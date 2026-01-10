@@ -121,6 +121,7 @@ function handleReset() {
 </script>
 
 <style lang="scss" scoped>
+@use '@/assets/styles/variables.scss' as *;
 @use '@/assets/styles/mixins.scss' as *;
 
 .filter-panel {

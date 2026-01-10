@@ -1,6 +1,6 @@
 <template>
   <div class="employee-list-page">
-    <PageHeader title="员工名录" add-text="新增员工" @add="handleAdd" />
+    <PageHeader title="员工名录" :show-add="true" add-text="新增员工" @add="handleAdd" />
 
     <div class="page-content">
       <el-row :gutter="16">
@@ -86,22 +86,24 @@
                 </template>
               </el-table-column>
               <el-table-column prop="entryDate" label="入职日期" width="120" />
-              <el-table-column label="操作" width="150" fixed="right">
+              <el-table-column label="操作" width="150" fixed="right" align="center">
                 <template #default="{ row }">
-                  <el-button link type="primary" size="small" @click.stop="handleEdit(row)">
-                    编辑
-                  </el-button>
-                  <el-dropdown @command="(cmd) => handleCommand(cmd, row)">
-                    <el-button link type="primary" size="small">
-                      更多<el-icon class="el-icon--right"><arrow-down /></el-icon>
+                  <div class="action-buttons">
+                    <el-button link type="primary" size="small" @click.stop="handleEdit(row)">
+                      编辑
                     </el-button>
-                    <template #dropdown>
-                      <el-dropdown-menu>
-                        <el-dropdown-item command="delete">删除</el-dropdown-item>
-                        <el-dropdown-item command="reset">重置密码</el-dropdown-item>
-                      </el-dropdown-menu>
-                    </template>
-                  </el-dropdown>
+                    <el-dropdown @command="(cmd) => handleCommand(cmd, row)" trigger="click">
+                      <el-button link type="primary" size="small" @click.stop>
+                        更多<el-icon class="el-icon--right"><arrow-down /></el-icon>
+                      </el-button>
+                      <template #dropdown>
+                        <el-dropdown-menu>
+                          <el-dropdown-item command="delete">删除</el-dropdown-item>
+                          <el-dropdown-item command="reset">重置密码</el-dropdown-item>
+                        </el-dropdown-menu>
+                      </template>
+                    </el-dropdown>
+                  </div>
                 </template>
               </el-table-column>
             </el-table>
@@ -324,6 +326,7 @@ function handleSizeChange(size: number) {
 </script>
 
 <style lang="scss" scoped>
+@use '@/assets/styles/variables.scss' as *;
 @use '@/assets/styles/mixins.scss' as *;
 
 .employee-list-page {
@@ -331,6 +334,13 @@ function handleSizeChange(size: number) {
     .table-header {
       @include flex-between;
     }
+  }
+
+  .action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
   }
 
   .card-view {

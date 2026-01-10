@@ -346,6 +346,7 @@ async function handleCommand(command: string) {
 </script>
 
 <style lang="scss" scoped>
+@use '@/assets/styles/variables.scss' as *;
 @use '@/assets/styles/mixins.scss' as *;
 
 .employee-detail-page {

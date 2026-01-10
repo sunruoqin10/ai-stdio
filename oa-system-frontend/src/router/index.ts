@@ -1,4 +1,8 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { setupPermissionGuard } from './permission'
+
+// 导入权限路由
+import permissionRoutes from './permission.routes'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -17,6 +21,21 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/modules/employee/views/EmployeeDetail.vue'),
     meta: { title: '员工详情' },
   },
+  {
+    path: '/dict',
+    name: 'DictManagement',
+    component: () => import('@/modules/dict/views/DictManagement.vue'),
+    meta: { title: '数据字典管理' },
+  },
+  {
+    path: '/dict/items/:dictTypeCode',
+    name: 'DictItemManagement',
+    component: () => import('@/modules/dict/views/DictItemManagement.vue'),
+    meta: { title: '字典项管理' },
+  },
+
+  // 权限管理路由
+  ...permissionRoutes,
   // 暂时注释掉未实现的模块
   // {
   //   path: '/department/org',
@@ -54,6 +73,9 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
 })
+
+// 设置路由权限守卫（开发环境下可以注释掉以简化测试）
+// setupPermissionGuard(router)
 
 // 路由守卫 - 更新页面标题
 router.beforeEach((to, _from, next) => {

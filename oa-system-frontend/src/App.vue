@@ -25,6 +25,26 @@
             <el-icon><Box /></el-icon>
             <span>资产管理</span>
           </el-menu-item>
+
+          <!-- 设置菜单 -->
+          <el-sub-menu index="settings">
+            <template #title>
+              <el-icon><Setting /></el-icon>
+              <span>设置</span>
+            </template>
+            <el-menu-item index="/permission/role">
+              <el-icon><User-filled /></el-icon>
+              <span>角色管理</span>
+            </el-menu-item>
+            <el-menu-item index="/permission/permission">
+              <el-icon><Key /></el-icon>
+              <span>权限管理</span>
+            </el-menu-item>
+            <el-menu-item index="/dict">
+              <el-icon><Notebook /></el-icon>
+              <span>数据字典</span>
+            </el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-header>
 
@@ -43,6 +63,15 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import {
+  User,
+  OfficeBuilding,
+  Box,
+  Setting,
+  UserFilled,
+  Key,
+  Notebook
+} from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 
 const route = useRoute()
@@ -58,12 +87,19 @@ watch(
       activeMenu.value = '/department/org'
     } else if (newPath.startsWith('/asset')) {
       activeMenu.value = '/asset'
+    } else if (newPath.startsWith('/permission')) {
+      // 权限管理页面，设置菜单保持激活状态
+      activeMenu.value = 'settings'
+    } else if (newPath.startsWith('/dict')) {
+      // 数据字典页面，设置菜单保持激活状态
+      activeMenu.value = 'settings'
     }
   }
 )
 </script>
 
 <style lang="scss" scoped>
+@use '@/assets/styles/variables.scss' as *;
 @use '@/assets/styles/mixins.scss' as *;
 
 .app-container {
@@ -101,6 +137,20 @@ watch(
       display: flex;
       align-items: center;
       gap: $spacing-sm;
+    }
+
+    .el-sub-menu {
+      .el-sub-menu__title {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+      }
+
+      .el-menu-item {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+      }
     }
   }
 }

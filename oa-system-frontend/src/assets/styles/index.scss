@@ -1,6 +1,6 @@
 // ==================== 全局样式入口 ====================
-@import './variables.scss';
-@import './mixins.scss';
+@use './variables.scss' as *;
+@use './mixins.scss' as *;
 
 // ==================== 重置样式 ====================
 
