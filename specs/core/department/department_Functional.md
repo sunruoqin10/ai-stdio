@@ -225,47 +225,240 @@ graph TD
 - 查看组织架构图
 - 不能进行任何编辑操作
 
-### 5.4 数据同步规则
+#### 5.3.4 字段级权限控制
 
-#### 5.4.1 层级更新
+| 字段 | 系统管理员 | 部门管理员 | 普通员工 |
+|------|-----------|-----------|---------|
+| 基本信息(名称/简称/描述) | ✅ 查看/编辑 | ✅ 查看/编辑本部门 | ✅ 查看 |
+| 部门负责人 | ✅ 查看/编辑 | ✅ 查看/编辑本部门 | ✅ 查看 |
+| 部门层级 | ✅ 查看/编辑 | ✅ 查看 | ✅ 查看 |
+| 排序号 | ✅ 查看/编辑 | ❌ | ✅ 查看 |
+| 部门成员 | ✅ 查看/管理 | ✅ 查看本部门 | ✅ 查看本部门 |
+| 统计数据 | ✅ 查看 | ✅ 查看本部门 | ✅ 查看本部门 |
+
+---
+
+### 5.4 数据字典集成
+
+#### 5.4.1 依赖的数据字典类型
+
+部门管理模块依赖以下数据字典类型:
+
+| 字典类型 | 字典编码 | 用途 | 是否必填 |
+|---------|---------|------|---------|
+| 部门状态 | `department_status` | 部门状态(正常/停用) | ✅ |
+| 部门类型 | `department_type` | 部门分类(总部/分公司/部门/小组) | ❌ |
+| 部门层级 | `department_level` | 部门层级级别(1-5级) | ❌ |
+
+#### 5.4.2 数据字典使用场景
+
+**1. 部门状态筛选**
+```typescript
+// 从数据字典加载部门状态选项
+const statusOptions = [
+  { label: '正常', value: 'active', dictCode: 'department_status' },
+  { label: '停用', value: 'disabled', dictCode: 'department_status' }
+]
+```
+
+**2. 部门类型选择**
+```typescript
+// 从数据字典加载部门类型选项
+const typeOptions = await getDictList('department_type')
+// 返回: [{ label: '总部', value: 'headquarters' }, { label: '分公司', value: 'branch' }, ...]
+```
+
+**3. 部门层级显示**
+```typescript
+// 从数据字典获取层级显示文本
+const levelText = getDictLabel('department_level', '1') // "一级部门"
+```
+
+#### 5.4.3 数据字典初始化要求
+
+- **模块加载时**: 预加载部门状态字典
+- **表单编辑时**: 动态加载部门类型字典
+- **筛选面板**: 使用缓存的字典数据
+- **字典刷新**: 监听字典变更事件,自动更新界面显示
+
+#### 5.4.4 数据字典缓存策略
+
+```typescript
+// 字典数据缓存管理
+const dictCache = {
+  // 常用字典: 启动时预加载
+  preload: ['department_status'],
+
+  // 低频字典: 按需加载
+  onDemand: ['department_type', 'department_level'],
+
+  // 缓存过期时间: 30分钟
+  expireTime: 30 * 60 * 1000
+}
+```
+
+---
+
+### 5.5 权限管理集成
+
+#### 5.5.1 部门管理权限定义
+
+| 权限编码 | 权限名称 | 权限描述 | 依赖角色 |
+|---------|---------|---------|---------|
+| `department:view` | 查看部门 | 查看部门列表和详情 | 所有用户 |
+| `department:view_all` | 查看所有部门 | 查看公司所有部门信息 | 系统管理员 |
+| `department:view_tree` | 查看部门树 | 查看完整部门树形结构 | 系统管理员 |
+| `department:view_department` | 查看本部门 | 查看本部门及下级部门 | 部门管理员 |
+| `department:create` | 新增部门 | 创建新部门 | 系统管理员 |
+| `department:edit` | 编辑部门 | 编辑部门基本信息 | 系统管理员/部门管理员 |
+| `department:edit_all` | 编辑所有信息 | 编辑部门所有信息(含层级排序) | 系统管理员 |
+| `department:delete` | 删除部门 | 删除部门 | 系统管理员 |
+| `department:move` | 移动部门 | 移动部门到其他上级 | 系统管理员 |
+| `department:export` | 导出列表 | 导出部门列表数据 | 系统管理员 |
+| `department:view_members` | 查看成员 | 查看部门成员列表 | 所有用户 |
+| `department:manage_members` | 管理成员 | 添加/移除部门成员 | 系统管理员/部门管理员 |
+
+#### 5.5.2 功能权限矩阵
+
+| 功能 | 系统管理员 | 部门管理员 | 普通员工 |
+|------|-----------|-----------|---------|
+| 查看部门列表 | ✅ department:view_all | ✅ department:view_department | ✅ department:view(仅本部门) |
+| 查看部门树 | ✅ department:view_tree | ✅ department:view_department | ✅ department:view(仅本部门) |
+| 查看部门详情 | ✅ department:view_all | ✅ department:view_department | ✅ department:view(仅本部门) |
+| 新增部门 | ✅ department:create | ❌ | ❌ |
+| 编辑基本信息 | ✅ department:edit_all | ✅ department:edit(仅本部门) | ❌ |
+| 编辑层级排序 | ✅ department:edit_all | ❌ | ❌ |
+| 删除部门 | ✅ department:delete | ❌ | ❌ |
+| 移动部门 | ✅ department:move | ❌ | ❌ |
+| 导出列表 | ✅ department:export | ❌ | ❌ |
+| 查看成员 | ✅ department:view_members | ✅ department:view_members | ✅ department:view_members |
+| 管理成员 | ✅ department:manage_members | ✅ department:manage_members(仅本部门) | ❌ |
+
+#### 5.5.3 权限检查实现
+
+```typescript
+// 权限检查函数
+function checkPermission(permission: string): boolean {
+  const authStore = useAuthStore()
+  return authStore.hasPermission(permission)
+}
+
+// 使用示例
+const canCreate = computed(() => checkPermission('department:create'))
+const canEdit = computed(() => checkPermission('department:edit'))
+const canDelete = computed(() => checkPermission('department:delete'))
+
+// 数据权限过滤
+const filteredDepartments = computed(() => {
+  if (checkPermission('department:view_all')) {
+    return departmentList.value // 返回所有部门
+  } else if (checkPermission('department:view_department')) {
+    // 只返回本部门及下级部门
+    return getDepartmentAndChildren(currentUser.departmentId)
+  } else {
+    // 仅返回本部门
+    return departmentList.value.filter(d => d.id === currentUser.departmentId)
+  }
+})
+```
+
+#### 5.5.4 按钮级权限控制
+
+```vue
+<!-- 根据权限显示/隐藏按钮 -->
+<el-button
+  v-if="hasPermission('department:create')"
+  @click="handleCreate"
+>
+  新增部门
+</el-button>
+
+<el-button
+  v-if="hasPermission('department:edit')"
+  @click="handleEdit(row)"
+>
+  编辑
+</el-button>
+
+<el-button
+  v-if="hasPermission('department:move')"
+  @click="handleMove(row)"
+>
+  移动
+</el-button>
+
+<el-button
+  v-if="hasPermission('department:delete')"
+  type="danger"
+  @click="handleDelete(row)"
+>
+  删除
+</el-button>
+```
+
+#### 5.5.5 字段级权限控制
+
+```typescript
+// 敏感字段权限判断
+const fieldPermissions = {
+  sort: {
+    editable: computed(() => hasPermission('department:edit_all'))
+  },
+  level: {
+    editable: computed(() => hasPermission('department:edit_all'))
+  }
+}
+
+// 表单中使用
+const canEditSort = computed(() => hasPermission('department:edit_all'))
+const canEditLevel = computed(() => hasPermission('department:edit_all'))
+```
+
+---
+
+### 5.6 数据同步规则
+
+#### 5.6.1 层级更新
 - 移动部门时自动更新本部门level
 - 级联更新所有子部门level
 - 更新操作在事务中执行
 
-#### 5.4.2 人数统计
+#### 5.6.2 人数统计
 - 部门人数实时从员工表统计
 - 可考虑定期缓存优化性能
 - 员工部门变更时自动更新统计
 
-#### 5.4.3 负责人关联
+#### 5.6.3 负责人关联
 - 负责人必须是有效的员工记录
 - 员工删除时需处理部门负责人关联
 - 负责人信息支持级联查询
 
-### 5.5 业务场景
+---
 
-#### 5.5.1 公司组织架构调整
+### 5.7 业务场景
+
+#### 5.7.1 公司组织架构调整
 场景: 公司业务调整,需要重组部门结构
 1. 创建新的部门结构
 2. 将现有部门移动到新结构下
 3. 系统自动更新层级关系
 4. 验证结构合理性(层级、成员等)
 
-#### 5.5.2 部门合并
+#### 5.7.2 部门合并
 场景: 两个部门合并为一个部门
 1. 将部门A的所有成员转移到部门B
 2. 将部门A的子部门移动到部门B下
 3. 删除空的部门A
 4. 更新部门B的基本信息
 
-#### 5.5.3 部门拆分
+#### 5.7.3 部门拆分
 场景: 一个部门拆分为多个子部门
 1. 创建新的子部门
 2. 将成员分配到不同子部门
 3. 设置各部门负责人
 4. 调整部门层级和排序
 
-#### 5.5.4 新员工入职
+#### 5.7.4 新员工入职
 场景: 新员工入职,需要分配到部门
 1. 创建或编辑员工信息
 2. 选择所属部门

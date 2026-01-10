@@ -13,7 +13,8 @@
       "Bash(dir /S /B \"c:\\\\Users\\\\sunru\\\\Downloads\\\\OA系统设计\")",
       "Bash(dir:*)",
       "Bash(ls:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(if exist node_modules.vite rmdir /s /q node_modules.vite)"
     ]
   }
 }

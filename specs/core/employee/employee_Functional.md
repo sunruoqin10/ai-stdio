@@ -228,6 +228,198 @@ graph TD
 - 办理离职: 系统管理员和部门管理员
 - 导入导出: 仅系统管理员
 
+#### 3.6.3 字段级权限控制
+
+| 字段 | 系统管理员 | 部门管理员 | 普通员工 |
+|------|-----------|-----------|---------|
+| 基本信息(姓名/性别/出生日期) | ✅ 查看/编辑 | ✅ 查看/编辑 | ✅ 查看自己/编辑自己 |
+| 联系方式(手机/邮箱) | ✅ 查看/编辑 | ✅ 查看 | ✅ 查看自己/编辑自己 |
+| 工作信息(部门/职位/入职日期) | ✅ 查看/编辑 | ✅ 查看 | ✅ 查看 |
+| 敏感信息(薪资/职级) | ✅ 查看/编辑 | ❌ | ❌ |
+| 操作记录 | ✅ 查看 | ✅ 查看本部门 | ✅ 查看自己 |
+
+---
+
+### 3.7 数据字典集成
+
+#### 3.7.1 依赖的数据字典类型
+
+员工管理模块依赖以下数据字典类型:
+
+| 字典类型 | 字典编码 | 用途 | 是否必填 |
+|---------|---------|------|---------|
+| 员工状态 | `employee_status` | 员工当前状态(在职/离职/停薪留职) | ✅ |
+| 性别 | `gender` | 员工性别 | ✅ |
+| 试用期状态 | `probation_status` | 试用期状态(试用期内/已转正) | ✅ |
+| 职位等级 | `position_level` | 员工职级(P1/P2/P3等) | ❌ |
+| 部门类型 | `department_type` | 部门分类 | ❌ |
+| 员工标签 | `employee_tag` | 员工标签(核心/骨干/新员工等) | ❌ |
+
+#### 3.7.2 数据字典使用场景
+
+**1. 员工状态筛选**
+```typescript
+// 从数据字典加载员工状态选项
+const statusOptions = [
+  { label: '在职', value: 'active', dictCode: 'employee_status' },
+  { label: '离职', value: 'resigned', dictCode: 'employee_status' },
+  { label: '停薪留职', value: 'suspended', dictCode: 'employee_status' }
+]
+```
+
+**2. 性别选择器**
+```typescript
+// 从数据字典加载性别选项
+const genderOptions = [
+  { label: '男', value: 'male', dictCode: 'gender' },
+  { label: '女', value: 'female', dictCode: 'gender' }
+]
+```
+
+**3. 试用期状态显示**
+```typescript
+// 从数据字典获取显示文本
+const statusText = getDictLabel('probation_status', 'probation') // "试用期内"
+```
+
+**4. 职级选择**
+```typescript
+// 从数据字典加载职级选项
+const levelOptions = await getDictList('position_level')
+// 返回: [{ label: 'P1', value: 'P1' }, { label: 'P2', value: 'P2' }, ...]
+```
+
+#### 3.7.3 数据字典初始化要求
+
+- **模块加载时**: 预加载员工状态、性别、试用期状态字典
+- **表单编辑时**: 动态加载职位等级字典
+- **筛选面板**: 使用缓存的字典数据
+- **字典刷新**: 监听字典变更事件,自动更新界面显示
+
+#### 3.7.4 数据字典缓存策略
+
+```typescript
+// 字典数据缓存管理
+const dictCache = {
+  // 常用字典: 启动时预加载
+  preload: ['employee_status', 'gender', 'probation_status'],
+
+  // 低频字典: 按需加载
+  onDemand: ['position_level', 'department_type', 'employee_tag'],
+
+  // 缓存过期时间: 30分钟
+  expireTime: 30 * 60 * 1000
+}
+```
+
+---
+
+### 3.8 权限管理集成
+
+#### 3.8.1 员工管理权限定义
+
+| 权限编码 | 权限名称 | 权限描述 | 依赖角色 |
+|---------|---------|---------|---------|
+| `employee:view` | 查看员工 | 查看员工列表和详情 | 所有用户 |
+| `employee:view_all` | 查看所有员工 | 查看公司所有员工信息 | 管理员 |
+| `employee:view_department` | 查看本部门员工 | 仅查看本部门员工 | 部门管理员 |
+| `employee:create` | 新增员工 | 创建新员工档案 | 系统管理员 |
+| `employee:edit` | 编辑员工 | 编辑员工基本信息 | 管理员/本人 |
+| `employee:edit_all` | 编辑所有信息 | 编辑员工所有信息(含敏感字段) | 系统管理员 |
+| `employee:delete` | 删除员工 | 删除员工档案 | 系统管理员 |
+| `employee:resign` | 办理离职 | 处理员工离职流程 | 管理员 |
+| `employee:import` | 批量导入 | 导入员工Excel数据 | 系统管理员 |
+| `employee:export` | 导出列表 | 导出员工列表数据 | 系统管理员 |
+| `employee:view_sensitive` | 查看敏感信息 | 查看薪资等敏感信息 | 系统管理员 |
+| `employee:reset_password` | 重置密码 | 重置员工登录密码 | 系统管理员 |
+
+#### 3.8.2 功能权限矩阵
+
+| 功能 | 系统管理员 | 部门管理员 | 普通员工 |
+|------|-----------|-----------|---------|
+| 查看员工列表 | ✅ employee:view_all | ✅ employee:view_department | ✅ employee:view(仅自己) |
+| 查看员工详情 | ✅ employee:view_all | ✅ employee:view_department | ✅ employee:view(仅自己) |
+| 新增员工 | ✅ employee:create | ❌ | ❌ |
+| 编辑基本信息 | ✅ employee:edit_all | ✅ employee:edit | ✅ employee:edit(仅自己) |
+| 编辑敏感信息 | ✅ employee:edit_all | ❌ | ❌ |
+| 删除员工 | ✅ employee:delete | ❌ | ❌ |
+| 办理离职 | ✅ employee:resign | ✅ employee:resign | ❌ |
+| 批量导入 | ✅ employee:import | ❌ | ❌ |
+| 导出列表 | ✅ employee:export | ❌ | ❌ |
+| 重置密码 | ✅ employee:reset_password | ❌ | ❌ |
+
+#### 3.8.3 权限检查实现
+
+```typescript
+// 权限检查函数
+function checkPermission(permission: string): boolean {
+  const authStore = useAuthStore()
+  return authStore.hasPermission(permission)
+}
+
+// 使用示例
+const canEdit = computed(() => checkPermission('employee:edit'))
+const canDelete = computed(() => checkPermission('employee:delete'))
+const canViewSensitive = computed(() => checkPermission('employee:view_sensitive'))
+
+// 数据权限过滤
+const filteredEmployees = computed(() => {
+  if (checkPermission('employee:view_all')) {
+    return employeeList.value // 返回所有员工
+  } else if (checkPermission('employee:view_department')) {
+    return employeeList.value.filter(e => e.departmentId === currentUser.departmentId)
+  } else {
+    return employeeList.value.filter(e => e.id === currentUser.id) // 仅自己
+  }
+})
+```
+
+#### 3.8.4 按钮级权限控制
+
+```vue
+<!-- 根据权限显示/隐藏按钮 -->
+<el-button
+  v-if="hasPermission('employee:create')"
+  @click="handleCreate"
+>
+  新增员工
+</el-button>
+
+<el-button
+  v-if="hasPermission('employee:edit')"
+  @click="handleEdit(row)"
+>
+  编辑
+</el-button>
+
+<el-button
+  v-if="hasPermission('employee:delete')"
+  type="danger"
+  @click="handleDelete(row)"
+>
+  删除
+</el-button>
+```
+
+#### 3.8.5 字段级权限控制
+
+```typescript
+// 敏感字段权限判断
+const fieldPermissions = {
+  salary: {
+    visible: computed(() => hasPermission('employee:view_sensitive')),
+    editable: computed(() => hasPermission('employee:edit_all'))
+  },
+  level: {
+    visible: computed(() => hasPermission('employee:view_sensitive')),
+    editable: computed(() => hasPermission('employee:edit_all'))
+  }
+}
+
+// 表单中使用
+const showSensitiveFields = computed(() => hasPermission('employee:view_sensitive'))
+```
+
 ---
 
 ## 附录

@@ -297,6 +297,249 @@
 
 ---
 
+### 5.6 字段级权限控制
+
+| 字段 | 普通员工 | 部门负责人 | 人事专员 | 总经理 | 系统管理员 |
+|------|---------|-----------|---------|--------|-----------|
+| 基本信息(类型/时间/事由) | ✅ 查看/编辑(自己) | ✅ 查看 | ✅ 查看 | ✅ 查看 | ✅ 查看/编辑 |
+| 请假时长 | ✅ 查看 | ✅ 查看 | ✅ 查看 | ✅ 查看 | ✅ 查看/编辑 |
+| 请假附件 | ✅ 查看/上传(自己) | ✅ 查看 | ✅ 查看 | ✅ 查看 | ✅ 查看/编辑 |
+| 年假余额 | ✅ 查看(自己) | ✅ 查看(本部门) | ✅ 查看(所有) | ✅ 查看(所有) | ✅ 查看/编辑 |
+| 审批意见 | ✅ 查看 | ✅ 查看/填写 | ✅ 查看/填写 | ✅ 查看/填写 | ✅ 查看/填写 |
+| 年假额度 | ❌ | ❌ | ✅ 查看/编辑 | ✅ 查看/编辑 | ✅ 查看/编辑 |
+
+---
+
+### 5.7 数据字典集成
+
+#### 5.7.1 依赖的数据字典类型
+
+请假管理模块依赖以下数据字典类型:
+
+| 字典类型 | 字典编码 | 用途 | 是否必填 |
+|---------|---------|------|---------|
+| 请假类型 | `leave_type` | 请假类型分类(年假/病假/事假/调休/婚假/产假) | ✅ |
+| 请假状态 | `leave_status` | 请假单状态(待提交/待审批/审批中/已通过/已驳回/已撤销) | ✅ |
+| 审批状态 | `approval_status` | 审批状态(待审批/已通过/已驳回) | ✅ |
+| 时间单位 | `time_unit` | 请假时间单位(天/半天) | ❌ |
+
+#### 5.7.2 数据字典使用场景
+
+**1. 请假类型选择**
+```typescript
+// 从数据字典加载请假类型选项
+const leaveTypeOptions = [
+  { label: '年假', value: 'annual', dictCode: 'leave_type' },
+  { label: '病假', value: 'sick', dictCode: 'leave_type' },
+  { label: '事假', value: 'personal', dictCode: 'leave_type' },
+  { label: '调休', value: 'comp_time', dictCode: 'leave_type' },
+  { label: '婚假', value: 'marriage', dictCode: 'leave_type' },
+  { label: '产假', value: 'maternity', dictCode: 'leave_type' }
+]
+```
+
+**2. 请假状态筛选**
+```typescript
+// 从数据字典加载请假状态选项
+const statusOptions = [
+  { label: '待提交', value: 'draft', dictCode: 'leave_status' },
+  { label: '待审批', value: 'pending', dictCode: 'leave_status' },
+  { label: '审批中', value: 'approving', dictCode: 'leave_status' },
+  { label: '已通过', value: 'approved', dictCode: 'leave_status' },
+  { label: '已驳回', value: 'rejected', dictCode: 'leave_status' },
+  { label: '已撤销', value: 'cancelled', dictCode: 'leave_status' }
+]
+```
+
+**3. 状态标签显示**
+```typescript
+// 从数据字典获取显示文本
+const statusText = getDictLabel('leave_status', 'approved') // "已通过"
+const leaveTypeText = getDictLabel('leave_type', 'annual') // "年假"
+```
+
+**4. 请假类型规则配置**
+```typescript
+// 从数据字典获取请假类型配置
+const leaveTypeConfig = await getDictItem('leave_type', 'annual')
+// 返回: { label: '年假', value: 'annual', needAttachment: false, deductAnnual: true }
+```
+
+#### 5.7.3 数据字典初始化要求
+
+- **模块加载时**: 预加载请假类型、请假状态字典
+- **表单编辑时**: 动态加载时间单位字典
+- **筛选面板**: 使用缓存的字典数据
+- **字典刷新**: 监听字典变更事件,自动更新界面显示
+
+#### 5.7.4 数据字典缓存策略
+
+```typescript
+// 字典数据缓存管理
+const dictCache = {
+  // 常用字典: 启动时预加载
+  preload: ['leave_type', 'leave_status'],
+
+  // 低频字典: 按需加载
+  onDemand: ['approval_status', 'time_unit'],
+
+  // 缓存过期时间: 30分钟
+  expireTime: 30 * 60 * 1000
+}
+```
+
+---
+
+### 5.8 权限管理集成
+
+#### 5.8.1 请假管理权限定义
+
+| 权限编码 | 权限名称 | 权限描述 | 依赖角色 |
+|---------|---------|---------|---------|
+| `leave:create` | 创建请假申请 | 创建新的请假申请 | 所有员工 |
+| `leave:view_own` | 查看自己的请假 | 查看自己提交的请假申请 | 所有员工 |
+| `leave:view_department` | 查看部门请假 | 查看本部门员工的请假申请 | 部门负责人 |
+| `leave:view_all` | 查看所有请假 | 查看公司所有请假申请 | 人事专员/总经理/管理员 |
+| `leave:edit_own` | 编辑自己的请假 | 编辑草稿状态的请假申请 | 所有员工 |
+| `leave:delete_own` | 删除自己的请假 | 删除草稿状态的请假申请 | 所有员工 |
+| `leave:cancel_own` | 撤销请假申请 | 撤销待审批的请假申请 | 所有员工 |
+| `leave:dept_approve` | 部门审批 | 部门负责人审批请假 | 部门负责人/管理员 |
+| `leave:hr_approve` | 人事审批 | 人事专员审批请假 | 人事专员/管理员 |
+| `leave:gm_approve` | 总经理审批 | 总经理审批长期请假 | 总经理/管理员 |
+| `leave:view_balance` | 查看年假余额 | 查看年假余额 | 所有员工(自己)/人事(所有) |
+| `leave:manage_balance` | 管理年假额度 | 管理员工年假额度 | 人事专员/管理员 |
+| `leave:view_statistics` | 查看统计报表 | 查看请假统计数据 | 部门负责人/人事专员/总经理/管理员 |
+| `leave:export` | 导出数据 | 导出请假数据 | 人事专员/管理员 |
+
+#### 5.8.2 功能权限矩阵
+
+| 功能 | 普通员工 | 部门负责人 | 人事专员 | 总经理 | 系统管理员 |
+|------|---------|-----------|---------|--------|-----------|
+| 创建请假申请 | ✅ leave:create | ✅ leave:create | ✅ leave:create | ✅ leave:create | ✅ leave:create |
+| 查看自己请假 | ✅ leave:view_own | ✅ leave:view_own | ✅ leave:view_own | ✅ leave:view_own | ✅ leave:view_own |
+| 编辑草稿请假 | ✅ leave:edit_own | ✅ leave:edit_own | ✅ leave:edit_own | ✅ leave:edit_own | ✅ leave:edit_own |
+| 删除草稿请假 | ✅ leave:delete_own | ✅ leave:delete_own | ✅ leave:delete_own | ✅ leave:delete_own | ✅ leave:delete_own |
+| 撤销待审批请假 | ✅ leave:cancel_own | ✅ leave:cancel_own | ✅ leave:cancel_own | ✅ leave:cancel_own | ✅ leave:cancel_own |
+| 查看部门请假 | ❌ | ✅ leave:view_department | ❌ | ❌ | ✅ leave:view_department |
+| 查看所有请假 | ❌ | ❌ | ✅ leave:view_all | ✅ leave:view_all | ✅ leave:view_all |
+| 部门审批 | ❌ | ✅ leave:dept_approve | ❌ | ❌ | ✅ leave:dept_approve |
+| 人事审批 | ❌ | ❌ | ✅ leave:hr_approve | ❌ | ✅ leave:hr_approve |
+| 总经理审批 | ❌ | ❌ | ❌ | ✅ leave:gm_approve | ✅ leave:gm_approve |
+| 查看自己年假余额 | ✅ leave:view_balance | ✅ leave:view_balance | ✅ leave:view_balance | ✅ leave:view_balance | ✅ leave:view_balance |
+| 查看部门年假余额 | ❌ | ✅ leave:view_balance | ✅ leave:view_balance | ✅ leave:view_balance | ✅ leave:view_balance |
+| 查看所有年假余额 | ❌ | ❌ | ✅ leave:view_balance | ✅ leave:view_balance | ✅ leave:view_balance |
+| 管理年假额度 | ❌ | ❌ | ✅ leave:manage_balance | ✅ leave:manage_balance | ✅ leave:manage_balance |
+| 查看统计报表 | ❌ | ✅ leave:view_statistics | ✅ leave:view_statistics | ✅ leave:view_statistics | ✅ leave:view_statistics |
+| 导出数据 | ❌ | ❌ | ✅ leave:export | ✅ leave:export | ✅ leave:export |
+
+#### 5.8.3 权限检查实现
+
+```typescript
+// 权限检查函数
+function checkPermission(permission: string): boolean {
+  const authStore = useAuthStore()
+  return authStore.hasPermission(permission)
+}
+
+// 使用示例
+const canCreate = computed(() => checkPermission('leave:create'))
+const canDeptApprove = computed(() => checkPermission('leave:dept_approve'))
+const canHrApprove = computed(() => checkPermission('leave:hr_approve'))
+
+// 数据权限过滤
+const filteredLeaves = computed(() => {
+  if (checkPermission('leave:view_all')) {
+    return leaveList.value // 返回所有请假申请
+  } else if (checkPermission('leave:view_department')) {
+    // 只返回本部门的请假申请
+    return leaveList.value.filter(l => l.departmentId === currentUser.departmentId)
+  } else {
+    // 只返回自己的请假申请
+    return leaveList.value.filter(l => l.applicantId === currentUser.id)
+  }
+})
+```
+
+#### 5.8.4 按钮级权限控制
+
+```vue
+<!-- 根据权限显示/隐藏按钮 -->
+<el-button
+  v-if="hasPermission('leave:create')"
+  @click="handleCreate"
+>
+  新增请假
+</el-button>
+
+<el-button
+  v-if="hasPermission('leave:dept_approve') && row.status === 'pending' && row.approvalLevel === 1"
+  type="primary"
+  @click="handleDeptApprove(row)"
+>
+  部门审批
+</el-button>
+
+<el-button
+  v-if="hasPermission('leave:hr_approve') && row.status === 'approving' && row.approvalLevel === 2"
+  type="success"
+  @click="handleHrApprove(row)"
+>
+  人事审批
+</el-button>
+
+<el-button
+  v-if="hasPermission('leave:gm_approve') && row.status === 'approving' && row.approvalLevel === 3"
+  type="warning"
+  @click="handleGmApprove(row)"
+>
+  总经理审批
+</el-button>
+
+<el-button
+  v-if="hasPermission('leave:cancel_own') && row.status === 'pending' && row.applicantId === currentUser.id"
+  type="danger"
+  @click="handleCancel(row)"
+>
+  撤销申请
+</el-button>
+```
+
+#### 5.8.5 字段级权限控制
+
+```typescript
+// 敏感字段权限判断
+const fieldPermissions = {
+  annualBalance: {
+    visible: computed(() => {
+      // 自己的年假余额
+      if (leave.value.applicantId === currentUser.id) {
+        return checkPermission('leave:view_balance')
+      }
+      // 部门员工的年假余额
+      if (leave.value.departmentId === currentUser.departmentId) {
+        return checkPermission('leave:view_department')
+      }
+      // 所有员工的年假余额
+      return checkPermission('leave:view_all')
+    })
+  },
+  annualQuota: {
+    editable: computed(() => checkPermission('leave:manage_balance'))
+  }
+}
+
+// 表单中使用
+const showAnnualBalance = computed(() => {
+  return fieldPermissions.annualBalance.visible.value
+})
+
+const canEditAnnualQuota = computed(() => {
+  return checkPermission('leave:manage_balance')
+})
+```
+
+---
+
 ## 6. 功能优先级
 
 ### 6.1 P0 - 核心功能 (必须实现)

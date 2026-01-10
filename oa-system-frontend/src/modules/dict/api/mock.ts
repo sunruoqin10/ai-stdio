@@ -361,3 +361,33 @@ export async function mockCheckDictValueExists(
 
   return mockResponse(exists)
 }
+
+/**
+ * 根据字典类型编码获取字典数据
+ */
+export async function mockGetDictData(dictTypeCode: string) {
+  // Debug: 打印所有可用的字典类型
+  console.log('[mockGetDictData] 查找字典类型:', dictTypeCode)
+  console.log('[mockGetDictData] 可用的字典类型:', mockDictTypes.map(dt => dt.code))
+
+  const dictType = mockDictTypes.find(dt => dt.code === dictTypeCode)
+  if (!dictType) {
+    console.error(`[mockGetDictData] 字典类型 ${dictTypeCode} 不存在`)
+    throw new Error(`字典类型 ${dictTypeCode} 不存在`)
+  }
+
+  const items = mockDictItems
+    .filter(item => item.dictTypeCode === dictTypeCode)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map(item => ({
+      label: item.label,
+      value: item.value,
+      colorType: item.colorType,
+      extProps: item.extProps
+    }))
+
+  return mockResponse({
+    dictType: dictTypeCode,
+    items
+  })
+}

@@ -9,11 +9,24 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     redirect: '/employee',
   },
+  // 登录相关路由
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/modules/auth/views/Login.vue'),
+    meta: { title: '用户登录', requiresAuth: false },
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('@/modules/auth/views/ResetPassword.vue'),
+    meta: { title: '找回密码', requiresAuth: false },
+  },
   {
     path: '/employee',
     name: 'Employee',
     component: () => import('@/modules/employee/views/EmployeeList.vue'),
-    meta: { title: '员工名录' },
+    meta: { title: '员工名录', requiresAuth: true },
   },
   {
     path: '/employee/:id',
@@ -32,6 +45,12 @@ const routes: RouteRecordRaw[] = [
     name: 'DictItemManagement',
     component: () => import('@/modules/dict/views/DictItemManagement.vue'),
     meta: { title: '字典项管理' },
+  },
+  {
+    path: '/menu',
+    name: 'MenuManagement',
+    component: () => import('@/modules/menu/views/index.vue'),
+    meta: { title: '菜单管理', requiresAuth: true },
   },
 
   // 权限管理路由
@@ -74,8 +93,8 @@ const router = createRouter({
   routes,
 })
 
-// 设置路由权限守卫（开发环境下可以注释掉以简化测试）
-// setupPermissionGuard(router)
+// 设置路由权限守卫
+setupPermissionGuard(router)
 
 // 路由守卫 - 更新页面标题
 router.beforeEach((to, _from, next) => {

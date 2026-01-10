@@ -1114,5 +1114,982 @@ async function getOCRResult(taskId: string): Promise<Invoice | null> {
 
 ---
 
-**文档版本**: v1.0.0
-**最后更新**: 2026-01-09
+## 8. 数据字典集成实现
+
+### 8.1 数据字典API封装
+
+```typescript
+// src/modules/dict/api/index.ts
+
+import { http } from '@/utils/request'
+
+/**
+ * 字典数据项接口
+ */
+export interface DictItem {
+  label: string
+  value: string
+  dictCode: string
+  sort?: number
+  remark?: string
+}
+
+/**
+ * 获取指定类型的字典列表
+ * @param dictCode 字典编码
+ * @returns 字典项列表
+ */
+export async function getDictList(dictCode: string): Promise<DictItem[]> {
+  return http.get<DictItem[]>(`/api/dict/${dictCode}`)
+}
+
+/**
+ * 批量获取多个字典类型
+ * @param dictCodes 字典编码数组
+ * @returns 字典数据映射
+ */
+export async function getDictBatch(dictCodes: string[]): Promise<Record<string, DictItem[]>> {
+  return http.post<Record<string, DictItem[]>>('/api/dict/batch', { dictCodes })
+}
+
+/**
+ * 获取字典标签文本
+ * @param dictCode 字典编码
+ * @param value 字典值
+ * @returns 字典标签
+ */
+export async function getDictLabel(dictCode: string, value: string): Promise<string> {
+  return http.get<string>(`/api/dict/${dictCode}/label/${value}`)
+}
+```
+
+### 8.2 Pinia字典Store
+
+```typescript
+// src/modules/dict/store/index.ts
+
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { getDictBatch, getDictList, type DictItem } from '../api'
+
+export const useDictStore = defineStore('dict', () => {
+  // 字典数据缓存
+  const dictData = ref<Record<string, DictItem[]>>({})
+
+  // 缓存时间戳
+  const cacheTime = ref<Record<string, number>>({})
+
+  // 缓存过期时间(30分钟)
+  const CACHE_EXPIRE = 30 * 60 * 1000
+
+  /**
+   * 批量加载字典数据
+   */
+  async function loadDicts(dictCodes: string[]) {
+    const now = Date.now()
+    const needLoad: string[] = []
+
+    // 检查哪些字典需要重新加载
+    for (const code of dictCodes) {
+      const cached = cacheTime.value[code]
+      if (!cached || now - cached > CACHE_EXPIRE) {
+        needLoad.push(code)
+      }
+    }
+
+    if (needLoad.length === 0) return
+
+    // 批量加载
+    const data = await getDictBatch(needLoad)
+
+    for (const [code, items] of Object.entries(data)) {
+      dictData.value[code] = items
+      cacheTime.value[code] = now
+    }
+  }
+
+  /**
+   * 获取字典列表
+   */
+  function getDictList(dictCode: string): DictItem[] {
+    return dictData.value[dictCode] || []
+  }
+
+  /**
+   * 获取字典标签
+   */
+  function getLabel(dictCode: string, value: string): string {
+    const items = getDictList(dictCode)
+    const item = items.find(i => i.value === value)
+    return item?.label || value
+  }
+
+  /**
+   * 刷新指定字典
+   */
+  async function refreshDict(dictCode: string) {
+    delete cacheTime.value[dictCode]
+    await loadDicts([dictCode])
+  }
+
+  /**
+   * 清空所有缓存
+   */
+  function clearCache() {
+    dictData.value = {}
+    cacheTime.value = {}
+  }
+
+  return {
+    dictData,
+    loadDicts,
+    getDictList,
+    getLabel,
+    refreshDict,
+    clearCache
+  }
+})
+```
+
+### 8.3 费用报销模块中使用字典
+
+```typescript
+// src/modules/expense/composables/useExpenseDict.ts
+
+import { computed, onMounted } from 'vue'
+import { useDictStore } from '@/modules/dict/store'
+
+/**
+ * 费用报销模块字典组合函数
+ */
+export function useExpenseDict() {
+  const dictStore = useDictStore()
+
+  // 组件挂载时预加载常用字典
+  onMounted(async () => {
+    await dictStore.loadDicts(['expense_type', 'expense_status', 'invoice_type'])
+  })
+
+  // 报销类型选项
+  const expenseTypeOptions = computed(() =>
+    dictStore.getDictList('expense_type')
+  )
+
+  // 报销状态选项
+  const statusOptions = computed(() =>
+    dictStore.getDictList('expense_status')
+  )
+
+  // 发票类型选项
+  const invoiceTypeOptions = computed(() =>
+    dictStore.getDictList('invoice_type')
+  )
+
+  // 动态加载费用分类字典
+  async function loadCategoryOptions() {
+    await dictStore.loadDicts(['expense_category'])
+    return dictStore.getDictList('expense_category')
+  }
+
+  // 获取状态标签文本
+  function getStatusLabel(value: string): string {
+    return dictStore.getLabel('expense_status', value)
+  }
+
+  // 获取报销类型标签文本
+  function getTypeLabel(value: string): string {
+    return dictStore.getLabel('expense_type', value)
+  }
+
+  // 获取发票类型标签文本
+  function getInvoiceTypeLabel(value: string): string {
+    return dictStore.getLabel('invoice_type', value)
+  }
+
+  return {
+    expenseTypeOptions,
+    statusOptions,
+    invoiceTypeOptions,
+    loadCategoryOptions,
+    getStatusLabel,
+    getTypeLabel,
+    getInvoiceTypeLabel
+  }
+}
+```
+
+### 8.4 筛选面板中使用字典
+
+```vue
+<!-- src/modules/expense/components/ExpenseFilter.vue -->
+<template>
+  <el-form :inline="true" :model="filterForm">
+    <!-- 报销类型筛选 -->
+    <el-form-item label="报销类型">
+      <el-select v-model="filterForm.type" placeholder="请选择" clearable>
+        <el-option
+          v-for="item in expenseTypeOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+    </el-form-item>
+
+    <!-- 状态筛选 -->
+    <el-form-item label="状态">
+      <el-select v-model="filterForm.status" placeholder="请选择" clearable>
+        <el-option
+          v-for="item in statusOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+    </el-form-item>
+
+    <!-- 发票类型筛选 -->
+    <el-form-item label="发票类型">
+      <el-select v-model="filterForm.invoiceType" placeholder="请选择" clearable>
+        <el-option
+          v-for="item in invoiceTypeOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+    </el-form-item>
+
+    <el-form-item>
+      <el-button type="primary" @click="handleFilter">查询</el-button>
+      <el-button @click="handleReset">重置</el-button>
+    </el-form-item>
+  </el-form>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useExpenseDict } from '../composables/useExpenseDict'
+
+const {
+  expenseTypeOptions,
+  statusOptions,
+  invoiceTypeOptions
+} = useExpenseDict()
+
+const filterForm = ref({
+  type: '',
+  status: '',
+  invoiceType: ''
+})
+
+const emit = defineEmits(['filter'])
+
+function handleFilter() {
+  emit('filter', filterForm.value)
+}
+
+function handleReset() {
+  filterForm.value = {
+    type: '',
+    status: '',
+    invoiceType: ''
+  }
+  emit('filter', filterForm.value)
+}
+</script>
+```
+
+### 8.5 列表页中使用字典标签
+
+```vue
+<!-- src/modules/expense/components/ExpenseList.vue -->
+<template>
+  <el-table :data="expenseList">
+    <el-table-column prop="id" label="报销单号" width="180" />
+
+    <el-table-column prop="type" label="报销类型" width="120">
+      <template #default="{ row }">
+        <el-tag>{{ getTypeLabel(row.type) }}</el-tag>
+      </template>
+    </el-table-column>
+
+    <el-table-column prop="amount" label="金额" width="120">
+      <template #default="{ row }">
+        ¥{{ row.amount.toFixed(2) }}
+      </template>
+    </el-table-column>
+
+    <el-table-column prop="status" label="状态" width="120">
+      <template #default="{ row }">
+        <el-tag :type="getStatusTagType(row.status)">
+          {{ getStatusLabel(row.status) }}
+        </el-tag>
+      </template>
+    </el-table-column>
+
+    <el-table-column prop="applyDate" label="申请日期" width="120" />
+
+    <el-table-column label="操作" fixed="right" width="200">
+      <template #default="{ row }">
+        <el-button
+          v-if="hasPermission('expense:edit_own') && row.status === 'draft'"
+          size="small"
+          @click="handleEdit(row)"
+        >
+          编辑
+        </el-button>
+        <el-button
+          v-if="hasPermission('expense:dept_approve') && row.status === 'dept_pending'"
+          type="primary"
+          size="small"
+          @click="handleDeptApprove(row)"
+        >
+          审批
+        </el-button>
+      </template>
+    </el-table-column>
+  </el-table>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useExpenseDict } from '../composables/useExpenseDict'
+import { useExpensePermission } from '../composables/useExpensePermission'
+
+const {
+  getStatusLabel,
+  getTypeLabel
+} = useExpenseDict()
+
+const { hasPermission } = useExpensePermission()
+
+const expenseList = ref([])
+
+function getStatusTagType(status: string) {
+  const typeMap: Record<string, string> = {
+    draft: 'info',
+    dept_pending: 'warning',
+    finance_pending: 'warning',
+    rejected: 'danger',
+    paid: 'success'
+  }
+  return typeMap[status] || 'info'
+}
+
+onMounted(async () => {
+  // 加载数据
+})
+</script>
+```
+
+---
+
+## 9. 权限管理集成实现
+
+### 9.1 权限Store扩展
+
+```typescript
+// src/modules/expense/composables/useExpensePermission.ts
+
+import { computed } from 'vue'
+import { useAuthStore } from '@/modules/auth/store'
+
+/**
+ * 费用报销权限组合函数
+ */
+export function useExpensePermission() {
+  const authStore = useAuthStore()
+
+  /**
+   * 检查权限
+   */
+  function hasPermission(permission: string): boolean {
+    return authStore.hasPermission(permission)
+  }
+
+  /**
+   * 检查是否可以编辑报销单
+   */
+  function canEditExpense(expense: any): boolean {
+    // 草稿状态且是自己的报销单
+    return (
+      expense.status === 'draft' &&
+      expense.applicantId === authStore.currentUser?.id &&
+      hasPermission('expense:edit_own')
+    )
+  }
+
+  /**
+   * 检查是否可以查看报销单
+   */
+  function canViewExpense(expense: any): boolean {
+    // 自己的报销单
+    if (expense.applicantId === authStore.currentUser?.id) {
+      return hasPermission('expense:view_own')
+    }
+
+    // 本部门的报销单
+    if (expense.departmentId === authStore.currentUser?.departmentId) {
+      return hasPermission('expense:view_department')
+    }
+
+    // 所有报销单
+    return hasPermission('expense:view_all')
+  }
+
+  /**
+   * 过滤报销单列表(数据权限)
+   */
+  function filterExpenseList(expenses: any[]): any[] {
+    if (hasPermission('expense:view_all')) {
+      return expenses // 返回所有报销单
+    }
+
+    if (hasPermission('expense:view_department')) {
+      // 只返回本部门的报销单
+      return expenses.filter(
+        e => e.departmentId === authStore.currentUser?.departmentId
+      )
+    }
+
+    // 只返回自己的报销单
+    return expenses.filter(
+      e => e.applicantId === authStore.currentUser?.id
+    )
+  }
+
+  /**
+   * 检查是否可以审批报销单
+   */
+  function canApproveExpense(expense: any): boolean {
+    if (expense.status === 'dept_pending') {
+      return hasPermission('expense:dept_approve')
+    }
+
+    if (expense.status === 'finance_pending') {
+      return hasPermission('expense:finance_approve')
+    }
+
+    return false
+  }
+
+  /**
+   * 检查是否可以执行打款
+   */
+  function canPayment(expense: any): boolean {
+    return (
+      expense.status === 'pending' &&
+      hasPermission('expense:payment')
+    )
+  }
+
+  return {
+    hasPermission,
+    canEditExpense,
+    canViewExpense,
+    filterExpenseList,
+    canApproveExpense,
+    canPayment
+  }
+}
+```
+
+### 9.2 列表页权限控制
+
+```vue
+<!-- src/modules/expense/views/ExpenseListView.vue -->
+<template>
+  <div class="expense-list">
+    <!-- 工具栏 -->
+    <el-toolbar>
+      <el-button
+        v-if="hasPermission('expense:create')"
+        type="primary"
+        @click="handleCreate"
+      >
+        新增报销单
+      </el-button>
+
+      <el-button
+        v-if="hasPermission('expense:export')"
+        @click="handleExport"
+      >
+        导出数据
+      </el-button>
+    </el-toolbar>
+
+    <!-- 筛选面板 -->
+    <ExpenseFilter @filter="handleFilter" />
+
+    <!-- 数据表格 -->
+    <el-table :data="displayExpenses">
+      <el-table-column prop="id" label="报销单号" width="180" />
+
+      <el-table-column prop="type" label="报销类型" width="120">
+        <template #default="{ row }">
+          <el-tag>{{ getTypeLabel(row.type) }}</el-tag>
+        </template>
+      </el-table-column>
+
+      <el-table-column prop="amount" label="金额" width="120">
+        <template #default="{ row }">
+          ¥{{ row.amount.toFixed(2) }}
+        </template>
+      </el-table-column>
+
+      <el-table-column prop="status" label="状态" width="120">
+        <template #default="{ row }">
+          <el-tag :type="getStatusTagType(row.status)">
+            {{ getStatusLabel(row.status) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+
+      <el-table-column label="操作" fixed="right" width="250">
+        <template #default="{ row }">
+          <el-button
+            v-if="canEditExpense(row)"
+            size="small"
+            @click="handleEdit(row)"
+          >
+            编辑
+          </el-button>
+
+          <el-button
+            v-if="canApproveExpense(row)"
+            type="primary"
+            size="small"
+            @click="handleApprove(row)"
+          >
+            审批
+          </el-button>
+
+          <el-button
+            v-if="canPayment(row)"
+            type="warning"
+            size="small"
+            @click="handlePayment(row)"
+          >
+            打款
+          </el-button>
+
+          <el-button
+            v-if="hasPermission('expense:delete_own') && row.status === 'draft'"
+            type="danger"
+            size="small"
+            @click="handleDelete(row)"
+          >
+            删除
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useExpenseDict } from '../composables/useExpenseDict'
+import { useExpensePermission } from '../composables/useExpensePermission'
+import ExpenseFilter from '../components/ExpenseFilter.vue'
+
+const {
+  getStatusLabel,
+  getTypeLabel
+} = useExpenseDict()
+
+const {
+  hasPermission,
+  canEditExpense,
+  canApproveExpense,
+  canPayment,
+  filterExpenseList
+} = useExpensePermission()
+
+// 原始数据
+const allExpenses = ref<any[]>([])
+
+// 应用数据权限过滤
+const displayExpenses = computed(() => {
+  return filterExpenseList(allExpenses.value)
+})
+
+function getStatusTagType(status: string) {
+  const typeMap: Record<string, string> = {
+    draft: 'info',
+    dept_pending: 'warning',
+    finance_pending: 'warning',
+    rejected: 'danger',
+    paid: 'success'
+  }
+  return typeMap[status] || 'info'
+}
+
+function handleCreate() {
+  // 新增报销单
+}
+
+function handleEdit(row: any) {
+  // 编辑报销单
+}
+
+function handleApprove(row: any) {
+  // 审批报销单
+}
+
+function handlePayment(row: any) {
+  // 打款
+}
+
+function handleDelete(row: any) {
+  // 删除报销单
+}
+
+function handleExport() {
+  // 导出数据
+}
+
+function handleFilter(filters: any) {
+  // 应用筛选
+}
+
+onMounted(async () => {
+  // 加载报销单数据
+  allExpenses.value = []
+})
+</script>
+```
+
+### 9.3 详情页权限控制
+
+```vue
+<!-- src/modules/expense/views/ExpenseDetailView.vue -->
+<template>
+  <el-descriptions :column="2" border>
+    <el-descriptions-item label="报销单号">
+      {{ expense.id }}
+    </el-descriptions-item>
+
+    <el-descriptions-item label="报销类型">
+      {{ getTypeLabel(expense.type) }}
+    </el-descriptions-item>
+
+    <el-descriptions-item label="报销金额">
+      ¥{{ expense.amount.toFixed(2) }}
+    </el-descriptions-item>
+
+    <el-descriptions-item label="报销状态">
+      <el-tag :type="getStatusTagType(expense.status)">
+        {{ getStatusLabel(expense.status) }}
+      </el-tag>
+    </el-descriptions-item>
+
+    <el-descriptions-item label="报销事由" :span="2">
+      {{ expense.reason }}
+    </el-descriptions-item>
+
+    <!-- 银行账户信息 - 仅财务和本人可见 -->
+    <el-descriptions-item
+      v-if="showBankAccount"
+      label="银行账户"
+      :span="2"
+    >
+      {{ expense.bankAccount }}
+    </el-descriptions-item>
+
+    <!-- 打款凭证 - 仅财务可见 -->
+    <el-descriptions-item
+      v-if="hasPermission('expense:view_all') && expense.paymentProof"
+      label="打款凭证"
+      :span="2"
+    >
+      <el-image
+        :src="expense.paymentProof"
+        :preview-src-list="[expense.paymentProof]"
+        style="width: 200px"
+      />
+    </el-descriptions-item>
+
+    <!-- 审批意见 -->
+    <el-descriptions-item v-if="expense.deptApproval" label="部门审批意见" :span="2">
+      {{ expense.deptApproval.opinion || '无' }}
+    </el-descriptions-item>
+
+    <el-descriptions-item v-if="expense.financeApproval" label="财务审批意见" :span="2">
+      {{ expense.financeApproval.opinion || '无' }}
+    </el-descriptions-item>
+  </el-descriptions>
+
+  <!-- 操作按钮 -->
+  <div class="actions">
+    <el-button
+      v-if="canEditExpense(expense)"
+      type="primary"
+      @click="handleEdit"
+    >
+      编辑
+    </el-button>
+
+    <el-button
+      v-if="canApproveExpense(expense)"
+      type="success"
+      @click="handleApprove"
+    >
+      审批
+    </el-button>
+
+    <el-button
+      v-if="canPayment(expense)"
+      type="warning"
+      @click="handlePayment"
+    >
+      执行打款
+    </el-button>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useExpenseDict } from '../composables/useExpenseDict'
+import { useExpensePermission } from '../composables/useExpensePermission'
+
+const props = defineProps<{
+  expense: any
+}>()
+
+const {
+  getStatusLabel,
+  getTypeLabel
+} = useExpenseDict()
+
+const {
+  hasPermission,
+  canEditExpense,
+  canApproveExpense,
+  canPayment
+} = useExpensePermission()
+
+// 银行账户显示控制
+const showBankAccount = computed(() => {
+  return hasPermission('expense:view_all') ||
+         (hasPermission('expense:view_own') &&
+          props.expense.applicantId === authStore.currentUser?.id)
+})
+
+function getStatusTagType(status: string) {
+  const typeMap: Record<string, string> = {
+    draft: 'info',
+    dept_pending: 'warning',
+    finance_pending: 'warning',
+    rejected: 'danger',
+    paid: 'success'
+  }
+  return typeMap[status] || 'info'
+}
+
+function handleEdit() {
+  // 编辑
+}
+
+function handleApprove() {
+  // 审批
+}
+
+function handlePayment() {
+  // 打款
+}
+</script>
+```
+
+### 9.4 表单权限控制
+
+```vue
+<!-- src/modules/expense/components/ExpenseForm.vue -->
+<template>
+  <el-form :model="form" :rules="rules" ref="formRef" label-width="120px">
+    <!-- 基本信息 -->
+    <el-form-item label="报销类型" prop="type">
+      <el-select v-model="form.type" placeholder="请选择报销类型">
+        <el-option
+          v-for="item in expenseTypeOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+    </el-form-item>
+
+    <el-form-item label="报销事由" prop="reason">
+      <el-input
+        v-model="form.reason"
+        type="textarea"
+        :rows="3"
+        placeholder="请输入报销事由"
+        :disabled="formDisabled"
+      />
+    </el-form-item>
+
+    <!-- 费用明细 -->
+    <el-form-item label="费用明细">
+      <div v-for="(item, index) in form.items" :key="index" class="expense-item">
+        <el-input v-model="item.description" placeholder="费用说明" :disabled="formDisabled" />
+        <el-input-number v-model="item.amount" :precision="2" :disabled="formDisabled" />
+        <el-date-picker v-model="item.date" :disabled="formDisabled" />
+      </div>
+    </el-form-item>
+
+    <!-- 发票信息 - 仅财务可编辑 -->
+    <el-form-item label="发票信息">
+      <div v-for="(invoice, index) in form.invoices" :key="index" class="invoice-item">
+        <el-select v-model="invoice.type" :disabled="!canEditInvoice">
+          <el-option
+            v-for="type in invoiceTypeOptions"
+            :key="type.value"
+            :label="type.label"
+            :value="type.value"
+          />
+        </el-select>
+        <el-input v-model="invoice.number" placeholder="发票号码" :disabled="!canEditInvoice" />
+        <el-input-number v-model="invoice.amount" :precision="2" :disabled="!canEditInvoice" />
+      </div>
+    </el-form-item>
+
+    <!-- 打款凭证 - 仅财务可上传 -->
+    <el-form-item v-if="hasPermission('expense:payment')" label="打款凭证">
+      <el-upload
+        :action="uploadUrl"
+        :headers="uploadHeaders"
+        :on-success="handleUploadSuccess"
+      >
+        <el-button type="primary">上传打款凭证</el-button>
+      </el-upload>
+    </el-form-item>
+
+    <el-form-item>
+      <el-button
+        v-if="!formDisabled"
+        type="primary"
+        @click="handleSubmit"
+      >
+        提交
+      </el-button>
+      <el-button @click="handleCancel">取消</el-button>
+    </el-form-item>
+  </el-form>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useExpenseDict } from '../composables/useExpenseDict'
+import { useExpensePermission } from '../composables/useExpensePermission'
+
+const props = defineProps<{
+  expense?: any
+}>()
+
+const emit = defineEmits(['submit', 'cancel'])
+
+const {
+  expenseTypeOptions,
+  invoiceTypeOptions
+} = useExpenseDict()
+
+const { hasPermission } = useExpensePermission()
+
+const form = ref({
+  type: '',
+  reason: '',
+  items: [],
+  invoices: []
+})
+
+const formRef = ref()
+
+// 表单是否禁用(草稿可编辑,其他状态不可编辑)
+const formDisabled = computed(() => {
+  return props.expense && props.expense.status !== 'draft'
+})
+
+// 是否可以编辑发票信息
+const canEditInvoice = computed(() => {
+  return !formDisabled.value || hasPermission('expense:manage_invoice')
+})
+
+function handleSubmit() {
+  formRef.value?.validate((valid: boolean) => {
+    if (valid) {
+      emit('submit', form.value)
+    }
+  })
+}
+
+function handleCancel() {
+  emit('cancel')
+}
+
+function handleUploadSuccess(response: any) {
+  console.log('上传成功', response)
+}
+</script>
+```
+
+### 9.5 API请求权限拦截
+
+```typescript
+// src/utils/request.ts
+
+import axios from 'axios'
+import { useAuthStore } from '@/modules/auth/store'
+
+// 创建axios实例
+const http = axios.create({
+  baseURL: '/api',
+  timeout: 10000
+})
+
+// 请求拦截器
+http.interceptors.request.use(
+  (config) => {
+    const authStore = useAuthStore()
+
+    // 添加Token
+    if (authStore.token) {
+      config.headers.Authorization = `Bearer ${authStore.token}`
+    }
+
+    // 记录审计日志
+    if (config.method === 'post' || config.method === 'put' || config.method === 'delete') {
+      console.log(`[API Audit] ${config.method?.toUpperCase()} ${config.url}`, {
+        user: authStore.currentUser?.id,
+        timestamp: new Date().toISOString()
+      })
+    }
+
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// 响应拦截器
+http.interceptors.response.use(
+  (response) => {
+    return response.data
+  },
+  (error) => {
+    if (error.response?.status === 403) {
+      console.error('[Permission Error] 无权限访问:', error.config.url)
+    }
+    return Promise.reject(error)
+  }
+)
+
+export { http }
+```
+
+---
+
+**文档版本**: v1.1.0
+**最后更新**: 2026-01-10

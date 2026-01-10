@@ -49,10 +49,6 @@
 │   │   │         登 录                            │     │   │
 │   │   └─────────────────────────────────────────┘     │   │
 │   │                                                   │   │
-│   │   ──────── 其他登录方式 ────────                  │   │
-│   │                                                   │   │
-│   │   [企业微信]    [钉钉]                            │   │
-│   │                                                   │   │
 │   └───────────────────────────────────────────────────┘   │
 │                                                            │
 │           © 2026 Company Name                             │
@@ -69,7 +65,6 @@
 - **辅助链接**: 右对齐(注册账号、忘记密码)
 - **表单项**: 垂直排列,间距24px
 - **登录按钮**: 宽度100%,高度44px,主色调
-- **第三方登录**: 图标+文字,灰色样式
 
 ### 1.2 找回密码页布局
 
@@ -290,21 +285,6 @@
         >
           登 录
         </el-button>
-
-        <!-- 第三方登录 -->
-        <div class="third-party-login">
-          <el-divider>其他登录方式</el-divider>
-          <div class="third-party-buttons">
-            <el-button plain class="third-party-button">
-              <img src="/icons/wechat.png" alt="企业微信" />
-              企业微信
-            </el-button>
-            <el-button plain class="third-party-button">
-              <img src="/icons/dingtalk.png" alt="钉钉" />
-              钉钉
-            </el-button>
-          </div>
-        </div>
       </el-form>
     </el-card>
 
@@ -463,27 +443,6 @@ const handleLogin = async () => {
   height: 44px;
   font-size: 16px;
   margin-bottom: 24px;
-}
-
-.third-party-login {
-  .third-party-buttons {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-
-    .third-party-button {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-
-      img {
-        width: 20px;
-        height: 20px;
-      }
-    }
-  }
 }
 
 .login-footer {

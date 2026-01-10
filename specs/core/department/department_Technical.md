@@ -1059,6 +1059,520 @@ function handleDepartmentError(error: any) {
 
 ---
 
-**文档版本**: v1.0.0
+## 8. 数据字典集成实现
+
+### 8.1 数据字典API封装
+
+```typescript
+// src/modules/dict/api/index.ts
+import { http } from '@/utils/request'
+
+/**
+ * 数据字典项
+ */
+interface DictItem {
+  label: string
+  value: string
+  color?: string
+  icon?: string
+  sort?: number
+}
+
+/**
+ * 获取字典列表
+ * @param dictCode 字典编码
+ */
+export function getDictList(dictCode: string): Promise<DictItem[]> {
+  return http.get<DictItem[]>(`/api/dict/${dictCode}`)
+}
+
+/**
+ * 批量获取字典
+ * @param dictCodes 字典编码数组
+ */
+export function getDictBatch(dictCodes: string[]): Promise<Record<string, DictItem[]>> {
+  return http.post<Record<string, DictItem[]>>('/api/dict/batch', { dictCodes })
+}
+
+/**
+ * 获取字典标签
+ * @param dictCode 字典编码
+ * @param value 字典值
+ */
+export function getDictLabel(dictCode: string, value: string): string {
+  const dictStore = useDictStore()
+  return dictStore.getLabel(dictCode, value)
+}
+```
+
+### 8.2 Pinia字典Store
+
+```typescript
+// src/modules/dict/store/index.ts
+import { defineStore } from 'pinia'
+import { getDictBatch } from '../api'
+import type { DictItem } from '../types'
+
+export const useDictStore = defineStore('dict', () => {
+  const dictData = ref<Record<string, DictItem[]>>({})
+  const cacheTime = ref<Record<string, number>>({})
+
+  const CACHE_DURATION = 30 * 60 * 1000 // 30分钟
+
+  /**
+   * 批量加载字典
+   */
+  async function loadDicts(dictCodes: string[]): Promise<void> {
+    const now = Date.now()
+    const needLoad = dictCodes.filter(code => {
+      const cached = cacheTime.value[code]
+      return !cached || (now - cached > CACHE_DURATION)
+    })
+
+    if (needLoad.length === 0) return
+
+    const data = await getDictBatch(needLoad)
+
+    for (const [code, items] of Object.entries(data)) {
+      dictData.value[code] = items
+      cacheTime.value[code] = now
+    }
+  }
+
+  /**
+   * 获取字典列表
+   */
+  function getDictList(dictCode: string): DictItem[] {
+    return dictData.value[dictCode] || []
+  }
+
+  /**
+   * 获取字典标签
+   */
+  function getLabel(dictCode: string, value: string): string {
+    const list = getDictList(dictCode)
+    const item = list.find(d => d.value === value)
+    return item?.label || value
+  }
+
+  /**
+   * 刷新字典
+   */
+  async function refreshDict(dictCode: string): Promise<void> {
+    delete cacheTime.value[dictCode]
+    await loadDicts([dictCode])
+  }
+
+  return {
+    dictData,
+    loadDicts,
+    getDictList,
+    getLabel,
+    refreshDict
+  }
+})
+```
+
+### 8.3 部门模块中使用字典
+
+```typescript
+// src/modules/department/composables/useDict.ts
+import { useDictStore } from '@/modules/dict/store'
+
+export function useDepartmentDict() {
+  const dictStore = useDictStore()
+
+  // 预加载部门模块所需字典
+  onMounted(async () => {
+    await dictStore.loadDicts([
+      'department_status'
+    ])
+  })
+
+  // 获取字典选项
+  const statusOptions = computed(() => dictStore.getDictList('department_status'))
+
+  // 动态加载部门类型字典
+  async function loadTypeOptions() {
+    await dictStore.loadDicts(['department_type'])
+    return dictStore.getDictList('department_type')
+  }
+
+  // 动态加载部门层级字典
+  async function loadLevelOptions() {
+    await dictStore.loadDicts(['department_level'])
+    return dictStore.getDictList('department_level')
+  }
+
+  // 获取状态显示文本
+  function getStatusLabel(value: string): string {
+    return dictStore.getLabel('department_status', value)
+  }
+
+  function getTypeLabel(value: string): string {
+    return dictStore.getLabel('department_type', value)
+  }
+
+  function getLevelLabel(value: string): string {
+    return dictStore.getLabel('department_level', value)
+  }
+
+  return {
+    statusOptions,
+    loadTypeOptions,
+    loadLevelOptions,
+    getStatusLabel,
+    getTypeLabel,
+    getLevelLabel
+  }
+}
+```
+
+### 8.4 筛选面板中使用字典
+
+```vue
+<!-- src/modules/department/components/DepartmentFilter.vue -->
+<script setup lang="ts">
+import { useDepartmentDict } from '../composables/useDict'
+
+const {
+  statusOptions,
+  loadTypeOptions
+} = useDepartmentDict()
+
+const filterForm = ref({
+  status: '',
+  type: ''
+})
+
+// 加载类型选项
+onMounted(async () => {
+  typeOptions.value = await loadTypeOptions()
+})
+</script>
+
+<template>
+  <el-form :model="filterForm">
+    <el-form-item label="部门状态">
+      <el-select v-model="filterForm.status" clearable>
+        <el-option
+          v-for="item in statusOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+    </el-form-item>
+
+    <el-form-item label="部门类型">
+      <el-select v-model="filterForm.type" clearable>
+        <el-option
+          v-for="item in typeOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+    </el-form-item>
+  </el-form>
+</template>
+```
+
+---
+
+## 9. 权限管理集成实现
+
+### 9.1 权限Store扩展
+
+```typescript
+// src/modules/auth/store/index.ts (扩展)
+import { useAuthStore } from '@/modules/auth/store'
+
+export function useDepartmentPermission() {
+  const authStore = useAuthStore()
+
+  /**
+   * 检查部门管理权限
+   */
+  function hasPermission(permission: string): boolean {
+    return authStore.hasPermission(permission)
+  }
+
+  /**
+   * 检查是否可以编辑指定部门
+   */
+  function canEditDepartment(targetDepartment: Department): boolean {
+    // 系统管理员可以编辑所有部门
+    if (hasPermission('department:edit_all')) {
+      return true
+    }
+
+    // 部门管理员可以编辑本部门
+    if (hasPermission('department:edit')) {
+      const currentUser = authStore.userInfo
+      return targetDepartment.id === currentUser?.departmentId
+    }
+
+    return false
+  }
+
+  /**
+   * 检查是否可以查看指定部门
+   */
+  function canViewDepartment(targetDepartment: Department): boolean {
+    // 系统管理员可以查看所有部门
+    if (hasPermission('department:view_all')) {
+      return true
+    }
+
+    // 部门管理员可以查看本部门及下级部门
+    if (hasPermission('department:view_department')) {
+      const currentUser = authStore.userInfo
+      return isChildDepartment(targetDepartment.id, currentUser?.departmentId)
+    }
+
+    // 普通员工只能查看本部门
+    const currentUser = authStore.userInfo
+    return targetDepartment.id === currentUser?.departmentId
+  }
+
+  /**
+   * 过滤部门列表(数据权限)
+   */
+  function filterDepartmentList(departments: Department[]): Department[] {
+    if (hasPermission('department:view_all')) {
+      return departments
+    }
+
+    if (hasPermission('department:view_department')) {
+      const currentUser = authStore.userInfo
+      // 返回本部门及所有下级部门
+      return departments.filter(d =>
+        d.id === currentUser?.departmentId ||
+        isChildDepartment(d.id, currentUser?.departmentId)
+      )
+    }
+
+    // 仅本部门
+    const currentUser = authStore.userInfo
+    return departments.filter(d => d.id === currentUser?.departmentId)
+  }
+
+  /**
+   * 判断是否为子部门
+   */
+  function isChildDepartment(departmentId: string, parentId: string): boolean {
+    // 递归检查部门树结构
+    const department = departmentStore.list.find(d => d.id === parentId)
+    if (!department) return false
+
+    if (department.id === departmentId) return true
+    if (department.children) {
+      return department.children.some((child: Department) =>
+        isChildDepartment(departmentId, child.id)
+      )
+    }
+
+    return false
+  }
+
+  return {
+    hasPermission,
+    canEditDepartment,
+    canViewDepartment,
+    filterDepartmentList
+  }
+}
+```
+
+### 9.2 列表页权限控制
+
+```vue
+<!-- src/modules/department/views/DepartmentList.vue -->
+<script setup lang="ts">
+import { useDepartmentPermission } from '../composables/useDepartmentPermission'
+
+const {
+  hasPermission,
+  filterDepartmentList
+} = useDepartmentPermission()
+
+// 权限判断
+const canCreate = computed(() => hasPermission('department:create'))
+const canExport = computed(() => hasPermission('department:export'))
+const canDelete = computed(() => hasPermission('department:delete'))
+
+// 原始数据
+const allDepartments = ref<Department[]>([])
+
+// 应用数据权限过滤
+const departments = computed(() => filterDepartmentList(allDepartments.value))
+</script>
+
+<template>
+  <div class="department-list">
+    <!-- 操作栏 -->
+    <div class="toolbar">
+      <el-button
+        v-if="canCreate"
+        type="primary"
+        @click="handleCreate"
+      >
+        新增部门
+      </el-button>
+
+      <el-button
+        v-if="canExport"
+        @click="handleExport"
+      >
+        导出列表
+      </el-button>
+    </div>
+
+    <!-- 部门树形表格 -->
+    <el-table :data="departments" row-key="id" :tree-props="{ children: 'children' }">
+      <el-table-column prop="name" label="部门名称" />
+      <el-table-column prop="shortName" label="简称" />
+      <el-table-column prop="leaderName" label="负责人" />
+      <el-table-column prop="level" label="层级" />
+      <el-table-column prop="employeeCount" label="人数" />
+
+      <el-table-column label="操作" fixed="right">
+        <template #default="{ row }">
+          <el-button
+            v-if="hasPermission('department:edit')"
+            link
+            @click="handleEdit(row)"
+          >
+            编辑
+          </el-button>
+
+          <el-button
+            v-if="hasPermission('department:move')"
+            link
+            @click="handleMove(row)"
+          >
+            移动
+          </el-button>
+
+          <el-button
+            v-if="canDelete"
+            link
+            type="danger"
+            @click="handleDelete(row)"
+          >
+            删除
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </div>
+</template>
+```
+
+### 9.3 表单权限控制
+
+```vue
+<!-- src/modules/department/components/DepartmentForm.vue -->
+<script setup lang="ts">
+import { useDepartmentPermission } from '../composables/useDepartmentPermission'
+
+const {
+  canEditDepartment
+} = useDepartmentPermission()
+
+const isEdit = ref(false)
+const department = ref<Department>(null)
+
+// 表单权限
+const formDisabled = computed(() => {
+  if (isEdit.value) {
+    return !canEditDepartment(department.value)
+  }
+  return false
+})
+
+// 字段级权限
+const canEditSort = computed(() => hasPermission('department:edit_all'))
+const canEditLevel = computed(() => hasPermission('department:edit_all'))
+</script>
+
+<template>
+  <el-form :disabled="formDisabled">
+    <!-- 基本信息 -->
+    <el-form-item label="部门名称">
+      <el-input v-model="form.name" />
+    </el-form-item>
+
+    <el-form-item label="部门简称">
+      <el-input v-model="form.shortName" />
+    </el-form-item>
+
+    <el-form-item label="部门负责人">
+      <el-select v-model="form.leaderId" filterable>
+        <el-option
+          v-for="emp in employeeList"
+          :key="emp.id"
+          :label="emp.name"
+          :value="emp.id"
+        />
+      </el-select>
+    </el-form-item>
+
+    <!-- 敏感字段: 仅系统管理员可编辑 -->
+    <el-form-item v-if="canEditLevel" label="层级">
+      <el-input-number v-model="form.level" :min="1" :max="5" />
+    </el-form-item>
+
+    <el-form-item v-if="canEditSort" label="排序号">
+      <el-input-number v-model="form.sort" :min="0" />
+    </el-form-item>
+  </el-form>
+</template>
+```
+
+### 9.4 API请求权限拦截
+
+```typescript
+// src/utils/request.ts (扩展)
+import { useAuthStore } from '@/modules/auth/store'
+
+service.interceptors.request.use(
+  (config) => {
+    const authStore = useAuthStore()
+
+    // 自动添加Token
+    if (authStore.accessToken) {
+      config.headers.Authorization = `Bearer ${authStore.accessToken}`
+    }
+
+    // 记录请求权限(用于审计)
+    config.metadata = {
+      permission: getPermissionFromUrl(config.url),
+      userId: authStore.userInfo?.id,
+      timestamp: Date.now()
+    }
+
+    return config
+  },
+  (error) => Promise.reject(error)
+)
+
+// 根据URL推断所需权限
+function getPermissionFromUrl(url: string): string {
+  if (url.includes('/departments')) {
+    if (url.includes('POST')) return 'department:create'
+    if (url.includes('PUT') && url.includes('/move')) return 'department:move'
+    if (url.includes('PUT')) return 'department:edit'
+    if (url.includes('DELETE')) return 'department:delete'
+    return 'department:view'
+  }
+  return ''
+}
+```
+
+---
+
+**文档版本**: v1.1.0
 **创建人**: AI开发助手
-**最后更新**: 2026-01-09
+**最后更新**: 2026-01-10

@@ -5,10 +5,10 @@
 
 import type { Router } from 'vue-router'
 import { usePermissionStore } from '@/modules/permission/store'
-// import { useUserStore } from '@/stores/user'
+import { useAuthStore } from '@/modules/auth/store'
 
 // 白名单路由(不需要权限)
-const whiteList = ['/login', '/404', '/403']
+const whiteList = ['/login', '/reset-password', '/404', '/403']
 
 /**
  * 设置路由权限守卫
@@ -16,16 +16,16 @@ const whiteList = ['/login', '/404', '/403']
  */
 export function setupPermissionGuard(router: Router) {
   router.beforeEach(async (to, from, next) => {
-    // const userStore = useUserStore()
+    const authStore = useAuthStore()
     const permissionStore = usePermissionStore()
 
-    // 检查是否登录
-    const userId = localStorage.getItem('userId')
-    const isLoggedIn = !!userId
+    // 检查是否已登录
+    const isLoggedIn = authStore.isAuthenticated()
 
     if (isLoggedIn) {
-      if (to.path === '/login') {
-        // 已登录,跳转到首页
+      // 已登录
+      if (to.path === '/login' || to.path === '/reset-password') {
+        // 已登录,访问登录页则跳转到首页
         next({ path: '/' })
       } else {
         // 检查是否已加载权限
@@ -34,20 +34,12 @@ export function setupPermissionGuard(router: Router) {
             // 加载用户权限
             await permissionStore.loadUserPermissions()
 
-            // 动态生成可访问路由
-            // const accessRoutes = await permissionStore.generateRoutes()
-
-            // 添加路由
-            // accessRoutes.forEach(route => {
-            //   router.addRoute(route)
-            // })
-
-            // 确保addRoute完成后跳转
+            // 确保权限加载完成后跳转
             next({ ...to, replace: true })
           } catch (error) {
             // 权限加载失败,退出登录
             console.error('权限加载失败:', error)
-            localStorage.removeItem('userId')
+            await authStore.logout()
             next(`/login?redirect=${to.path}`)
           }
         } else {

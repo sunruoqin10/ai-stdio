@@ -230,6 +230,242 @@ stateDiagram-v2
 
 ---
 
+### 3.4 字段级权限控制
+
+| 字段 | 普通员工 | 部门审批人 | 财务审批人 | 系统管理员 |
+|------|---------|-----------|-----------|-----------|
+| 基本信息(类型/事由/日期) | ✅ 查看/编辑(自己) | ✅ 查看 | ✅ 查看 | ✅ 查看/编辑 |
+| 报销金额 | ✅ 查看(自己) | ✅ 查看 | ✅ 查看 | ✅ 查看/编辑 |
+| 费用明细 | ✅ 查看/编辑(自己) | ✅ 查看 | ✅ 查看 | ✅ 查看/编辑 |
+| 发票信息 | ✅ 查看/编辑(自己) | ✅ 查看 | ✅ 查看/验证 | ✅ 查看/编辑 |
+| 银行账户信息 | ✅ 查看(自己) | ❌ | ✅ 查看 | ✅ 查看/编辑 |
+| 打款凭证 | ✅ 查看(自己) | ❌ | ✅ 查看/上传 | ✅ 查看/编辑 |
+| 审批意见 | ✅ 查看 | ✅ 查看/填写 | ✅ 查看/填写 | ✅ 查看/填写 |
+
+---
+
+### 3.5 数据字典集成
+
+#### 3.5.1 依赖的数据字典类型
+
+费用报销模块依赖以下数据字典类型:
+
+| 字典类型 | 字典编码 | 用途 | 是否必填 |
+|---------|---------|------|---------|
+| 报销类型 | `expense_type` | 报销类型分类(差旅费/招待费/办公用品/交通费/其他) | ✅ |
+| 报销状态 | `expense_status` | 报销单状态(草稿/待审批/已驳回/待打款/已完成) | ✅ |
+| 发票类型 | `invoice_type` | 发票类型(增值税专用发票/增值税普通发票/电子发票) | ✅ |
+| 打款方式 | `payment_method` | 打款方式(银行转账/现金/支票) | ❌ |
+| 打款状态 | `payment_status` | 打款状态(待打款/打款中/已完成/打款失败) | ✅ |
+| 费用分类 | `expense_category` | 费用明细分类(交通/住宿/餐饮/办公等) | ❌ |
+
+#### 3.5.2 数据字典使用场景
+
+**1. 报销类型选择**
+```typescript
+// 从数据字典加载报销类型选项
+const expenseTypeOptions = [
+  { label: '差旅费', value: 'travel', dictCode: 'expense_type' },
+  { label: '招待费', value: 'hospitality', dictCode: 'expense_type' },
+  { label: '办公用品', value: 'office', dictCode: 'expense_type' },
+  { label: '交通费', value: 'transport', dictCode: 'expense_type' },
+  { label: '其他费用', value: 'other', dictCode: 'expense_type' }
+]
+```
+
+**2. 报销状态筛选**
+```typescript
+// 从数据字典加载报销状态选项
+const statusOptions = [
+  { label: '草稿', value: 'draft', dictCode: 'expense_status' },
+  { label: '待部门审批', value: 'dept_pending', dictCode: 'expense_status' },
+  { label: '待财务审批', value: 'finance_pending', dictCode: 'expense_status' },
+  { label: '已驳回', value: 'rejected', dictCode: 'expense_status' },
+  { label: '待打款', value: 'pending', dictCode: 'expense_status' },
+  { label: '已完成', value: 'paid', dictCode: 'expense_status' }
+]
+```
+
+**3. 发票类型选择**
+```typescript
+// 从数据字典加载发票类型选项
+const invoiceTypeOptions = await getDictList('invoice_type')
+// 返回: [{ label: '增值税专用发票', value: 'vat_special' }, { label: '增值税普通发票', value: 'vat_common' }, ...]
+```
+
+**4. 状态标签显示**
+```typescript
+// 从数据字典获取显示文本
+const statusText = getDictLabel('expense_status', 'paid') // "已完成"
+const invoiceTypeText = getDictLabel('invoice_type', 'vat_special') // "增值税专用发票"
+```
+
+**5. 费用分类选择**
+```typescript
+// 费用明细分类
+const categoryOptions = await getDictList('expense_category')
+// 返回: [{ label: '交通费', value: 'transport' }, { label: '住宿费', value: 'accommodation' }, ...]
+```
+
+#### 3.5.3 数据字典初始化要求
+
+- **模块加载时**: 预加载报销类型、报销状态、发票类型字典
+- **表单编辑时**: 动态加载费用分类字典
+- **筛选面板**: 使用缓存的字典数据
+- **字典刷新**: 监听字典变更事件,自动更新界面显示
+
+#### 3.5.4 数据字典缓存策略
+
+```typescript
+// 字典数据缓存管理
+const dictCache = {
+  // 常用字典: 启动时预加载
+  preload: ['expense_type', 'expense_status', 'invoice_type'],
+
+  // 低频字典: 按需加载
+  onDemand: ['payment_method', 'expense_category'],
+
+  // 缓存过期时间: 30分钟
+  expireTime: 30 * 60 * 1000
+}
+```
+
+---
+
+### 3.6 权限管理集成
+
+#### 3.6.1 费用报销权限定义
+
+| 权限编码 | 权限名称 | 权限描述 | 依赖角色 |
+|---------|---------|---------|---------|
+| `expense:create` | 创建报销单 | 创建新的报销申请 | 所有员工 |
+| `expense:view_own` | 查看自己的报销单 | 查看自己提交的报销单 | 所有员工 |
+| `expense:view_department` | 查看部门报销单 | 查看本部门员工的报销单 | 部门审批人/管理员 |
+| `expense:view_all` | 查看所有报销单 | 查看公司所有报销单 | 财务审批人/管理员 |
+| `expense:edit_own` | 编辑自己的报销单 | 编辑草稿状态的报销单 | 所有员工 |
+| `expense:delete_own` | 删除自己的报销单 | 删除草稿状态的报销单 | 所有员工 |
+| `expense:dept_approve` | 部门审批 | 审批部门报销单 | 部门审批人/管理员 |
+| `expense:finance_approve` | 财务审批 | 财务审批并打款 | 财务审批人/管理员 |
+| `expense:payment` | 打款操作 | 执行打款并上传凭证 | 财务审批人/管理员 |
+| `expense:view_statistics` | 查看统计报表 | 查看报销统计数据 | 部门审批人/财务审批人/管理员 |
+| `expense:export` | 导出数据 | 导出报销数据 | 财务审批人/管理员 |
+| `expense:manage_invoice` | 验证发票 | 验证发票合规性和唯一性 | 财务审批人/管理员 |
+
+#### 3.6.2 功能权限矩阵
+
+| 功能 | 普通员工 | 部门审批人 | 财务审批人 | 系统管理员 |
+|------|---------|-----------|-----------|-----------|
+| 创建报销单 | ✅ expense:create | ✅ expense:create | ✅ expense:create | ✅ expense:create |
+| 查看自己报销单 | ✅ expense:view_own | ✅ expense:view_own | ✅ expense:view_own | ✅ expense:view_own |
+| 编辑草稿报销单 | ✅ expense:edit_own | ✅ expense:edit_own | ✅ expense:edit_own | ✅ expense:edit_own |
+| 删除草稿报销单 | ✅ expense:delete_own | ✅ expense:delete_own | ✅ expense:delete_own | ✅ expense:delete_own |
+| 查看部门报销单 | ❌ | ✅ expense:view_department | ❌ | ✅ expense:view_department |
+| 查看所有报销单 | ❌ | ❌ | ✅ expense:view_all | ✅ expense:view_all |
+| 部门审批 | ❌ | ✅ expense:dept_approve | ❌ | ✅ expense:dept_approve |
+| 财务审批 | ❌ | ❌ | ✅ expense:finance_approve | ✅ expense:finance_approve |
+| 打款操作 | ❌ | ❌ | ✅ expense:payment | ✅ expense:payment |
+| 查看统计报表 | ❌ | ✅ expense:view_statistics | ✅ expense:view_statistics | ✅ expense:view_statistics |
+| 导出数据 | ❌ | ❌ | ✅ expense:export | ✅ expense:export |
+| 验证发票 | ❌ | ❌ | ✅ expense:manage_invoice | ✅ expense:manage_invoice |
+
+#### 3.6.3 权限检查实现
+
+```typescript
+// 权限检查函数
+function checkPermission(permission: string): boolean {
+  const authStore = useAuthStore()
+  return authStore.hasPermission(permission)
+}
+
+// 使用示例
+const canCreate = computed(() => checkPermission('expense:create'))
+const canDeptApprove = computed(() => checkPermission('expense:dept_approve'))
+const canFinanceApprove = computed(() => checkPermission('expense:finance_approve'))
+
+// 数据权限过滤
+const filteredExpenses = computed(() => {
+  if (checkPermission('expense:view_all')) {
+    return expenseList.value // 返回所有报销单
+  } else if (checkPermission('expense:view_department')) {
+    // 只返回本部门的报销单
+    return expenseList.value.filter(e => e.departmentId === currentUser.departmentId)
+  } else {
+    // 只返回自己的报销单
+    return expenseList.value.filter(e => e.applicantId === currentUser.id)
+  }
+})
+```
+
+#### 3.6.4 按钮级权限控制
+
+```vue
+<!-- 根据权限显示/隐藏按钮 -->
+<el-button
+  v-if="hasPermission('expense:create')"
+  @click="handleCreate"
+>
+  新增报销单
+</el-button>
+
+<el-button
+  v-if="hasPermission('expense:dept_approve') && row.status === 'dept_pending'"
+  type="primary"
+  @click="handleDeptApprove(row)"
+>
+  部门审批
+</el-button>
+
+<el-button
+  v-if="hasPermission('expense:finance_approve') && row.status === 'finance_pending'"
+  type="success"
+  @click="handleFinanceApprove(row)"
+>
+  财务审批
+</el-button>
+
+<el-button
+  v-if="hasPermission('expense:payment') && row.status === 'pending'"
+  type="warning"
+  @click="handlePayment(row)"
+>
+  执行打款
+</el-button>
+
+<el-button
+  v-if="hasPermission('expense:export')"
+  @click="handleExport"
+>
+  导出数据
+</el-button>
+```
+
+#### 3.6.5 字段级权限控制
+
+```typescript
+// 敏感字段权限判断
+const fieldPermissions = {
+  bankAccount: {
+    visible: computed(() => {
+      return checkPermission('expense:view_all') ||
+             (checkPermission('expense:view_own') && isOwnExpense())
+    })
+  },
+  paymentProof: {
+    editable: computed(() => checkPermission('expense:payment'))
+  }
+}
+
+// 表单中使用
+const showBankAccount = computed(() => {
+  return checkPermission('expense:view_all') ||
+         (checkPermission('expense:view_own') && expense.value.applicantId === currentUser.id)
+})
+
+const canUploadProof = computed(() => checkPermission('expense:payment'))
+```
+
+---
+
 ## 4. 用户故事
 
 ### 4.1 作为员工,我希望

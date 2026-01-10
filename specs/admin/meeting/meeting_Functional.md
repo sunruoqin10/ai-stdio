@@ -133,7 +133,214 @@
 - 管理会议室信息
 - 设置会议室可用状态
 
-### 3.3 冲突处理规则
+#### 3.2.3 字段级权限控制
+
+| 字段 | 普通用户 | 管理员 |
+|------|---------|--------|
+| 基本信息(主题/时间/参会人) | ✅ 查看/编辑(自己) | ✅ 查看/编辑 |
+| 会议议程 | ✅ 查看/编辑(自己) | ✅ 查看/编辑 |
+| 设备需求 | ✅ 查看(自己) | ✅ 查看/编辑 |
+| 预定人信息 | ✅ 查看(自己) | ✅ 查看 |
+| 会议室状态 | ✅ 查看 | ✅ 查看/编辑 |
+| 会议室配置(容量/设备) | ✅ 查看 | ✅ 查看/编辑 |
+| 取消原因 | ✅ 查看/填写(自己) | ✅ 查看/填写 |
+
+---
+
+### 3.3 数据字典集成
+
+#### 3.3.1 依赖的数据字典类型
+
+会议室预定模块依赖以下数据字典类型:
+
+| 字典类型 | 字典编码 | 用途 | 是否必填 |
+|---------|---------|------|---------|
+| 预定状态 | `booking_status` | 预定状态(已预定/进行中/已完成/已取消) | ✅ |
+| 会议室类型 | `room_type` | 会议室分类(大会议室/小会议室/培训室) | ✅ |
+| 设备类型 | `equipment_type` | 会议室设备(投影仪/白板/视频会议/饮水机) | ❌ |
+| 时间段 | `time_slot` | 时间段选项(按小时/按半天) | ❌ |
+
+#### 3.3.2 数据字典使用场景
+
+**1. 预定状态筛选**
+```typescript
+// 从数据字典加载预定状态选项
+const statusOptions = [
+  { label: '已预定', value: 'booked', dictCode: 'booking_status' },
+  { label: '进行中', value: 'in_progress', dictCode: 'booking_status' },
+  { label: '已完成', value: 'completed', dictCode: 'booking_status' },
+  { label: '已取消', value: 'cancelled', dictCode: 'booking_status' }
+]
+```
+
+**2. 会议室类型选择**
+```typescript
+// 从数据字典加载会议室类型选项
+const roomTypeOptions = await getDictList('room_type')
+// 返回: [{ label: '大会议室', value: 'large' }, { label: '小会议室', value: 'small' }, ...]
+```
+
+**3. 设备类型选择**
+```typescript
+// 从数据字典加载设备类型选项
+const equipmentOptions = await getDictList('equipment_type')
+// 返回: [{ label: '投影仪', value: 'projector' }, { label: '白板', value: 'whiteboard' }, ...]
+```
+
+**4. 状态标签显示**
+```typescript
+// 从数据字典获取显示文本
+const statusText = getDictLabel('booking_status', 'booked') // "已预定"
+```
+
+#### 3.3.3 数据字典初始化要求
+
+- **模块加载时**: 预加载预定状态、会议室类型字典
+- **表单编辑时**: 动态加载设备类型字典
+- **筛选面板**: 使用缓存的字典数据
+- **字典刷新**: 监听字典变更事件,自动更新界面显示
+
+#### 3.3.4 数据字典缓存策略
+
+```typescript
+// 字典数据缓存管理
+const dictCache = {
+  // 常用字典: 启动时预加载
+  preload: ['booking_status', 'room_type'],
+
+  // 低频字典: 按需加载
+  onDemand: ['equipment_type', 'time_slot'],
+
+  // 缓存过期时间: 30分钟
+  expireTime: 30 * 60 * 1000
+}
+```
+
+---
+
+### 3.4 权限管理集成
+
+#### 3.4.1 会议室管理权限定义
+
+| 权限编码 | 权限名称 | 权限描述 | 依赖角色 |
+|---------|---------|---------|---------|
+| `meeting:book` | 创建预定 | 创建会议室预定 | 所有用户 |
+| `meeting:view_own` | 查看自己的预定 | 查看自己创建的预定 | 所有用户 |
+| `meeting:view_all` | 查看所有预定 | 查看所有会议室预定 | 所有用户 |
+| `meeting:edit_own` | 编辑自己的预定 | 编辑自己的预定(需重新检测冲突) | 所有用户 |
+| `meeting:cancel_own` | 取消自己的预定 | 取消自己的预定 | 所有用户 |
+| `meeting:edit_all` | 编辑任何预定 | 编辑任何用户的预定 | 管理员 |
+| `meeting:cancel_all` | 取消任何预定 | 取消任何用户的预定 | 管理员 |
+| `meeting:manage_room` | 管理会议室 | 管理会议室信息、容量、设备、可用状态 | 管理员 |
+| `meeting:view_statistics` | 查看统计报表 | 查看会议室使用统计 | 管理员 |
+
+#### 3.4.2 功能权限矩阵
+
+| 功能 | 普通用户 | 管理员 |
+|------|---------|--------|
+| 创建预定 | ✅ meeting:book | ✅ meeting:book |
+| 查看所有预定 | ✅ meeting:view_all | ✅ meeting:view_all |
+| 编辑自己的预定 | ✅ meeting:edit_own | ✅ meeting:edit_own |
+| 取消自己的预定 | ✅ meeting:cancel_own | ✅ meeting:cancel_own |
+| 编辑任何预定 | ❌ | ✅ meeting:edit_all |
+| 取消任何预定 | ❌ | ✅ meeting:cancel_all |
+| 管理会议室信息 | ❌ | ✅ meeting:manage_room |
+| 设置会议室可用状态 | ❌ | ✅ meeting:manage_room |
+| 查看使用统计 | ❌ | ✅ meeting:view_statistics |
+
+#### 3.4.3 权限检查实现
+
+```typescript
+// 权限检查函数
+function checkPermission(permission: string): boolean {
+  const authStore = useAuthStore()
+  return authStore.hasPermission(permission)
+}
+
+// 使用示例
+const canBook = computed(() => checkPermission('meeting:book'))
+const canManageRoom = computed(() => checkPermission('meeting:manage_room'))
+
+// 数据权限过滤
+const filteredBookings = computed(() => {
+  // 所有预定都可以查看
+  return bookingList.value
+})
+
+// 操作权限过滤
+const canEditBooking = (booking: any) => {
+  return booking.bookerId === currentUser.id && checkPermission('meeting:edit_own') ||
+         checkPermission('meeting:edit_all')
+}
+
+const canCancelBooking = (booking: any) => {
+  return booking.bookerId === currentUser.id && checkPermission('meeting:cancel_own') ||
+         checkPermission('meeting:cancel_all')
+}
+```
+
+#### 3.4.4 按钮级权限控制
+
+```vue
+<!-- 根据权限显示/隐藏按钮 -->
+<el-button
+  v-if="hasPermission('meeting:book')"
+  type="primary"
+  @click="handleBook"
+>
+  预定会议室
+</el-button>
+
+<el-button
+  v-if="canEditBooking(row)"
+  size="small"
+  @click="handleEdit(row)"
+>
+  编辑
+</el-button>
+
+<el-button
+  v-if="canCancelBooking(row)"
+  type="danger"
+  size="small"
+  @click="handleCancel(row)"
+>
+  取消预定
+</el-button>
+
+<el-button
+  v-if="hasPermission('meeting:manage_room')"
+  @click="handleManageRoom"
+>
+  管理会议室
+</el-button>
+```
+
+#### 3.4.5 字段级权限控制
+
+```typescript
+// 敏感字段权限判断
+const fieldPermissions = {
+  roomStatus: {
+    editable: computed(() => checkPermission('meeting:manage_room'))
+  },
+  roomCapacity: {
+    editable: computed(() => checkPermission('meeting:manage_room'))
+  },
+  roomEquipment: {
+    editable: computed(() => checkPermission('meeting:manage_room'))
+  }
+}
+
+// 表单中使用
+const canEditRoomInfo = computed(() => {
+  return checkPermission('meeting:manage_room')
+})
+```
+
+---
+
+### 3.5 冲突处理规则
 
 #### 3.3.1 冲突定义
 - 同一会议室

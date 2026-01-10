@@ -142,3 +142,10 @@ export function checkDictCodeExists(code: string, excludeId?: string) {
 export function checkDictValueExists(dictTypeCode: string, value: string, excludeId?: string) {
   return mockApi.mockCheckDictValueExists(dictTypeCode, value, excludeId)
 }
+
+/**
+ * 根据字典类型编码获取字典数据
+ */
+export function getDictData(dictTypeCode: string) {
+  return mockApi.mockGetDictData(dictTypeCode)
+}

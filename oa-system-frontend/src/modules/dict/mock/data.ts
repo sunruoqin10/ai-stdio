@@ -86,6 +86,45 @@ export const mockDictTypes: DictType[] = [
     extProps: {},
     createdAt: '2026-01-01 10:00:00',
     updatedAt: '2026-01-01 10:00:00'
+  },
+  {
+    id: 'dict_type_007',
+    code: 'menu_type',
+    name: '菜单类型',
+    description: '系统菜单类型分类',
+    category: 'system',
+    itemCount: 4,
+    status: 'enabled',
+    sortOrder: 90,
+    extProps: {},
+    createdAt: '2026-01-01 10:00:00',
+    updatedAt: '2026-01-01 10:00:00'
+  },
+  {
+    id: 'dict_type_008',
+    code: 'menu_status',
+    name: '菜单状态',
+    description: '菜单启用状态',
+    category: 'system',
+    itemCount: 2,
+    status: 'enabled',
+    sortOrder: 91,
+    extProps: {},
+    createdAt: '2026-01-01 10:00:00',
+    updatedAt: '2026-01-01 10:00:00'
+  },
+  {
+    id: 'dict_type_009',
+    code: 'menu_target',
+    name: '链接打开方式',
+    description: '菜单链接打开方式',
+    category: 'system',
+    itemCount: 2,
+    status: 'enabled',
+    sortOrder: 92,
+    extProps: {},
+    createdAt: '2026-01-01 10:00:00',
+    updatedAt: '2026-01-01 10:00:00'
   }
 ]
 
@@ -93,6 +132,113 @@ export const mockDictTypes: DictType[] = [
  * Mock 字典项数据
  */
 export const mockDictItems: DictItem[] = [
+  // 菜单类型
+  {
+    id: 'dict_item_000',
+    dictTypeId: 'dict_type_007',
+    dictTypeCode: 'menu_type',
+    label: '目录',
+    value: 'directory',
+    colorType: 'primary',
+    sortOrder: 10,
+    status: 'enabled',
+    extProps: {},
+    createdAt: '2026-01-01 10:00:00',
+    updatedAt: '2026-01-01 10:00:00'
+  },
+  {
+    id: 'dict_item_0001',
+    dictTypeId: 'dict_type_007',
+    dictTypeCode: 'menu_type',
+    label: '菜单',
+    value: 'menu',
+    colorType: 'success',
+    sortOrder: 20,
+    status: 'enabled',
+    extProps: {},
+    createdAt: '2026-01-01 10:00:00',
+    updatedAt: '2026-01-01 10:00:00'
+  },
+  {
+    id: 'dict_item_0002',
+    dictTypeId: 'dict_type_007',
+    dictTypeCode: 'menu_type',
+    label: '页面',
+    value: 'page',
+    colorType: 'info',
+    sortOrder: 30,
+    status: 'enabled',
+    extProps: {},
+    createdAt: '2026-01-01 10:00:00',
+    updatedAt: '2026-01-01 10:00:00'
+  },
+  {
+    id: 'dict_item_0003',
+    dictTypeId: 'dict_type_007',
+    dictTypeCode: 'menu_type',
+    label: '按钮',
+    value: 'button',
+    colorType: 'warning',
+    sortOrder: 40,
+    status: 'enabled',
+    extProps: {},
+    createdAt: '2026-01-01 10:00:00',
+    updatedAt: '2026-01-01 10:00:00'
+  },
+  // 菜单状态
+  {
+    id: 'dict_item_0004',
+    dictTypeId: 'dict_type_008',
+    dictTypeCode: 'menu_status',
+    label: '启用',
+    value: 'enabled',
+    colorType: 'success',
+    sortOrder: 10,
+    status: 'enabled',
+    extProps: {},
+    createdAt: '2026-01-01 10:00:00',
+    updatedAt: '2026-01-01 10:00:00'
+  },
+  {
+    id: 'dict_item_0005',
+    dictTypeId: 'dict_type_008',
+    dictTypeCode: 'menu_status',
+    label: '禁用',
+    value: 'disabled',
+    colorType: 'info',
+    sortOrder: 20,
+    status: 'enabled',
+    extProps: {},
+    createdAt: '2026-01-01 10:00:00',
+    updatedAt: '2026-01-01 10:00:00'
+  },
+  // 链接打开方式
+  {
+    id: 'dict_item_0006',
+    dictTypeId: 'dict_type_009',
+    dictTypeCode: 'menu_target',
+    label: '当前窗口',
+    value: '_self',
+    colorType: 'primary',
+    sortOrder: 10,
+    status: 'enabled',
+    extProps: {},
+    createdAt: '2026-01-01 10:00:00',
+    updatedAt: '2026-01-01 10:00:00'
+  },
+  {
+    id: 'dict_item_0007',
+    dictTypeId: 'dict_type_009',
+    dictTypeCode: 'menu_target',
+    label: '新窗口',
+    value: '_blank',
+    colorType: 'success',
+    sortOrder: 20,
+    status: 'enabled',
+    extProps: {},
+    createdAt: '2026-01-01 10:00:00',
+    updatedAt: '2026-01-01 10:00:00'
+  },
   // 员工状态
   {
     id: 'dict_item_001',

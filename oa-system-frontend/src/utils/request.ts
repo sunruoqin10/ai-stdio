@@ -1,6 +1,7 @@
-import axios from 'axios'
-import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
+import axios, { AxiosError } from 'axios'
+import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
+import { useAuthStore } from '@/modules/auth/store'
 
 // 创建 axios 实例
 const service: AxiosInstance = axios.create({
@@ -13,12 +14,15 @@ const service: AxiosInstance = axios.create({
 
 // 请求拦截器
 service.interceptors.request.use(
-  (config) => {
-    // 在这里可以添加 token 等认证信息
-    // const token = localStorage.getItem('token')
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`
-    // }
+  (config: InternalAxiosRequestConfig) => {
+    // 添加Token到请求头
+    const authStore = useAuthStore()
+    const token = authStore.accessToken
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+
     return config
   },
   (error) => {
@@ -33,26 +37,63 @@ service.interceptors.response.use(
     const res = response.data
 
     // 这里假设后端返回格式为 { code: number, data: any, message: string }
-    // 如果是 Mock 数据,直接返回
+    // 如果是 Blob 数据,直接返回
     if (response.config.responseType === 'blob') {
       return response
     }
 
     return res
   },
-  (error) => {
+  async (error: AxiosError) => {
     console.error('Response error:', error)
 
-    if (error.response) {
+    const authStore = useAuthStore()
+
+    // 处理401未授权错误
+    if (error.response?.status === 401) {
+      const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
+
+      // 如果没有重试过,尝试刷新Token
+      if (!originalRequest._retry) {
+        originalRequest._retry = true
+
+        try {
+          // 尝试刷新Token
+          const success = await authStore.refreshAccessToken()
+
+          if (success) {
+            // 刷新成功,重试原请求
+            const newToken = authStore.accessToken
+            if (newToken) {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`
+            }
+            return service(originalRequest)
+          } else {
+            // 刷新失败,跳转登录页
+            ElMessage.error('登录已过期,请重新登录')
+            authStore.clearAuthState()
+            window.location.href = '/login'
+            return Promise.reject(error)
+          }
+        } catch (refreshError) {
+          console.error('Token刷新失败:', refreshError)
+          ElMessage.error('登录已过期,请重新登录')
+          authStore.clearAuthState()
+          window.location.href = '/login'
+          return Promise.reject(refreshError)
+        }
+      } else {
+        // 已经重试过,直接跳转登录页
+        ElMessage.error('登录已过期,请重新登录')
+        authStore.clearAuthState()
+        window.location.href = '/login'
+      }
+    } else if (error.response) {
       const { status, data } = error.response
 
       switch (status) {
         case 400:
-          ElMessage.error(data.message || '请求参数错误')
-          break
-        case 401:
-          ElMessage.error('未授权,请重新登录')
-          // 这里可以跳转到登录页
+          ElMessage.error((data as any)?.message || '请求参数错误')
           break
         case 403:
           ElMessage.error('拒绝访问')
@@ -64,7 +105,7 @@ service.interceptors.response.use(
           ElMessage.error('服务器错误')
           break
         default:
-          ElMessage.error(data.message || '网络错误')
+          ElMessage.error((data as any)?.message || '网络错误')
       }
     } else {
       ElMessage.error('网络连接失败')

@@ -872,42 +872,588 @@ const activeEmployees = computed(() =>
 <img v-lazy="employee.avatar" alt="头像" />
 ```
 
-### 5.3 权限控制实现
+### 5.3 数据字典集成实现
+
+#### 5.3.1 数据字典API封装
 
 ```typescript
-// 数据权限
-const dataPermissions = {
-  // 系统管理员: 查看所有员工
-  admin: {
-    canView: 'all',
-    canEdit: 'all',
-    canDelete: true
-  },
+// src/modules/dict/api/index.ts
+import { http } from '@/utils/request'
 
-  // 部门管理员: 查看本部门员工
-  department_manager: {
-    canView: 'department',
-    canEdit: 'basic_info_only',
-    canDelete: false
-  },
-
-  // 普通员工: 只能查看自己
-  employee: {
-    canView: 'self_only',
-    canEdit: 'self_basic_info',
-    canDelete: false
-  }
+/**
+ * 数据字典项
+ */
+interface DictItem {
+  label: string
+  value: string
+  color?: string
+  icon?: string
+  sort?: number
 }
 
-// 权限判断函数
-function canEditEmployee(currentUser: User, targetEmployee: Employee): boolean {
-  const permission = dataPermissions[currentUser.role]
+/**
+ * 获取字典列表
+ * @param dictCode 字典编码
+ */
+export function getDictList(dictCode: string): Promise<DictItem[]> {
+  return http.get<DictItem[]>(`/api/dict/${dictCode}`)
+}
 
-  if (permission.canEdit === 'all') return true
-  if (permission.canEdit === 'basic_info_only' && targetEmployee.departmentId === currentUser.departmentId) return true
-  if (permission.canEdit === 'self_basic_info' && targetEmployee.id === currentUser.id) return true
+/**
+ * 批量获取字典
+ * @param dictCodes 字典编码数组
+ */
+export function getDictBatch(dictCodes: string[]): Promise<Record<string, DictItem[]>> {
+  return http.post<Record<string, DictItem[]>>('/api/dict/batch', { dictCodes })
+}
 
+/**
+ * 获取字典标签
+ * @param dictCode 字典编码
+ * @param value 字典值
+ */
+export function getDictLabel(dictCode: string, value: string): string {
+  const dictStore = useDictStore()
+  return dictStore.getLabel(dictCode, value)
+}
+```
+
+#### 5.3.2 Pinia字典Store
+
+```typescript
+// src/modules/dict/store/index.ts
+import { defineStore } from 'pinia'
+import { getDictBatch } from '../api'
+import type { DictItem } from '../types'
+
+export const useDictStore = defineStore('dict', () => {
+  const dictData = ref<Record<string, DictItem[]>>({})
+  const cacheTime = ref<Record<string, number>>({})
+
+  const CACHE_DURATION = 30 * 60 * 1000 // 30分钟
+
+  /**
+   * 批量加载字典
+   */
+  async function loadDicts(dictCodes: string[]): Promise<void> {
+    const now = Date.now()
+    const needLoad = dictCodes.filter(code => {
+      const cached = cacheTime.value[code]
+      return !cached || (now - cached > CACHE_DURATION)
+    })
+
+    if (needLoad.length === 0) return
+
+    const data = await getDictBatch(needLoad)
+
+    for (const [code, items] of Object.entries(data)) {
+      dictData.value[code] = items
+      cacheTime.value[code] = now
+    }
+  }
+
+  /**
+   * 获取字典列表
+   */
+  function getDictList(dictCode: string): DictItem[] {
+    return dictData.value[dictCode] || []
+  }
+
+  /**
+   * 获取字典标签
+   */
+  function getLabel(dictCode: string, value: string): string {
+    const list = getDictList(dictCode)
+    const item = list.find(d => d.value === value)
+    return item?.label || value
+  }
+
+  /**
+   * 刷新字典
+   */
+  async function refreshDict(dictCode: string): Promise<void> {
+    delete cacheTime.value[dictCode]
+    await loadDicts([dictCode])
+  }
+
+  return {
+    dictData,
+    loadDicts,
+    getDictList,
+    getLabel,
+    refreshDict
+  }
+})
+```
+
+#### 5.3.3 员工模块中使用字典
+
+```typescript
+// src/modules/employee/composables/useDict.ts
+import { useDictStore } from '@/modules/dict/store'
+
+export function useEmployeeDict() {
+  const dictStore = useDictStore()
+
+  // 预加载员工模块所需字典
+  onMounted(async () => {
+    await dictStore.loadDicts([
+      'employee_status',
+      'gender',
+      'probation_status'
+    ])
+  })
+
+  // 获取字典选项
+  const statusOptions = computed(() => dictStore.getDictList('employee_status'))
+  const genderOptions = computed(() => dictStore.getDictList('gender'))
+  const probationOptions = computed(() => dictStore.getDictList('probation_status'))
+
+  // 动态加载职级字典
+  async function loadLevelOptions() {
+    await dictStore.loadDicts(['position_level'])
+    return dictStore.getDictList('position_level')
+  }
+
+  // 获取状态显示文本
+  function getStatusLabel(value: string): string {
+    return dictStore.getLabel('employee_status', value)
+  }
+
+  function getGenderLabel(value: string): string {
+    return dictStore.getLabel('gender', value)
+  }
+
+  function getProbationLabel(value: string): string {
+    return dictStore.getLabel('probation_status', value)
+  }
+
+  return {
+    statusOptions,
+    genderOptions,
+    probationOptions,
+    loadLevelOptions,
+    getStatusLabel,
+    getGenderLabel,
+    getProbationLabel
+  }
+}
+```
+
+#### 5.3.4 筛选面板中使用字典
+
+```vue
+<!-- src/modules/employee/components/EmployeeFilter.vue -->
+<script setup lang="ts">
+import { useEmployeeDict } from '../composables/useDict'
+
+const {
+  statusOptions,
+  genderOptions,
+  probationOptions
+} = useEmployeeDict()
+
+const filterForm = ref({
+  status: '',
+  gender: '',
+  probationStatus: ''
+})
+</script>
+
+<template>
+  <el-form :model="filterForm">
+    <el-form-item label="员工状态">
+      <el-select v-model="filterForm.status" clearable>
+        <el-option
+          v-for="item in statusOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+    </el-form-item>
+
+    <el-form-item label="性别">
+      <el-select v-model="filterForm.gender" clearable>
+        <el-option
+          v-for="item in genderOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+    </el-form-item>
+
+    <el-form-item label="试用期状态">
+      <el-select v-model="filterForm.probationStatus" clearable>
+        <el-option
+          v-for="item in probationOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+    </el-form-item>
+  </el-form>
+</template>
+```
+
+---
+
+### 5.4 权限管理集成实现
+
+#### 5.4.1 权限Store扩展
+
+```typescript
+// src/modules/auth/store/index.ts (扩展)
+import { useAuthStore } from '@/modules/auth/store'
+
+export function useEmployeePermission() {
+  const authStore = useAuthStore()
+
+  /**
+   * 检查员工管理权限
+   */
+  function hasPermission(permission: string): boolean {
+    return authStore.hasPermission(permission)
+  }
+
+  /**
+   * 检查是否可以编辑指定员工
+   */
+  function canEditEmployee(targetEmployee: Employee): boolean {
+    // 系统管理员可以编辑所有员工
+    if (hasPermission('employee:edit_all')) {
+      return true
+    }
+
+    // 部门管理员可以编辑本部门员工
+    if (hasPermission('employee:edit')) {
+      const currentUser = authStore.userInfo
+      return targetEmployee.departmentId === currentUser?.departmentId
+    }
+
+    // 普通员工只能编辑自己
+    if (targetEmployee.id === authStore.userInfo?.id) {
+      return true
+    }
+
+    return false
+  }
+
+  /**
+   * 检查是否可以查看指定员工
+   */
+  function canViewEmployee(targetEmployee: Employee): boolean {
+    // 系统管理员可以查看所有员工
+    if (hasPermission('employee:view_all')) {
+      return true
+    }
+
+    // 部门管理员可以查看本部门员工
+    if (hasPermission('employee:view_department')) {
+      const currentUser = authStore.userInfo
+      return targetEmployee.departmentId === currentUser?.departmentId
+    }
+
+    // 普通员工只能查看自己
+    return targetEmployee.id === authStore.userInfo?.id
+  }
+
+  /**
+   * 检查是否可以查看敏感字段
+   */
+  function canViewSensitiveField(fieldName: string): boolean {
+    const sensitiveFields = ['salary', 'level', 'socialSecurity']
+    return sensitiveFields.includes(fieldName)
+      ? hasPermission('employee:view_sensitive')
+      : true
+  }
+
+  /**
+   * 过滤员工列表(数据权限)
+   */
+  function filterEmployeeList(employees: Employee[]): Employee[] {
+    if (hasPermission('employee:view_all')) {
+      return employees
+    }
+
+    if (hasPermission('employee:view_department')) {
+      const currentUser = authStore.userInfo
+      return employees.filter(e => e.departmentId === currentUser?.departmentId)
+    }
+
+    // 仅自己
+    const currentUser = authStore.userInfo
+    return employees.filter(e => e.id === currentUser?.id)
+  }
+
+  return {
+    hasPermission,
+    canEditEmployee,
+    canViewEmployee,
+    canViewSensitiveField,
+    filterEmployeeList
+  }
+}
+```
+
+#### 5.4.2 列表页权限控制
+
+```vue
+<!-- src/modules/employee/views/EmployeeList.vue -->
+<script setup lang="ts">
+import { useEmployeePermission } from '../composables/useEmployeePermission'
+
+const {
+  hasPermission,
+  filterEmployeeList
+} = useEmployeePermission()
+
+// 权限判断
+const canCreate = computed(() => hasPermission('employee:create'))
+const canImport = computed(() => hasPermission('employee:import'))
+const canExport = computed(() => hasPermission('employee:export'))
+const canDelete = computed(() => hasPermission('employee:delete'))
+
+// 原始数据
+const allEmployees = ref<Employee[]>([])
+
+// 应用数据权限过滤
+const employees = computed(() => filterEmployeeList(allEmployees.value))
+</script>
+
+<template>
+  <div class="employee-list">
+    <!-- 操作栏 -->
+    <div class="toolbar">
+      <el-button
+        v-if="canCreate"
+        type="primary"
+        @click="handleCreate"
+      >
+        新增员工
+      </el-button>
+
+      <el-button
+        v-if="canImport"
+        @click="handleImport"
+      >
+        批量导入
+      </el-button>
+
+      <el-button
+        v-if="canExport"
+        @click="handleExport"
+      >
+        导出列表
+      </el-button>
+    </div>
+
+    <!-- 员工表格 -->
+    <el-table :data="employees">
+      <el-table-column prop="name" label="姓名" />
+      <el-table-column prop="departmentName" label="部门" />
+      <el-table-column prop="position" label="职位" />
+      <el-table-column prop="status" label="状态" />
+
+      <el-table-column label="操作" fixed="right">
+        <template #default="{ row }">
+          <el-button
+            v-if="hasPermission('employee:edit')"
+            link
+            @click="handleEdit(row)"
+          >
+            编辑
+          </el-button>
+
+          <el-button
+            v-if="canDelete"
+            link
+            type="danger"
+            @click="handleDelete(row)"
+          >
+            删除
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </div>
+</template>
+```
+
+#### 5.4.3 详情页权限控制
+
+```vue
+<!-- src/modules/employee/views/EmployeeDetail.vue -->
+<script setup lang="ts">
+import { useEmployeePermission } from '../composables/useEmployeePermission'
+
+const {
+  canEditEmployee,
+  canViewSensitiveField
+} = useEmployeePermission()
+
+const employee = ref<Employee>(null)
+
+// 权限判断
+const canEdit = computed(() => employee.value && canEditEmployee(employee.value))
+const canViewSalary = computed(() => canViewSensitiveField('salary'))
+const canViewLevel = computed(() => canViewSensitiveField('level'))
+const canResign = computed(() => hasPermission('employee:resign'))
+const canResetPassword = computed(() => hasPermission('employee:reset_password'))
+</script>
+
+<template>
+  <div class="employee-detail">
+    <div class="detail-header">
+      <h1>{{ employee?.name }}</h1>
+      <div class="actions">
+        <el-button
+          v-if="canEdit"
+          @click="handleEdit"
+        >
+          编辑
+        </el-button>
+
+        <el-button
+          v-if="canResign"
+          type="warning"
+          @click="handleResign"
+        >
+          办理离职
+        </el-button>
+
+        <el-button
+          v-if="canResetPassword"
+          type="danger"
+          @click="handleResetPassword"
+        >
+          重置密码
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <el-card title="基本信息">
+      <el-descriptions>
+        <el-descriptions-item label="员工编号">{{ employee?.id }}</el-descriptions-item>
+        <el-descriptions-item label="姓名">{{ employee?.name }}</el-descriptions-item>
+        <el-descriptions-item label="性别">{{ employee?.gender }}</el-descriptions-item>
+      </el-descriptions>
+    </el-card>
+
+    <!-- 工作信息 -->
+    <el-card title="工作信息">
+      <el-descriptions>
+        <el-descriptions-item label="部门">{{ employee?.departmentName }}</el-descriptions-item>
+        <el-descriptions-item label="职位">{{ employee?.position }}</el-descriptions-item>
+        <el-descriptions-item label="入职日期">{{ employee?.joinDate }}</el-descriptions-item>
+
+        <!-- 敏感字段: 需要权限 -->
+        <el-descriptions-item v-if="canViewLevel" label="职级">
+          {{ employee?.level }}
+        </el-descriptions-item>
+
+        <el-descriptions-item v-if="canViewSalary" label="薪资">
+          {{ employee?.salary }}
+        </el-descriptions-item>
+      </el-descriptions>
+    </el-card>
+  </div>
+</template>
+```
+
+#### 5.4.4 表单权限控制
+
+```vue
+<!-- src/modules/employee/components/EmployeeForm.vue -->
+<script setup lang="ts">
+import { useEmployeePermission } from '../composables/useEmployeePermission'
+
+const {
+  canEditEmployee,
+  canViewSensitiveField
+} = useEmployeePermission()
+
+const isEdit = ref(false)
+const employee = ref<Employee>(null)
+
+// 表单权限
+const formDisabled = computed(() => {
+  if (isEdit.value) {
+    return !canEditEmployee(employee.value)
+  }
   return false
+})
+
+// 字段级权限
+const canEditSalary = computed(() => hasPermission('employee:edit_all'))
+const canEditLevel = computed(() => hasPermission('employee:edit_all'))
+</script>
+
+<template>
+  <el-form :disabled="formDisabled">
+    <!-- 基本信息 -->
+    <el-form-item label="姓名">
+      <el-input v-model="form.name" />
+    </el-form-item>
+
+    <el-form-item label="性别">
+      <el-select v-model="form.gender">
+        <el-option label="男" value="male" />
+        <el-option label="女" value="female" />
+      </el-select>
+    </el-form-item>
+
+    <!-- 敏感字段: 仅系统管理员可编辑 -->
+    <el-form-item v-if="canEditLevel" label="职级">
+      <el-input v-model="form.level" />
+    </el-form-item>
+
+    <el-form-item v-if="canEditSalary" label="薪资">
+      <el-input-number v-model="form.salary" />
+    </el-form-item>
+  </el-form>
+</template>
+```
+
+#### 5.4.5 API请求权限拦截
+
+```typescript
+// src/utils/request.ts (扩展)
+import { useAuthStore } from '@/modules/auth/store'
+
+service.interceptors.request.use(
+  (config) => {
+    const authStore = useAuthStore()
+
+    // 自动添加Token
+    if (authStore.accessToken) {
+      config.headers.Authorization = `Bearer ${authStore.accessToken}`
+    }
+
+    // 记录请求权限(用于审计)
+    config.metadata = {
+      permission: getPermissionFromUrl(config.url),
+      userId: authStore.userInfo?.id,
+      timestamp: Date.now()
+    }
+
+    return config
+  },
+  (error) => Promise.reject(error)
+)
+
+// 根据URL推断所需权限
+function getPermissionFromUrl(url: string): string {
+  if (url.includes('/employees')) {
+    if (url.includes('POST')) return 'employee:create'
+    if (url.includes('PUT')) return 'employee:edit'
+    if (url.includes('DELETE')) return 'employee:delete'
+    return 'employee:view'
+  }
+  return ''
 }
 ```
 

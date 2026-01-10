@@ -216,6 +216,214 @@ sequenceDiagram
 - 只有管理员可以确认归还和处理报废
 - 财务人员可以查看统计报表
 
+#### 5.6.1 字段级权限控制
+
+| 字段 | 资产管理员 | 普通员工 | 财务人员 |
+|------|-----------|---------|---------|
+| 基本信息(名称/类别/品牌) | ✅ 查看/编辑 | ✅ 查看 | ✅ 查看 |
+| 购置金额 | ✅ 查看/编辑 | ❌ | ✅ 查看 |
+| 当前价值 | ✅ 查看 | ❌ | ✅ 查看 |
+| 使用人/保管人 | ✅ 查看/编辑 | ✅ 查看自己 | ✅ 查看 |
+| 存放位置 | ✅ 查看/编辑 | ✅ 查看 | ✅ 查看 |
+| 维护记录 | ✅ 查看/编辑 | ✅ 查看 | ✅ 查看 |
+| 借还历史 | ✅ 查看 | ✅ 查看自己 | ✅ 查看 |
+
+---
+
+### 5.7 数据字典集成
+
+#### 5.7.1 依赖的数据字典类型
+
+资产管理模块依赖以下数据字典类型:
+
+| 字典类型 | 字典编码 | 用途 | 是否必填 |
+|---------|---------|------|---------|
+| 资产类别 | `asset_category` | 资产分类(电子/家具/书籍/其他) | ✅ |
+| 资产状态 | `asset_status` | 资产状态(库存中/使用中/已借出/维修中/报废) | ✅ |
+| 资产归还状态 | `asset_condition` | 归还时资产状态(良好/损坏/丢失) | ❌ |
+
+#### 5.7.2 数据字典使用场景
+
+**1. 资产类别筛选**
+```typescript
+// 从数据字典加载资产类别选项
+const categoryOptions = [
+  { label: '电子设备', value: 'electronic', dictCode: 'asset_category' },
+  { label: '家具', value: 'furniture', dictCode: 'asset_category' },
+  { label: '书籍', value: 'book', dictCode: 'asset_category' },
+  { label: '其他', value: 'other', dictCode: 'asset_category' }
+]
+```
+
+**2. 资产状态筛选**
+```typescript
+// 从数据字典加载资产状态选项
+const statusOptions = [
+  { label: '库存中', value: 'stock', dictCode: 'asset_status' },
+  { label: '使用中', value: 'in_use', dictCode: 'asset_status' },
+  { label: '已借出', value: 'borrowed', dictCode: 'asset_status' },
+  { label: '维修中', value: 'maintenance', dictCode: 'asset_status' },
+  { label: '已报废', value: 'scrapped', dictCode: 'asset_status' }
+]
+```
+
+**3. 资产状态显示**
+```typescript
+// 从数据字典获取显示文本
+const statusText = getDictLabel('asset_status', 'stock') // "库存中"
+```
+
+**4. 归还时资产状态**
+```typescript
+// 从数据字典加载归还状态选项
+const conditionOptions = await getDictList('asset_condition')
+// 返回: [{ label: '良好', value: 'good' }, { label: '损坏', value: 'damaged' }, { label: '丢失', value: 'lost' }]
+```
+
+#### 5.7.3 数据字典初始化要求
+
+- **模块加载时**: 预加载资产类别和状态字典
+- **归还资产时**: 动态加载归还状态字典
+- **筛选面板**: 使用缓存的字典数据
+- **字典刷新**: 监听字典变更事件,自动更新界面显示
+
+#### 5.7.4 数据字典缓存策略
+
+```typescript
+// 字典数据缓存管理
+const dictCache = {
+  // 常用字典: 启动时预加载
+  preload: ['asset_category', 'asset_status'],
+
+  // 低频字典: 按需加载
+  onDemand: ['asset_condition'],
+
+  // 缓存过期时间: 30分钟
+  expireTime: 30 * 60 * 1000
+}
+```
+
+---
+
+### 5.8 权限管理集成
+
+#### 5.8.1 资产管理权限定义
+
+| 权限编码 | 权限名称 | 权限描述 | 依赖角色 |
+|---------|---------|---------|---------|
+| `asset:view` | 查看资产 | 查看资产列表和详情 | 所有用户 |
+| `asset:view_all` | 查看所有资产 | 查看所有资产信息(含价格) | 资产管理员/财务人员 |
+| `asset:create` | 新增资产 | 创建新资产 | 资产管理员 |
+| `asset:edit` | 编辑资产 | 编辑资产基本信息 | 资产管理员 |
+| `asset:delete` | 删除资产 | 删除资产 | 资产管理员 |
+| `asset:borrow` | 借用资产 | 借用资产 | 所有用户 |
+| `asset:return` | 归还资产 | 确认资产归还 | 资产管理员 |
+| `asset:maintain` | 维护资产 | 记录维护和维修 | 资产管理员 |
+| `asset:scrap` | 报废资产 | 处理资产报废 | 资产管理员 |
+| `asset:import` | 批量导入 | 批量导入资产 | 资产管理员 |
+| `asset:export` | 导出列表 | 导出资产列表 | 资产管理员 |
+| `asset:view_statistics` | 查看统计 | 查看资产统计和报表 | 资产管理员/财务人员 |
+| `asset:view_price` | 查看价格 | 查看购置金额和当前价值 | 资产管理员/财务人员 |
+
+#### 5.8.2 功能权限矩阵
+
+| 功能 | 资产管理员 | 普通员工 | 财务人员 |
+|------|-----------|---------|---------|
+| 查看资产列表 | ✅ asset:view_all | ✅ asset:view | ✅ asset:view_all |
+| 查看资产详情 | ✅ asset:view_all | ✅ asset:view | ✅ asset:view_all |
+| 查看价格信息 | ✅ asset:view_price | ❌ | ✅ asset:view_price |
+| 新增资产 | ✅ asset:create | ❌ | ❌ |
+| 编辑资产 | ✅ asset:edit | ❌ | ❌ |
+| 删除资产 | ✅ asset:delete | ❌ | ❌ |
+| 借用资产 | ✅ asset:borrow | ✅ asset:borrow | ❌ |
+| 归还资产 | ✅ asset:return | ✅ asset:return(自己) | ❌ |
+| 维护资产 | ✅ asset:maintain | ❌ | ❌ |
+| 报废资产 | ✅ asset:scrap | ❌ | ❌ |
+| 批量导入 | ✅ asset:import | ❌ | ❌ |
+| 导出列表 | ✅ asset:export | ❌ | ✅ asset:export |
+| 查看统计 | ✅ asset:view_statistics | ❌ | ✅ asset:view_statistics |
+
+#### 5.8.3 权限检查实现
+
+```typescript
+// 权限检查函数
+function checkPermission(permission: string): boolean {
+  const authStore = useAuthStore()
+  return authStore.hasPermission(permission)
+}
+
+// 使用示例
+const canEdit = computed(() => checkPermission('asset:edit'))
+const canDelete = computed(() => checkPermission('asset:delete'))
+const canViewPrice = computed(() => checkPermission('asset:view_price'))
+
+// 数据权限过滤
+const filteredAssets = computed(() => {
+  if (checkPermission('asset:view_all')) {
+    return assetList.value // 返回所有资产(含价格)
+  } else {
+    // 普通员工:隐藏价格信息
+    return assetList.value.map(asset => ({
+      ...asset,
+      purchasePrice: undefined,
+      currentValue: undefined
+    }))
+  }
+})
+```
+
+#### 5.8.4 按钮级权限控制
+
+```vue
+<!-- 根据权限显示/隐藏按钮 -->
+<el-button
+  v-if="hasPermission('asset:create')"
+  @click="handleCreate"
+>
+  新增资产
+</el-button>
+
+<el-button
+  v-if="hasPermission('asset:edit')"
+  @click="handleEdit(row)"
+>
+  编辑
+</el-button>
+
+<el-button
+  v-if="hasPermission('asset:delete')"
+  type="danger"
+  @click="handleDelete(row)"
+>
+  删除
+</el-button>
+
+<el-button
+  v-if="hasPermission('asset:borrow')"
+  @click="handleBorrow(row)"
+>
+  借用
+</el-button>
+```
+
+#### 5.8.5 字段级权限控制
+
+```typescript
+// 敏感字段权限判断
+const fieldPermissions = {
+  purchasePrice: {
+    visible: computed(() => hasPermission('asset:view_price'))
+  },
+  currentValue: {
+    visible: computed(() => hasPermission('asset:view_price'))
+  }
+}
+
+// 表单中使用
+const showPriceFields = computed(() => hasPermission('asset:view_price'))
+const canEditPrice = computed(() => hasPermission('asset:edit'))
+```
+
 ---
 
 ## 6. 边界情况处理

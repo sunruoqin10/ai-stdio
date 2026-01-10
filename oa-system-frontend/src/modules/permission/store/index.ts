@@ -41,7 +41,8 @@ export const usePermissionStore = defineStore('permission', () => {
    * 菜单权限树
    */
   const menuTree = computed(() => {
-    return buildPermissionTree(userPermissions.value.menuPermissions, {
+    const menuPermissions = userPermissions.value.menuPermissions || []
+    return buildPermissionTree(menuPermissions, {
       type: 'menu' as any
     })
   })
@@ -93,7 +94,15 @@ export const usePermissionStore = defineStore('permission', () => {
         userPermissions.value = mockData
       } else {
         const response = await permissionApi.getUserPermissions(userId)
-        userPermissions.value = response.data
+        userPermissions.value = response.data || {
+          userId: '',
+          roles: [],
+          permissions: [],
+          permissionCodes: [],
+          buttonPermissions: [],
+          apiPermissions: [],
+          menuPermissions: []
+        }
       }
 
       // 缓存权限
@@ -125,7 +134,8 @@ export const usePermissionStore = defineStore('permission', () => {
         const mockData = permissionApi.getMockPermissionTree()
         allPermissions.value = mockData
       } else {
-        allPermissions.value = await permissionApi.getPermissionTree()
+        const response = await permissionApi.getPermissionTree()
+        allPermissions.value = response.data || []
       }
 
       // 缓存权限树
@@ -154,10 +164,10 @@ export const usePermissionStore = defineStore('permission', () => {
       // 开发环境使用 Mock 数据
       if (import.meta.env.DEV) {
         const mockData = permissionApi.getMockRoleList()
-        allRoles.value = mockData.list
+        allRoles.value = mockData.list || []
       } else {
         const response = await permissionApi.getRoleList()
-        allRoles.value = response.data.list
+        allRoles.value = response.data?.list || []
       }
 
       // 缓存角色列表
@@ -256,7 +266,7 @@ export const usePermissionStore = defineStore('permission', () => {
    * 获取权限统计
    */
   function getPermissionStats() {
-    const permissions = allPermissions.value
+    const permissions = allPermissions.value || []
     return {
       total: permissions.length,
       menu: permissions.filter(p => p.type === 'menu').length,
@@ -270,7 +280,7 @@ export const usePermissionStore = defineStore('permission', () => {
    * 获取角色统计
    */
   function getRoleStats() {
-    const roles = allRoles.value
+    const roles = allRoles.value || []
     return {
       total: roles.length,
       system: roles.filter(r => r.type === 'system').length,

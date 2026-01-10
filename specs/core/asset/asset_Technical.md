@@ -835,4 +835,585 @@ AssetSchema.index({ status: 1, expectedReturnDate: 1 }) // 查询即将到期资
 
 ---
 
-**文档版本**: v1.0.0
+## 8. 数据字典集成实现
+
+### 8.1 数据字典API封装
+
+```typescript
+// src/modules/dict/api/index.ts
+import { http } from '@/utils/request'
+
+/**
+ * 数据字典项
+ */
+interface DictItem {
+  label: string
+  value: string
+  color?: string
+  icon?: string
+  sort?: number
+}
+
+/**
+ * 获取字典列表
+ * @param dictCode 字典编码
+ */
+export function getDictList(dictCode: string): Promise<DictItem[]> {
+  return http.get<DictItem[]>(`/api/dict/${dictCode}`)
+}
+
+/**
+ * 批量获取字典
+ * @param dictCodes 字典编码数组
+ */
+export function getDictBatch(dictCodes: string[]): Promise<Record<string, DictItem[]>> {
+  return http.post<Record<string, DictItem[]>>('/api/dict/batch', { dictCodes })
+}
+
+/**
+ * 获取字典标签
+ * @param dictCode 字典编码
+ * @param value 字典值
+ */
+export function getDictLabel(dictCode: string, value: string): string {
+  const dictStore = useDictStore()
+  return dictStore.getLabel(dictCode, value)
+}
+```
+
+### 8.2 Pinia字典Store
+
+```typescript
+// src/modules/dict/store/index.ts
+import { defineStore } from 'pinia'
+import { getDictBatch } from '../api'
+import type { DictItem } from '../types'
+
+export const useDictStore = defineStore('dict', () => {
+  const dictData = ref<Record<string, DictItem[]>>({})
+  const cacheTime = ref<Record<string, number>>({})
+
+  const CACHE_DURATION = 30 * 60 * 1000 // 30分钟
+
+  /**
+   * 批量加载字典
+   */
+  async function loadDicts(dictCodes: string[]): Promise<void> {
+    const now = Date.now()
+    const needLoad = dictCodes.filter(code => {
+      const cached = cacheTime.value[code]
+      return !cached || (now - cached > CACHE_DURATION)
+    })
+
+    if (needLoad.length === 0) return
+
+    const data = await getDictBatch(needLoad)
+
+    for (const [code, items] of Object.entries(data)) {
+      dictData.value[code] = items
+      cacheTime.value[code] = now
+    }
+  }
+
+  /**
+   * 获取字典列表
+   */
+  function getDictList(dictCode: string): DictItem[] {
+    return dictData.value[dictCode] || []
+  }
+
+  /**
+   * 获取字典标签
+   */
+  function getLabel(dictCode: string, value: string): string {
+    const list = getDictList(dictCode)
+    const item = list.find(d => d.value === value)
+    return item?.label || value
+  }
+
+  /**
+   * 刷新字典
+   */
+  async function refreshDict(dictCode: string): Promise<void> {
+    delete cacheTime.value[dictCode]
+    await loadDicts([dictCode])
+  }
+
+  return {
+    dictData,
+    loadDicts,
+    getDictList,
+    getLabel,
+    refreshDict
+  }
+})
+```
+
+### 8.3 资产模块中使用字典
+
+```typescript
+// src/modules/asset/composables/useDict.ts
+import { useDictStore } from '@/modules/dict/store'
+
+export function useAssetDict() {
+  const dictStore = useDictStore()
+
+  // 预加载资产模块所需字典
+  onMounted(async () => {
+    await dictStore.loadDicts([
+      'asset_category',
+      'asset_status'
+    ])
+  })
+
+  // 获取字典选项
+  const categoryOptions = computed(() => dictStore.getDictList('asset_category'))
+  const statusOptions = computed(() => dictStore.getDictList('asset_status'))
+
+  // 动态加载归还状态字典
+  async function loadConditionOptions() {
+    await dictStore.loadDicts(['asset_condition'])
+    return dictStore.getDictList('asset_condition')
+  }
+
+  // 获取显示文本
+  function getCategoryLabel(value: string): string {
+    return dictStore.getLabel('asset_category', value)
+  }
+
+  function getStatusLabel(value: string): string {
+    return dictStore.getLabel('asset_status', value)
+  }
+
+  function getConditionLabel(value: string): string {
+    return dictStore.getLabel('asset_condition', value)
+  }
+
+  return {
+    categoryOptions,
+    statusOptions,
+    loadConditionOptions,
+    getCategoryLabel,
+    getStatusLabel,
+    getConditionLabel
+  }
+}
+```
+
+### 8.4 筛选面板中使用字典
+
+```vue
+<!-- src/modules/asset/components/AssetFilter.vue -->
+<script setup lang="ts">
+import { useAssetDict } from '../composables/useDict'
+
+const {
+  categoryOptions,
+  statusOptions
+} = useAssetDict()
+
+const filterForm = ref({
+  category: '',
+  status: ''
+})
+</script>
+
+<template>
+  <el-form :model="filterForm">
+    <el-form-item label="资产类别">
+      <el-select v-model="filterForm.category" clearable>
+        <el-option
+          v-for="item in categoryOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+    </el-form-item>
+
+    <el-form-item label="资产状态">
+      <el-select v-model="filterForm.status" clearable>
+        <el-option
+          v-for="item in statusOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+    </el-form-item>
+  </el-form>
+</template>
+```
+
+---
+
+## 9. 权限管理集成实现
+
+### 9.1 权限Store扩展
+
+```typescript
+// src/modules/auth/store/index.ts (扩展)
+import { useAuthStore } from '@/modules/auth/store'
+
+export function useAssetPermission() {
+  const authStore = useAuthStore()
+
+  /**
+   * 检查资产管理权限
+   */
+  function hasPermission(permission: string): boolean {
+    return authStore.hasPermission(permission)
+  }
+
+  /**
+   * 过滤资产列表(数据权限 - 隐藏价格)
+   */
+  function filterAssetList(assets: Asset[]): Asset[] {
+    if (hasPermission('asset:view_all')) {
+      return assets // 返回所有资产(含价格)
+    } else {
+      // 普通员工:隐藏价格信息
+      return assets.map(asset => ({
+        ...asset,
+        purchasePrice: undefined,
+        currentValue: undefined
+      }))
+    }
+  }
+
+  /**
+   * 检查是否可以编辑资产
+   */
+  function canEditAsset(asset: Asset): boolean {
+    if (!hasPermission('asset:edit')) {
+      return false
+    }
+
+    // 资产管理员可以编辑所有资产
+    return true
+  }
+
+  /**
+   * 检查是否可以借用资产
+   */
+  function canBorrowAsset(asset: Asset): boolean {
+    if (!hasPermission('asset:borrow')) {
+      return false
+    }
+
+    // 只有库存中的资产可以借用
+    return asset.status === 'stock'
+  }
+
+  /**
+   * 检查是否可以查看价格
+   */
+  function canViewPrice(): boolean {
+    return hasPermission('asset:view_price')
+  }
+
+  return {
+    hasPermission,
+    filterAssetList,
+    canEditAsset,
+    canBorrowAsset,
+    canViewPrice
+  }
+}
+```
+
+### 9.2 列表页权限控制
+
+```vue
+<!-- src/modules/asset/views/AssetList.vue -->
+<script setup lang="ts">
+import { useAssetPermission } from '../composables/useAssetPermission'
+
+const {
+  hasPermission,
+  filterAssetList,
+  canViewPrice
+} = useAssetPermission()
+
+// 权限判断
+const canCreate = computed(() => hasPermission('asset:create'))
+const canImport = computed(() => hasPermission('asset:import'))
+const canExport = computed(() => hasPermission('asset:export'))
+const canDelete = computed(() => hasPermission('asset:delete'))
+const showPrice = computed(() => canViewPrice())
+
+// 原始数据
+const allAssets = ref<Asset[]>([])
+
+// 应用数据权限过滤(隐藏价格)
+const assets = computed(() => filterAssetList(allAssets.value))
+</script>
+
+<template>
+  <div class="asset-list">
+    <!-- 操作栏 -->
+    <div class="toolbar">
+      <el-button
+        v-if="canCreate"
+        type="primary"
+        @click="handleCreate"
+      >
+        新增资产
+      </el-button>
+
+      <el-button
+        v-if="canImport"
+        @click="handleImport"
+      >
+        批量导入
+      </el-button>
+
+      <el-button
+        v-if="canExport"
+        @click="handleExport"
+      >
+        导出列表
+      </el-button>
+    </div>
+
+    <!-- 资产表格 -->
+    <el-table :data="assets">
+      <el-table-column prop="name" label="资产名称" />
+      <el-table-column prop="category" label="类别" />
+      <el-table-column prop="brandModel" label="品牌型号" />
+      <el-table-column prop="status" label="状态" />
+
+      <!-- 价格列: 根据权限显示 -->
+      <el-table-column v-if="showPrice" prop="purchasePrice" label="购置金额">
+        <template #default="{ row }">
+          ¥{{ row.purchasePrice?.toFixed(2) }}
+        </template>
+      </el-table-column>
+
+      <el-table-column v-if="showPrice" prop="currentValue" label="当前价值">
+        <template #default="{ row }">
+          ¥{{ row.currentValue?.toFixed(2) }}
+        </template>
+      </el-table-column>
+
+      <el-table-column label="操作" fixed="right">
+        <template #default="{ row }">
+          <el-button
+            v-if="hasPermission('asset:borrow')"
+            link
+            @click="handleBorrow(row)"
+            :disabled="row.status !== 'stock'"
+          >
+            借用
+          </el-button>
+
+          <el-button
+            v-if="hasPermission('asset:edit')"
+            link
+            @click="handleEdit(row)"
+          >
+            编辑
+          </el-button>
+
+          <el-button
+            v-if="canDelete"
+            link
+            type="danger"
+            @click="handleDelete(row)"
+          >
+            删除
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </div>
+</template>
+```
+
+### 9.3 详情页权限控制
+
+```vue
+<!-- src/modules/asset/views/AssetDetail.vue -->
+<script setup lang="ts">
+import { useAssetPermission } from '../composables/useAssetPermission'
+
+const {
+  canEditAsset,
+  canViewPrice
+} = useAssetPermission()
+
+const asset = ref<Asset>(null)
+
+// 权限判断
+const canEdit = computed(() => asset.value && canEditAsset(asset.value))
+const canMaintain = computed(() => hasPermission('asset:maintain'))
+const canScrap = computed(() => hasPermission('asset:scrap'))
+const showPriceInfo = computed(() => canViewPrice())
+</script>
+
+<template>
+  <div class="asset-detail">
+    <div class="detail-header">
+      <h1>{{ asset?.name }}</h1>
+      <div class="actions">
+        <el-button
+          v-if="canEdit"
+          @click="handleEdit"
+        >
+          编辑
+        </el-button>
+
+        <el-button
+          v-if="canMaintain"
+          type="warning"
+          @click="handleMaintain"
+        >
+          维护记录
+        </el-button>
+
+        <el-button
+          v-if="canScrap"
+          type="danger"
+          @click="handleScrap"
+        >
+          报废
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 基本信息 -->
+    <el-card title="基本信息">
+      <el-descriptions>
+        <el-descriptions-item label="资产编号">{{ asset?.id }}</el-descriptions-item>
+        <el-descriptions-item label="资产名称">{{ asset?.name }}</el-descriptions-item>
+        <el-descriptions-item label="资产类别">{{ asset?.category }}</el-descriptions-item>
+        <el-descriptions-item label="品牌型号">{{ asset?.brandModel }}</el-descriptions-item>
+        <el-descriptions-item label="状态">{{ asset?.status }}</el-descriptions-item>
+      </el-descriptions>
+    </el-card>
+
+    <!-- 价格信息: 需要权限 -->
+    <el-card v-if="showPriceInfo" title="价格信息">
+      <el-descriptions>
+        <el-descriptions-item label="购置金额">
+          ¥{{ asset?.purchasePrice?.toFixed(2) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="当前价值">
+          ¥{{ asset?.currentValue?.toFixed(2) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="购置日期">
+          {{ asset?.purchaseDate }}
+        </el-descriptions-item>
+      </el-descriptions>
+    </el-card>
+  </div>
+</template>
+```
+
+### 9.4 表单权限控制
+
+```vue
+<!-- src/modules/asset/components/AssetForm.vue -->
+<script setup lang="ts">
+import { useAssetPermission } from '../composables/useAssetPermission'
+
+const {
+  canViewPrice
+} = useAssetPermission()
+
+// 字段级权限
+const showPriceFields = computed(() => canViewPrice())
+const canEditPrice = computed(() => hasPermission('asset:edit'))
+</script>
+
+<template>
+  <el-form>
+    <!-- 基本信息 -->
+    <el-form-item label="资产名称">
+      <el-input v-model="form.name" />
+    </el-form-item>
+
+    <el-form-item label="资产类别">
+      <el-select v-model="form.category">
+        <el-option
+          v-for="item in categoryOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
+      </el-select>
+    </el-form-item>
+
+    <!-- 价格字段: 需要权限才能查看和编辑 -->
+    <template v-if="showPriceFields">
+      <el-form-item label="购置金额">
+        <el-input-number
+          v-model="form.purchasePrice"
+          :disabled="!canEditPrice"
+          :min="0"
+          :precision="2"
+        />
+      </el-form-item>
+
+      <el-form-item label="购置日期">
+        <el-date-picker
+          v-model="form.purchaseDate"
+          :disabled="!canEditPrice"
+        />
+      </el-form-item>
+    </template>
+  </el-form>
+</template>
+```
+
+### 9.5 API请求权限拦截
+
+```typescript
+// src/utils/request.ts (扩展)
+import { useAuthStore } from '@/modules/auth/store'
+
+service.interceptors.request.use(
+  (config) => {
+    const authStore = useAuthStore()
+
+    // 自动添加Token
+    if (authStore.accessToken) {
+      config.headers.Authorization = `Bearer ${authStore.accessToken}`
+    }
+
+    // 记录请求权限(用于审计)
+    config.metadata = {
+      permission: getPermissionFromUrl(config.url),
+      userId: authStore.userInfo?.id,
+      timestamp: Date.now()
+    }
+
+    return config
+  },
+  (error) => Promise.reject(error)
+)
+
+// 根据URL推断所需权限
+function getPermissionFromUrl(url: string): string {
+  if (url.includes('/assets')) {
+    if (url.includes('POST')) return 'asset:create'
+    if (url.includes('/borrow')) return 'asset:borrow'
+    if (url.includes('/return')) return 'asset:return'
+    if (url.includes('/scrap')) return 'asset:scrap'
+    if (url.includes('/maintenance')) return 'asset:maintain'
+    if (url.includes('PUT')) return 'asset:edit'
+    if (url.includes('DELETE')) return 'asset:delete'
+    if (url.includes('/import')) return 'asset:import'
+    if (url.includes('/export')) return 'asset:export'
+    if (url.includes('/statistics')) return 'asset:view_statistics'
+    return 'asset:view'
+  }
+  return ''
+}
+```
+
+---
+
+**文档版本**: v1.1.0
+**创建人**: AI开发助手
+**最后更新**: 2026-01-10

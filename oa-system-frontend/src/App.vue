@@ -1,6 +1,16 @@
 <template>
   <el-config-provider :locale="zhCn">
-    <div class="app-container">
+    <!-- 登录和重置密码页面独立布局 -->
+    <div v-if="isAuthPage" class="auth-page-layout">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </div>
+
+    <!-- 其他页面带顶部菜单的布局 -->
+    <div v-else class="app-container">
       <!-- 顶部导航栏 -->
       <el-header class="app-header">
         <div class="header-left">
@@ -44,6 +54,10 @@
               <el-icon><Notebook /></el-icon>
               <span>数据字典</span>
             </el-menu-item>
+            <el-menu-item index="/menu">
+              <el-icon><Menu /></el-icon>
+              <span>菜单管理</span>
+            </el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-header>
@@ -61,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   User,
@@ -70,12 +84,18 @@ import {
   Setting,
   UserFilled,
   Key,
-  Notebook
+  Notebook,
+  Menu
 } from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 
 const route = useRoute()
 const activeMenu = ref(route.path)
+
+// 判断是否是认证相关页面(不需要顶部菜单)
+const isAuthPage = computed(() => {
+  return route.path === '/login' || route.path === '/reset-password'
+})
 
 watch(
   () => route.path,
@@ -93,6 +113,9 @@ watch(
     } else if (newPath.startsWith('/dict')) {
       // 数据字典页面，设置菜单保持激活状态
       activeMenu.value = 'settings'
+    } else if (newPath.startsWith('/menu')) {
+      // 菜单管理页面，设置菜单保持激活状态
+      activeMenu.value = 'settings'
     }
   }
 )
@@ -101,6 +124,13 @@ watch(
 <style lang="scss" scoped>
 @use '@/assets/styles/variables.scss' as *;
 @use '@/assets/styles/mixins.scss' as *;
+
+// 认证页面独立布局(全屏,无顶部菜单)
+.auth-page-layout {
+  width: 100%;
+  height: 100vh;
+  overflow: auto;
+}
 
 .app-container {
   display: flex;
