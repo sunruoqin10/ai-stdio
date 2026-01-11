@@ -162,7 +162,46 @@ INSERT INTO sys_menu (menu_code, menu_name, menu_type, parent_id, menu_level, ro
 | 切换菜单状态 | PATCH | /api/menus/:id/status | 切换启用/禁用状态 |
 | 获取菜单路由 | GET | /api/menus/routes | 获取当前用户的路由菜单 |
 
-### 3.2 接口详细设计
+### 3.2 Mock数据实现 ⭐ NEW
+
+#### 3.2.1 Mock适配器
+开发环境使用Mock数据,生产环境调用真实API:
+
+```typescript
+// src/modules/menu/api/index.ts
+import * as mockApi from './mock-adapter'
+
+export function getMenuList(params?: MenuQuery) {
+  // 开发环境使用mock
+  return mockApi.mockMenuApiHandlers.getMenuList()
+
+  // 生产环境使用真实API
+  // return request.get<MenuItem[]>({ url: '/menus', method: 'get', params })
+}
+```
+
+#### 3.2.2 Mock数据结构
+Mock数据存储在 `src/modules/menu/mock/data.ts`,包含:
+- 菜单列表数据
+- 菜单详情数据
+- 父级菜单选项
+- 路由菜单数据
+
+#### 3.2.3 初始化菜单数据
+预置菜单定义在 `src/modules/menu/data/initMenus.ts`:
+- 系统管理(目录)
+- 员工名录
+- 员工详情(隐藏)
+- 数据字典管理
+- 字典项管理(隐藏)
+- 菜单管理
+- 权限管理(目录)
+- 角色管理
+- 权限管理
+
+### 3.3 接口详细设计
+
+### 3.3 接口详细设计
 
 #### 3.2.1 获取菜单列表
 

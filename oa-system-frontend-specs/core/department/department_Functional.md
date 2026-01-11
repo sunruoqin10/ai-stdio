@@ -59,37 +59,109 @@
 ## 3. 功能清单
 
 ### 3.1 部门列表页面
-- [ ] 树形表格展示部门层级
-- [ ] 支持展开/收起子部门
-- [ ] 显示部门名称、负责人、人数、层级等信息
-- [ ] 右键菜单操作(新增子部门、编辑、删除、移动)
-- [ ] 搜索部门(按名称、简称)
-- [ ] 筛选(按层级、负责人)
-- [ ] 导出部门列表
+- [x] 树形表格展示部门层级
+- [x] 支持展开/收起子部门
+- [x] 显示部门名称、负责人、人数、层级等信息
+- [x] 右键菜单操作(新增子部门、编辑、删除、移动)
+- [x] 搜索部门(按名称、简称)
+- [x] 筛选(按层级、负责人)
+- [x] 导出部门列表
 
 ### 3.2 组织架构图页面
-- [ ] ECharts Graph可视化展示
-- [ ] 支持缩放、拖拽
-- [ ] 点击节点查看部门详情
-- [ ] 高亮选中部门及其上级路径
-- [ ] 显示部门人数信息
-- [ ] 美观的卡片式节点设计
+- [x] ECharts Graph可视化展示
+- [x] 支持缩放、拖拽
+- [x] 点击节点查看部门详情
+- [x] 高亮选中部门及其上级路径
+- [x] 显示部门人数信息
+- [x] 美观的卡片式节点设计
 
 ### 3.3 部门详情弹窗
-- [ ] 部门基本信息展示
-- [ ] 部门负责人信息
-- [ ] 部门成员列表(关联员工表)
-- [ ] 上级部门信息
-- [ ] 子部门列表
-- [ ] 操作按钮(编辑、删除、添加成员)
+- [x] 部门基本信息展示
+- [x] 部门负责人信息
+- [x] 部门成员列表(关联员工表)
+- [x] 上级部门信息
+- [x] 子部门列表
+- [x] 操作按钮(编辑、删除、添加成员)
 
 ### 3.4 部门表单
-- [ ] 新增部门表单
-- [ ] 编辑部门表单
-- [ ] 移动部门(更改上级部门)
-- [ ] 选择部门负责人(员工下拉搜索)
-- [ ] 上传部门图标
-- [ ] 实时验证部门名称唯一性
+- [x] 新增部门表单
+- [x] 编辑部门表单
+- [x] 移动部门(更改上级部门)
+- [x] 选择部门负责人(员工下拉搜索)
+- [x] 上传部门图标
+- [x] 实时验证部门名称唯一性
+
+### 3.5 Mock数据支持
+
+部门管理模块提供了完整的Mock数据实现,便于前端独立开发和测试:
+
+**Mock数据结构** (`src/modules/department/mock/data.ts`):
+- 5级部门层级结构(从总公司到工作组)
+- 12个预置部门,覆盖常见组织架构
+- 包含部门负责人信息(关联员工)
+- 部门人数统计(虚拟字段)
+- DiceBear头像自动生成
+
+**Mock API实现** (`src/modules/department/api/index.ts`):
+- `getList()`: 获取部门列表,支持搜索和筛选
+- `getDetail()`: 获取部门详情
+- `create()`: 创建部门(自动生成DEPT编号)
+- `update()`: 更新部门信息
+- `remove()`: 删除部门
+- `move()`: 移动部门到新的上级部门
+- `getStatistics()`: 获取部门统计数据
+- `batchRemove()`: 批量删除部门
+- `export()`: 导出部门列表
+
+### 3.6 工具函数实现
+
+部门管理模块提供了丰富的工具函数 (`src/modules/department/utils/index.ts`):
+
+**编号生成**:
+- `generateDepartmentId(count)`: 生成部门编号(DEPT + 4位序号)
+
+**树形数据处理**:
+- `buildTree(flatList, options)`: 扁平数组转树形结构
+- `flattenTree(tree, childrenKey)`: 树形结构转扁平数组
+- `getNodePath(nodeId, flatList)`: 获取节点路径(从根到当前节点)
+- `calculateNodeLevel(nodeId, flatList)`: 计算节点层级
+- `getAllDescendants(node, childrenKey)`: 获取所有子孙节点
+- `getAllChildDepartments(parentId, departments)`: 获取所有子部门(递归)
+- `isChildDepartment(departmentId, parentId, departments)`: 判断是否为子部门
+
+**验证函数**:
+- `validateMove(departmentId, newParentId, departments, maxLevel)`: 移动部门验证
+  - 不能移动到自己
+  - 不能移动到自己的子部门
+  - 移动后层级不能超过上限(默认5级)
+- `validateDelete(departmentId, departments, employees)`: 删除部门前检查
+  - 检查是否有子部门
+  - 检查是否有成员
+
+**ECharts数据转换**:
+- `convertToGraphData(flatDepartments)`: 转换为ECharts Tree格式
+- `getGraphOption(treeData)`: 获取ECharts配置项
+
+**统计函数**:
+- `calculateEmployeeCount(departmentId, employees)`: 计算部门人数
+- `batchUpdateEmployeeCount(departments, employees)`: 批量更新部门人数
+
+### 3.7 统计功能
+
+部门管理模块提供了完整的统计功能:
+
+**统计数据** (`DepartmentStatistics`):
+- `total`: 总部门数
+- `level1Count`: 一级部门数
+- `maxLevel`: 最大层级深度
+- `withLeaderCount`: 有负责人的部门数
+- `totalEmployees`: 总员工数(去重)
+
+**统计特性**:
+- 实时从员工表统计部门人数
+- 仅统计status='active'的在职员工
+- 按层级分析部门分布
+- 支持导出统计报表
 
 ---
 

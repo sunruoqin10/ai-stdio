@@ -89,6 +89,259 @@ interface MaintenanceRecord {
 
 ---
 
+## 1.4 Mock数据实现
+
+资产管理模块提供了完整的Mock数据实现,便于前端独立开发和测试。
+
+**Mock数据位置**:
+```
+src/modules/asset/mock/
+└── data.ts          # Mock资产数据
+```
+
+**Mock数据结构**:
+
+```typescript
+// src/modules/asset/mock/data.ts
+import { mockEmployees } from '@/modules/employee/mock/data'
+
+export const mockAssets: Asset[] = [
+  {
+    id: 'ASSET000001',
+    name: 'MacBook Pro 16寸',
+    category: 'electronic',
+    brandModel: 'Apple M3 Max',
+    purchaseDate: '2024-01-15T00:00:00.000Z',
+    purchasePrice: 24999,
+    currentValue: 21249.15,  // 自动计算折旧
+    status: 'stock',
+    location: 'A座3楼办公室',
+    images: ['https://placehold.co/400x300'],
+    createdAt: '2024-01-15T00:00:00.000Z',
+    updatedAt: '2024-01-15T00:00:00.000Z'
+  },
+  // ... 12个预置资产,涵盖4种类别
+]
+
+export const mockBorrowRecords: BorrowRecord[] = [
+  {
+    id: 'BR1704931200000',
+    assetId: 'ASSET000005',
+    assetName: 'ThinkPad X1 Carbon',
+    borrowerId: 'EMP20250111001',
+    borrowerName: '张三',
+    borrowDate: '2025-01-10T00:00:00.000Z',
+    expectedReturnDate: '2025-01-20T00:00:00.000Z',
+    status: 'active',
+    createdAt: '2025-01-10T00:00:00.000Z',
+    updatedAt: '2025-01-10T00:00:00.000Z'
+  },
+  // ... 借还记录数据
+]
+
+export const mockStatistics: AssetStatistics = {
+  total: 12,
+  byCategory: {
+    electronic: 5,
+    furniture: 3,
+    book: 2,
+    other: 2
+  },
+  byStatus: {
+    stock: 6,
+    in_use: 2,
+    borrowed: 2,
+    maintenance: 1,
+    scrapped: 1
+  },
+  totalValue: 150000,
+  currentValue: 135000,
+  borrowedCount: 2,
+  maintenanceCount: 1
+}
+```
+
+**Mock API实现示例**:
+
+```typescript
+// src/modules/asset/api/index.ts
+import { mockAssets, mockBorrowRecords, mockStatistics } from '../mock/data'
+import { calculateCurrentValue, generateAssetId } from '../utils'
+
+// 模拟延迟
+function delay(ms: number = 500): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * 获取资产列表
+ */
+export async function getAssets(
+  params?: AssetFilter & { page?: number; pageSize?: number }
+): Promise<PaginationResponse<Asset> | Asset[]> {
+  await delay(300)
+
+  let filteredAssets = [...mockAssets]
+
+  // 筛选
+  if (params?.keyword) {
+    const keyword = params.keyword.toLowerCase()
+    filteredAssets = filteredAssets.filter(
+      asset =>
+        asset.name.toLowerCase().includes(keyword) ||
+        asset.id.toLowerCase().includes(keyword)
+    )
+  }
+
+  if (params?.category) {
+    filteredAssets = filteredAssets.filter(asset => asset.category === params.category)
+  }
+
+  if (params?.status) {
+    filteredAssets = filteredAssets.filter(asset => asset.status === params.status)
+  }
+
+  // 分页
+  if (params?.page !== undefined && params?.pageSize !== undefined) {
+    const start = (params.page - 1) * params.pageSize
+    const end = start + params.pageSize
+    const paginatedList = filteredAssets.slice(start, end)
+
+    return {
+      list: paginatedList,
+      total: filteredAssets.length,
+      page: params.page,
+      pageSize: params.pageSize
+    }
+  }
+
+  return filteredAssets
+}
+
+/**
+ * 创建资产
+ */
+export async function createAsset(data: AssetForm): Promise<Asset> {
+  await delay(400)
+
+  // 生成新ID
+  const newId = generateAssetId(mockAssets.length + 1)
+
+  const newAsset: Asset = {
+    id: newId,
+    name: data.name!,
+    category: data.category!,
+    brandModel: data.brandModel,
+    purchaseDate: data.purchaseDate!,
+    purchasePrice: data.purchasePrice!,
+    currentValue: calculateCurrentValue(data.purchasePrice!, data.purchaseDate!),
+    status: 'stock',
+    location: data.location,
+    images: data.images,
+    notes: data.notes,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+
+  mockAssets.unshift(newAsset)
+  return newAsset
+}
+
+/**
+ * 借出资产
+ */
+export async function borrowAsset(
+  id: string,
+  data: BorrowForm
+): Promise<{ asset: Asset; borrowRecord: BorrowRecord }> {
+  await delay(400)
+
+  const index = mockAssets.findIndex(a => a.id === id)
+  if (index === -1) {
+    throw new Error('资产不存在')
+  }
+
+  const asset = mockAssets[index]
+  if (asset.status !== 'stock') {
+    throw new Error('资产状态不允许借用')
+  }
+
+  // 更新资产状态
+  const updatedAsset: Asset = {
+    ...asset,
+    status: 'borrowed',
+    userId: data.borrowerId,
+    borrowDate: new Date().toISOString(),
+    expectedReturnDate: data.expectedReturnDate,
+    updatedAt: new Date().toISOString()
+  }
+
+  mockAssets[index] = updatedAsset
+
+  // 创建借还记录
+  const borrowRecord: BorrowRecord = {
+    id: `BR${Date.now()}`,
+    assetId: asset.id,
+    assetName: asset.name,
+    borrowerId: data.borrowerId,
+    borrowerName: data.borrowerId, // 实际应该从用户服务获取
+    borrowDate: new Date().toISOString(),
+    expectedReturnDate: data.expectedReturnDate,
+    status: 'active',
+    notes: data.notes,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+
+  mockBorrowRecords.unshift(borrowRecord)
+
+  return { asset: updatedAsset, borrowRecord }
+}
+
+/**
+ * 获取统计数据
+ */
+export async function getStatistics(): Promise<AssetStatistics> {
+  await delay(300)
+  return { ...mockStatistics }
+}
+
+/**
+ * 获取折旧趋势
+ */
+export async function getDepreciationTrend(months: number = 12): Promise<DepreciationTrend> {
+  await delay(300)
+
+  const monthData: string[] = []
+  const values: number[] = []
+
+  const now = new Date()
+  for (let i = months - 1; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    monthData.push(`${date.getMonth() + 1}月`)
+    values.push(Math.round(100000 + Math.random() * 50000))
+  }
+
+  return { months: monthData, values }
+}
+```
+
+**Mock数据特点**:
+- 12个预置资产,涵盖4种类别(电子设备、办公家具、图书资料、其他)
+- 5种资产状态(库存中、使用中、已借出、维修中、已报废)
+- 完整的借还记录数据
+- 统计数据预置
+- 支持完整CRUD操作
+- 实现搜索和筛选功能
+- 支持分页
+- 完整的状态转换验证
+- 自动折旧计算
+- 到期提醒功能
+- 逾期检测
+- 统计图表数据
+
+---
+
 ## 2. API接口设计
 
 ### 2.1 资产管理接口

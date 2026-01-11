@@ -148,59 +148,59 @@
 
 #### 3.2.1 登录页面
 
-- [ ] 登录表单
+- [x] 登录表单
   - 账号输入框(支持员工编号/邮箱/手机号)
   - 密码输入框(带显示/隐藏切换)
   - 记住我复选框
   - 登录按钮
   - 忘记密码链接
-- [ ] 表单验证
+- [x] 表单验证
   - 账号非空验证
   - 密码非空验证
   - 实时格式验证
-- [ ] 验证码(连续失败3次后显示)
+- [x] 验证码(连续失败3次后显示)
   - 图形验证码
   - 点击刷新
 
 #### 3.2.2 登录流程
 
-- [ ] 登录验证
+- [x] 登录验证
   - 账号存在性验证
   - 密码正确性验证
   - 账号状态验证(是否锁定/停用)
-- [ ] 会话创建
+- [x] 会话创建
   - 生成访问Token(JWT)
   - 生成刷新Token(Refresh Token)
   - 记录登录日志
-- [ ] 登录后处理
+- [x] 登录后处理
   - 跳转到首页或原访问页面
   - 加载用户信息和权限
   - 异地登录提醒(P2)
 
 #### 3.2.3 找回密码
 
-- [ ] 找回方式选择
+- [x] 找回方式选择
   - 邮箱找回
   - 手机号找回
-- [ ] 身份验证
+- [x] 身份验证
   - 输入注册邮箱/手机号
   - 发送验证码
   - 验证码校验
-- [ ] 重置密码
+- [x] 重置密码
   - 输入新密码
   - 确认新密码
   - 密码强度提示
-- [ ] 完成通知
+- [x] 完成通知
   - 密码修改成功提示
   - 发送密码变更通知
 
 #### 3.2.4 会话管理
 
-- [ ] Token存储
-  - Access Token存储(HttpOnly Cookie)
+- [x] Token存储
+  - Access Token存储(LocalStorage)
   - Refresh Token存储(LocalStorage)
-- [ ] 自动续期
-  - Token即将过期前自动刷新
+- [x] 自动续期
+  - Token即将过期前自动刷新(剩余5分钟)
   - 刷新失败跳转登录页
 - [ ] 多端登录管理
   - 查看活跃登录设备(P2)
@@ -208,14 +208,14 @@
 
 #### 3.2.5 安全防护
 
-- [ ] 登录限制
+- [x] 登录限制
   - 密码连续错误5次锁定账号30分钟
   - IP地址限流(1小时10次)
   - 账号锁定时显示解锁时间
-- [ ] 验证码机制
+- [x] 验证码机制
   - 连续失败3次出现图形验证码
   - 验证码有效期5分钟
-- [ ] 密码策略
+- [x] 密码策略
   - 最小长度8位
   - 必须包含字母和数字
   - 不能与最近3次密码重复
@@ -225,13 +225,88 @@
 
 #### 3.2.6 退出登录
 
-- [ ] 退出流程
+- [x] 退出流程
   - 清除本地Token
   - 调用后端退出接口
   - 记录退出日志
-- [ ] 退出后跳转
+- [x] 退出后跳转
   - 跳转到登录页
   - 清空路由历史
+
+### 3.3 Mock数据支持
+
+登录认证模块提供了完整的Mock数据实现,便于前端独立开发和测试:
+
+**Mock数据结构** (`src/modules/auth/api/mock.ts`):
+- 3个测试账号(管理员、普通员工、HR)
+- 完整的用户信息(角色、权限、部门等)
+- 登录失败次数记录
+- Token生成器(JWT格式)
+- 验证码生成器(图形验证码)
+
+**Mock测试账号**:
+```
+管理员 - admin / Admin123 (所有权限)
+员工   - zhangsan / Password123 (员工基础权限)
+HR     - lisi / Password123 (人事管理权限)
+```
+
+**Mock API实现** (`src/modules/auth/api/mock.ts`):
+- `mockLogin()`: 用户登录验证
+  - 支持员工编号/用户名/邮箱/手机号登录
+  - 密码错误次数统计
+  - 5次失败自动锁定账号
+  - 生成Access Token和Refresh Token
+- `mockRefreshToken()`: 刷新Token
+- `mockGetCaptcha()`: 获取图形验证码(SVG格式)
+- `mockSendCode()`: 发送验证码(邮箱/手机)
+  - 60秒发送频率限制
+  - 验证码有效期10分钟
+- `mockResetPassword()`: 重置密码
+  - 验证码验证
+  - 密码更新
+- `mockLogout()`: 退出登录
+
+### 3.4 Pinia状态管理
+
+登录认证模块使用Pinia进行状态管理 (`src/modules/auth/store/index.ts`):
+
+**状态**:
+- `userInfo`: 用户信息
+- `accessToken`: 访问Token
+- `refreshToken`: 刷新Token
+- `isLoggedIn`: 是否已登录
+- `userRoles`: 用户角色列表
+- `userPermissions`: 用户权限列表
+- `isAdmin`: 是否管理员
+
+**Actions**:
+- `login()`: 用户登录
+- `logout()`: 退出登录
+- `refreshAccessToken()`: 刷新Token
+- `fetchUserInfo()`: 获取用户信息
+- `isAuthenticated()`: 检查认证状态
+- `hasPermission()`: 检查权限
+- `hasRole()`: 检查角色
+- `hasAnyPermission()`: 检查是否有任意权限
+- `hasAllPermissions()`: 检查是否有所有权限
+- `clearAuthState()`: 清除认证状态
+
+### 3.5 Token工具函数
+
+Token管理工具函数 (`src/modules/auth/utils/token.ts`):
+
+**Token存储**:
+- `setAccessToken()`: 存储Access Token到LocalStorage
+- `getAccessToken()`: 获取Access Token
+- `setRefreshToken()`: 存储Refresh Token
+- `getRefreshToken()`: 获取Refresh Token
+- `clearTokens()`: 清除所有Token
+
+**Token验证**:
+- `isTokenExpired()`: 检查Token是否已过期
+- `isTokenExpiringSoon()`: 检查Token是否即将过期(剩余5分钟)
+- `getTokenExpiresIn()`: 获取Token剩余有效时间(秒)
 
 ---
 

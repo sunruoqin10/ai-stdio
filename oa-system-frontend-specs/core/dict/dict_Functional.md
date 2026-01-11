@@ -62,25 +62,25 @@
 
 **功能概述**: 管理系统中的字典分类,如"员工状态"、"资产状态"、"审批状态"等。
 
-- [ ] 字典类型列表
+- [x] 字典类型列表
   - 表格展示所有字典类型
   - 显示字典编码、名称、描述、项数量、状态、创建时间
   - 支持搜索(按编码/名称)
   - 支持筛选(系统字典/业务字典)
-- [ ] 新增字典类型
+- [x] 新增字典类型
   - 字典编码(唯一标识,如:employee_status)
   - 字典名称(如:员工状态)
   - 字典描述
   - 字典类别(系统字典/业务字典)
   - 验证编码唯一性
-- [ ] 编辑字典类型
+- [x] 编辑字典类型
   - 可编辑名称、描述
   - 字典编码不可修改
-- [ ] 删除字典类型
+- [x] 删除字典类型
   - 二次确认
   - 检查是否被引用
   - 如果有字典项,提示先删除字典项
-- [ ] 查看字典项
+- [x] 查看字典项
   - 点击字典类型跳转到字典项列表
   - 显示该类型下的所有字典项
 
@@ -88,13 +88,13 @@
 
 **功能概述**: 管理每个字典类型下的具体选项,如"在职"、"离职"、"试用期"等。
 
-- [ ] 字典项列表
+- [x] 字典项列表
   - 按字典类型分组显示
   - 显示项标签、项值、排序、状态、创建时间
   - 支持拖拽排序
   - 支持搜索(按标签/值)
   - 支持筛选(启用/禁用)
-- [ ] 新增字典项
+- [x] 新增字典项
   - 所属字典类型
   - 项标签(显示文本,如:在职)
   - 项值(实际值,如:active)
@@ -251,19 +251,90 @@
 - 如果被引用,提示"该字典项已被使用,无法删除"
 - 建议先禁用,再清理引用数据
 
-### 3.9 缓存规则
+### 3.9 缓存规则 ⭐ UPDATED
 
-**字典缓存机制**:
+#### 3.9.1 字典缓存机制
+
+**缓存管理类实现**:
+```typescript
+class DictCacheManager {
+  private cache: Map<string, CacheItem> = new Map()
+  private readonly CACHE_TTL = 3600000 // 1小时
+
+  // 获取缓存
+  get(dictTypeCode: string): DictData | null
+
+  // 设置缓存
+  set(dictTypeCode: string, data: DictData): void
+
+  // 清除缓存
+  clear(dictTypeCode?: string): void
+
+  // 批量清除缓存
+  clearBatch(dictTypeCodes: string[]): void
+}
+```
+
+**缓存策略**:
 - 字典数据加载后缓存到内存
 - 缓存key: `dict:${dictCode}`
-- 缓存时间: 1小时
-- 字典数据变更时清除对应缓存
-- 支持手动刷新缓存
+- 缓存时间: 1小时(3600000ms)
+- 定时清理过期缓存
+- 字典数据变更时自动清除对应缓存
 
-**API响应头**:
+**缓存使用示例**:
+```typescript
+import { dictCacheManager } from '@/modules/dict/utils/cache'
+
+// 获取字典数据(优先使用缓存)
+const data = dictCacheManager.get('employee_status')
+if (data) {
+  return data
+}
+
+// 从API加载
+const response = await dictApi.getDictData('employee_status')
+
+// 设置缓存
+dictCacheManager.set('employee_status', response.data)
 ```
-Cache-Control: public, max-age=3600
-ETag: "dict-employee-status-v1"
+
+#### 3.9.2 缓存失效时机
+
+**自动失效**:
+- 字典类型更新时 → 清除该字典类型缓存
+- 字典项增删改时 → 清除对应字典类型缓存
+- 缓存过期(1小时后) → 自动清除
+
+**手动失效**:
+```typescript
+// 清除特定字典类型缓存
+dictCacheManager.clear('employee_status')
+
+// 清除所有缓存
+dictCacheManager.clear()
+
+// 批量清除多个字典类型
+dictCacheManager.clearBatch(['employee_status', 'asset_status'])
+```
+
+#### 3.9.3 Mock数据支持 ⭐ NEW
+
+**Mock数据结构**:
+- 预置系统字典数据
+- Mock API实现
+- 开发环境使用Mock,生产环境使用真实API
+- 支持实时增删改查操作
+
+**API切换**:
+```typescript
+// 开发环境使用Mock API
+export function getDictTypeList(params) {
+  return mockApi.mockGetDictTypeList(params)
+
+  // 生产环境切换为真实API
+  // return request.get('/api/dict/types', { params })
+}
 ```
 
 ### 3.10 数据验证规则

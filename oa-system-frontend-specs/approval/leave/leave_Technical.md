@@ -1209,4 +1209,333 @@ async function getHolidays(year: number): Promise<Holiday[]> {
 
 ---
 
+## 6. Mock数据实现
+
+请假管理模块提供了完整的Mock数据实现,支持前端独立开发和测试。
+
+### 6.1 Mock数据结构
+
+**请假申请数据** (`mockLeaveRequests`):
+```typescript
+export const mockLeaveRequests: LeaveRequest[] = [
+  {
+    id: 'LEAVE20260109001',
+    applicantId: 'EMP000001',
+    applicantName: '张三',
+    departmentId: 'DEPT001',
+    departmentName: '技术部',
+    type: 'annual',
+    startTime: '2026-01-15T09:00:00.000Z',
+    endTime: '2026-01-17T18:00:00.000Z',
+    duration: 3,
+    reason: '家中有事,需要请假处理',
+    status: 'approved',
+    currentApprovalLevel: 1,
+    approvers: [
+      {
+        id: 1,
+        requestId: 'LEAVE20260109001',
+        approverId: 'EMP000005',
+        approverName: '孙经理',
+        approvalLevel: 1,
+        status: 'approved',
+        opinion: '同意',
+        timestamp: '2026-01-09T10:30:00.000Z'
+      }
+    ],
+    createdAt: '2026-01-09T09:00:00.000Z',
+    updatedAt: '2026-01-09T10:30:00.000Z'
+  },
+  // ... 更多请假申请数据
+]
+```
+
+**年假余额数据** (`mockLeaveBalances`):
+```typescript
+export const mockLeaveBalances: LeaveBalance[] = [
+  {
+    id: 1,
+    employeeId: 'EMP000001',
+    employeeName: '张三',
+    year: 2026,
+    annualTotal: 5,
+    annualUsed: 2,
+    annualRemaining: 3,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-09T00:00:00.000Z'
+  },
+  // ... 更多年假余额数据
+]
+```
+
+**节假日数据** (`mockHolidays`):
+```typescript
+export const mockHolidays: Holiday[] = [
+  { id: 1, date: '2026-01-01', name: '元旦', type: 'national', year: 2026 },
+  { id: 2, date: '2026-01-27', name: '春节', type: 'national', year: 2026 },
+  // ... 更多节假日数据
+]
+```
+
+### 6.2 Mock API实现
+
+**创建请假申请**:
+```typescript
+export async function createLeaveRequest(data: LeaveForm): Promise<LeaveRequest> {
+  await new Promise(resolve => setTimeout(resolve, 300))
+
+  const now = new Date()
+  const newRequest: LeaveRequest = {
+    id: `LEAVE${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
+    applicantId: 'EMP000001',
+    applicantName: '张三',
+    departmentId: 'DEPT001',
+    departmentName: '技术部',
+    type: data.type,
+    startTime: data.startTime,
+    endTime: data.endTime,
+    duration: data.duration || 1,
+    reason: data.reason,
+    attachments: data.attachments,
+    status: 'draft',
+    currentApprovalLevel: 0,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString()
+  }
+
+  mockLeaveRequests.unshift(newRequest)
+  return newRequest
+}
+```
+
+**提交请假申请**:
+```typescript
+export async function submitLeaveRequest(id: string): Promise<LeaveRequest> {
+  await new Promise(resolve => setTimeout(resolve, 400))
+
+  const request = mockLeaveRequests.find(req => req.id === id)
+  if (!request) {
+    throw new Error('请假申请不存在')
+  }
+
+  if (request.status !== 'draft') {
+    throw new Error('只能提交草稿状态的申请')
+  }
+
+  // 检查年假余额
+  if (request.type === 'annual') {
+    const balance = mockLeaveBalances.find(b => b.employeeId === request.applicantId && b.year === new Date().getFullYear())
+    if (balance && balance.annualRemaining < request.duration) {
+      throw new Error(`年假余额不足,剩余${balance.annualRemaining}天,需要${request.duration}天`)
+    }
+  }
+
+  // 更新状态
+  request.status = 'pending'
+  request.currentApprovalLevel = 1
+  request.updatedAt = new Date().toISOString()
+
+  // 添加审批人
+  const levels = Math.min(3, Math.ceil(request.duration / 3))
+  request.approvers = Array.from({ length: levels }, (_, i) => ({
+    requestId: request.id,
+    approverId: ['EMP000005', 'EMP000006', 'EMP000008'][i],
+    approverName: ['孙经理', '人事小李', '周总'][i],
+    approvalLevel: i + 1,
+    status: i === 0 ? 'pending' : 'pending'
+  }))
+
+  return request
+}
+```
+
+**审批请假申请**:
+```typescript
+export async function approveLeaveRequest(
+  id: string,
+  approval: ApprovalForm
+): Promise<LeaveRequest> {
+  await new Promise(resolve => setTimeout(resolve, 400))
+
+  const request = mockLeaveRequests.find(req => req.id === id)
+  if (!request) {
+    throw new Error('请假申请不存在')
+  }
+
+  if (request.status !== 'pending' && request.status !== 'approving') {
+    throw new Error('当前状态不允许审批')
+  }
+
+  const currentApprover = request.approvers?.find(
+    a => a.approvalLevel === request.currentApprovalLevel && a.status === 'pending'
+  )
+
+  if (!currentApprover) {
+    throw new Error('未找到待审批的记录')
+  }
+
+  // 更新审批记录
+  currentApprover.status = approval.status
+  currentApprover.opinion = approval.opinion
+  currentApprover.timestamp = new Date().toISOString()
+
+  // 如果通过
+  if (approval.status === 'approved') {
+    const totalLevels = request.approvers?.length || 0
+
+    if (request.currentApprovalLevel >= totalLevels) {
+      // 所有审批通过
+      request.status = 'approved'
+
+      // 如果是年假,扣减余额
+      if (request.type === 'annual') {
+        const balance = mockLeaveBalances.find(
+          b => b.employeeId === request.applicantId && b.year === new Date().getFullYear()
+        )
+        if (balance) {
+          balance.annualUsed += request.duration
+          balance.annualRemaining -= request.duration
+          balance.updatedAt = new Date().toISOString()
+        }
+      }
+    } else {
+      // 进入下一级审批
+      request.status = 'approving'
+      request.currentApprovalLevel++
+    }
+  } else {
+    // 驳回
+    request.status = 'rejected'
+  }
+
+  request.updatedAt = new Date().toISOString()
+
+  return request
+}
+```
+
+### 6.3 工具函数实现
+
+**计算请假时长(工作日)**:
+```typescript
+export function calculateDuration(
+  startTime: string,
+  endTime: string,
+  holidays: Holiday[] = []
+): number {
+  const start = new Date(startTime)
+  const end = new Date(endTime)
+
+  // 规范化时间,只取日期部分
+  start.setHours(0, 0, 0, 0)
+  end.setHours(0, 0, 0, 0)
+
+  let workDays = 0
+  const currentDate = new Date(start)
+  const holidaySet = new Set(holidays.map(h => h.date))
+
+  while (currentDate <= end) {
+    const dayOfWeek = currentDate.getDay()
+
+    // 排除周末(周六=6, 周日=0)
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      // 检查是否为节假日
+      const dateStr = currentDate.toISOString().split('T')[0]
+      if (!holidaySet.has(dateStr)) {
+        workDays++
+      }
+    }
+
+    // 移动到下一天
+    currentDate.setDate(currentDate.getDate() + 1)
+  }
+
+  // 计算小时部分(支持半天)
+  const startHour = new Date(startTime).getHours()
+  const endHour = new Date(endTime).getHours()
+
+  // 如果开始时间是下午,减0.5天
+  if (startHour >= 12) {
+    workDays -= 0.5
+  }
+
+  // 如果结束时间是上午,减0.5天
+  if (endHour <= 12) {
+    workDays -= 0.5
+  }
+
+  // 确保不为负数
+  return Math.max(0, workDays)
+}
+```
+
+**计算年假额度**:
+```typescript
+export function calculateAnnualQuota(joinDate: string): number {
+  const join = new Date(joinDate)
+  const now = new Date()
+  const currentYear = now.getFullYear()
+
+  // 计算工作年限(截至当年12月31日)
+  const yearEnd = new Date(currentYear, 11, 31)
+  const workYears = Math.floor((yearEnd.getTime() - join.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+
+  // 根据工龄返回年假天数
+  if (workYears < 1) return 0
+  if (workYears < 10) return 5
+  if (workYears < 20) return 10
+  return 15
+}
+
+export function calculateWorkYears(joinDate: string): number {
+  const join = new Date(joinDate)
+  const now = new Date()
+  const currentYear = now.getFullYear()
+
+  // 计算工作年限(截至当年12月31日)
+  const yearEnd = new Date(currentYear, 11, 31)
+  return Math.floor((yearEnd.getTime() - join.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+}
+```
+
+**获取审批层级**:
+```typescript
+export function getApprovalLevels(duration: number): number {
+  if (duration <= 3) return 1  // 部门负责人
+  if (duration <= 7) return 2  // 部门负责人 + 人事
+  return 3                     // 部门负责人 + 人事 + 总经理
+}
+
+export function isCurrentApprover(request: LeaveRequest, userId: string): boolean {
+  if (!request.approvers) return false
+
+  const currentApprover = request.approvers.find(
+    a => a.approvalLevel === request.currentApprovalLevel
+  )
+
+  return currentApprover?.approverId === userId && currentApprover.status === 'pending'
+}
+```
+
+**状态判断**:
+```typescript
+export function canCancel(request: LeaveRequest): boolean {
+  return request.status === 'pending'
+}
+
+export function canEdit(request: LeaveRequest): boolean {
+  return request.status === 'draft' || request.status === 'rejected'
+}
+
+export function canDelete(request: LeaveRequest): boolean {
+  return request.status === 'draft'
+}
+
+export function canResubmit(request: LeaveRequest): boolean {
+  return request.status === 'rejected'
+}
+```
+
+---
+
 **文档版本**: v1.0.0

@@ -541,5 +541,359 @@ function generateRecurringInstances(
 
 ---
 
+## 10. Mock数据实现
+
+会议室预定模块提供了完整的Mock数据实现,支持前端独立开发和测试。
+
+### 10.1 Mock数据结构
+
+**会议室数据** (`mockMeetingRooms`):
+```typescript
+export const mockMeetingRooms: MeetingRoom[] = [
+  {
+    id: 'MR001',
+    name: '第一会议室',
+    location: '3楼东侧',
+    capacity: 20,
+    floor: 3,
+    area: 60,
+    equipments: [
+      { id: 'EQ001', name: '高清投影仪', type: 'projector', quantity: 1, available: true },
+      { id: 'EQ002', name: '120寸投影幕', type: 'screen', quantity: 1, available: true },
+      { id: 'EQ003', name: '白板', type: 'whiteboard', quantity: 2, available: true },
+      { id: 'EQ004', name: '音响系统', type: 'audio', quantity: 1, available: true }
+    ],
+    status: 'available',
+    images: [],
+    description: '适合中型会议,配备齐全的会议设备',
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z'
+  },
+  // ... 更多会议室
+]
+```
+
+**会议预定数据** (`mockMeetingBookings`):
+```typescript
+export const mockMeetingBookings: MeetingBooking[] = [
+  {
+    id: 'MB20260110001',
+    title: '产品需求评审会',
+    organizerId: 'U001',
+    organizerName: '张三',
+    organizerPhone: '13800138001',
+    departmentId: 'D001',
+    departmentName: '产品部',
+    roomId: 'MR001',
+    roomName: '第一会议室',
+    startTime: '2026-01-15T09:00:00Z',
+    endTime: '2026-01-15T11:00:00Z',
+    duration: 120,
+    attendees: [
+      { userId: 'U001', userName: '张三', department: '产品部', required: true, status: 'accepted' },
+      { userId: 'U002', userName: '李四', department: '技术部', required: true, status: 'accepted' }
+    ],
+    agenda: '讨论Q1产品需求',
+    level: 'important',
+    isPrivate: false,
+    reminder: '30min',
+    status: 'approved',
+    approval: {
+      approverId: 'ADMIN',
+      approverName: '管理员',
+      status: 'approved',
+      opinion: '同意',
+      timestamp: '2026-01-10T10:00:00Z'
+    },
+    createdAt: '2026-01-10T09:00:00Z',
+    updatedAt: '2026-01-10T10:00:00Z',
+    createdBy: 'U001'
+  },
+  // ... 更多会议预定
+]
+```
+
+### 10.2 Mock API实现
+
+**创建会议预定**:
+```typescript
+export async function createMeetingBooking(form: BookingForm): Promise<MeetingBooking> {
+  await delay()
+
+  // 构建开始和结束时间
+  const startDateTime = new Date(`${form.date} ${form.startTime}`)
+  const endDateTime = new Date(`${form.date} ${form.endTime}`)
+  const duration = Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000)
+
+  const room = mockData.rooms.find(r => r.id === form.roomId)
+
+  const newBooking: MeetingBooking = {
+    id: generateBookingId(),
+    title: form.title,
+    organizerId: 'CURRENT_USER',
+    organizerName: '当前用户',
+    organizerPhone: form.organizerPhone,
+    departmentId: 'CURRENT_DEPT',
+    departmentName: '当前部门',
+    roomId: form.roomId,
+    roomName: room?.name || '',
+    startTime: startDateTime.toISOString(),
+    endTime: endDateTime.toISOString(),
+    duration,
+    attendees: form.attendeeIds.map(userId => ({
+      userId,
+      userName: '用户',
+      required: true,
+      status: 'pending' as const
+    })),
+    agenda: form.agenda,
+    level: form.level,
+    isPrivate: form.isPrivate,
+    reminder: form.reminder,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    createdBy: 'CURRENT_USER'
+  }
+
+  // 如果有重复规则,添加到预定数据中
+  if (form.recurrence) {
+    newBooking.recurrence = form.recurrence
+  }
+
+  mockData.bookings.push(newBooking)
+  return newBooking
+}
+```
+
+**审批会议预定**:
+```typescript
+export async function approveMeetingBooking(
+  bookingId: string,
+  approval: MeetingApprovalForm
+): Promise<MeetingBooking | null> {
+  await delay()
+
+  const booking = mockData.bookings.find(b => b.id === bookingId)
+  if (!booking) return null
+
+  if (booking.status !== 'pending') {
+    throw new Error('只有待审批的预定才能审批')
+  }
+
+  booking.status = approval.status
+  booking.approval = {
+    approverId: 'ADMIN',
+    approverName: '管理员',
+    status: approval.status,
+    opinion: approval.opinion,
+    timestamp: new Date().toISOString()
+  }
+
+  if (approval.status === 'rejected') {
+    booking.rejectionReason = approval.opinion
+  }
+
+  booking.updatedAt = new Date().toISOString()
+
+  return booking
+}
+```
+
+**检查会议室可用性**:
+```typescript
+export async function checkRoomAvailability(params: AvailabilityQueryParams): Promise<{
+  available: boolean
+  conflicts: MeetingBooking[]
+}> {
+  await delay()
+
+  const bookings = mockData.bookings.filter(b => {
+    if (b.roomId !== params.roomId) return false
+    if (b.status === 'cancelled' || b.status === 'rejected') return false
+
+    const bookingDate = new Date(b.startTime).toDateString()
+    const queryDate = new Date(params.date).toDateString()
+    if (bookingDate !== queryDate) return false
+
+    return true
+  })
+
+  const conflicts: MeetingBooking[] = []
+
+  if (params.startTime && params.endTime) {
+    const queryStart = new Date(`${params.date} ${params.startTime}`)
+    const queryEnd = new Date(`${params.date} ${params.endTime}`)
+
+    bookings.forEach(booking => {
+      const bookingStart = new Date(booking.startTime)
+      const bookingEnd = new Date(booking.endTime)
+
+      if (queryStart < bookingEnd && queryEnd > bookingStart) {
+        conflicts.push(booking)
+      }
+    })
+  }
+
+  return {
+    available: conflicts.length === 0,
+    conflicts
+  }
+}
+```
+
+**会议签到**:
+```typescript
+export async function checkInMeeting(form: CheckInForm): Promise<MeetingBooking | null> {
+  await delay()
+
+  const booking = mockData.bookings.find(b => b.id === form.bookingId)
+  if (!booking) return null
+
+  if (booking.status !== 'approved') {
+    throw new Error('只有已通过的预定才能签到')
+  }
+
+  if (booking.actualStartTime) {
+    throw new Error('已经签到过了')
+  }
+
+  booking.actualStartTime = form.actualStartTime
+  booking.checkInUser = 'CURRENT_USER'
+  booking.updatedAt = new Date().toISOString()
+
+  return booking
+}
+```
+
+**提交评价**:
+```typescript
+export async function submitMeetingRating(form: RatingForm): Promise<MeetingBooking | null> {
+  await delay()
+
+  const booking = mockData.bookings.find(b => b.id === form.bookingId)
+  if (!booking) return null
+
+  if (!booking.actualEndTime) {
+    throw new Error('会议结束后才能评价')
+  }
+
+  booking.rating = form.rating
+  booking.feedback = form.feedback
+  booking.updatedAt = new Date().toISOString()
+
+  return booking
+}
+```
+
+### 10.3 工具函数实现
+
+**生成预定ID**:
+```typescript
+export function generateBookingId(): string {
+  const now = new Date()
+  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '')
+  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
+  return `MB${dateStr}${random}`
+}
+```
+
+**冲突检测**:
+```typescript
+export function hasTimeConflict(
+  booking1: { startTime: string; endTime: string },
+  booking2: { startTime: string; endTime: string }
+): boolean {
+  const start1 = new Date(booking1.startTime)
+  const end1 = new Date(booking1.endTime)
+  const start2 = new Date(booking2.startTime)
+  const end2 = new Date(booking2.endTime)
+
+  return start1 < end2 && end1 > start2
+}
+
+export function getConflictingBookings(
+  roomId: string,
+  startTime: string,
+  endTime: string,
+  existingBookings: MeetingBooking[],
+  excludeBookingId?: string
+): MeetingBooking[] {
+  return existingBookings.filter(booking => {
+    if (booking.roomId !== roomId) return false
+    if (booking.status === 'cancelled' || booking.status === 'rejected') return false
+    if (excludeBookingId && booking.id === excludeBookingId) return false
+    return hasTimeConflict(
+      { startTime, endTime },
+      { startTime: booking.startTime, endTime: booking.endTime }
+    )
+  })
+}
+```
+
+**状态判断**:
+```typescript
+export function canEdit(status: BookingStatus): boolean {
+  return status === 'pending'
+}
+
+export function canCancel(status: BookingStatus): boolean {
+  return status === 'pending' || status === 'approved'
+}
+
+export function canApprove(status: BookingStatus): boolean {
+  return status === 'pending'
+}
+
+export function canCheckIn(booking: MeetingBooking): boolean {
+  if (booking.status !== 'approved') return false
+  const now = new Date()
+  const startTime = new Date(booking.startTime)
+  const endTime = new Date(booking.endTime)
+  return now >= startTime && now <= endTime && !booking.actualStartTime
+}
+
+export function canCheckOut(booking: MeetingBooking): boolean {
+  return !!booking.actualStartTime && !booking.actualEndTime
+}
+
+export function canRate(booking: MeetingBooking): boolean {
+  return booking.status === 'approved' && !!booking.actualEndTime && !booking.rating
+}
+```
+
+**计算会议时长**:
+```typescript
+export function calculateDuration(startTime: string, endTime: string): number {
+  const start = new Date(startTime)
+  const end = new Date(endTime)
+  return Math.round((end.getTime() - start.getTime()) / 60000)
+}
+```
+
+**验证函数**:
+```typescript
+export function validateTimeFormat(time: string): boolean {
+  const regex = /^([01]\d|2[0-3]):([0-5]\d)$/
+  return regex.test(time)
+}
+
+export function validateTimeRange(startTime: string, endTime: string): boolean {
+  return new Date(startTime) < new Date(endTime)
+}
+
+export function validateDuration(startTime: string, endTime: string): boolean {
+  const duration = calculateDuration(startTime, endTime)
+  return duration > 0 && duration <= 8 * 60
+}
+
+export function validatePhoneNumber(phone: string): boolean {
+  const regex = /^1[3-9]\d{9}$/
+  return regex.test(phone)
+}
+```
+
+---
+
 **文档版本**: v1.0.0
-**最后更新**: 2026-01-09
+**最后更新**: 2026-01-11

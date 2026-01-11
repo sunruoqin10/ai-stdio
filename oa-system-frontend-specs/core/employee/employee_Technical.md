@@ -367,7 +367,87 @@ interface StatisticsResponse {
 }
 ```
 
-### 2.3 API实现要求
+### 2.3 Mock数据实现 ⭐ NEW
+
+#### 2.3.1 Mock数据结构
+```typescript
+// src/modules/employee/mock/data.ts
+
+// Mock员工数据 (预置4名员工)
+export const mockEmployees: Employee[] = [
+  {
+    id: 'EMP20230115001',
+    name: '张三',
+    englishName: 'Tom',
+    gender: Gender.MALE,
+    // ... 完整员工信息
+  },
+  // ... 更多员工
+]
+
+// Mock部门数据
+export const mockDepartments = [
+  { id: 'dept_001', name: '技术部' },
+  { id: 'dept_002', name: '产品部' },
+  { id: 'dept_003', name: '设计部' },
+]
+
+// Mock职位数据
+export const mockPositions = [
+  '前端工程师',
+  '后端工程师',
+  '产品经理',
+  'UI设计师',
+  '技术经理',
+]
+
+// Mock操作日志
+export const mockOperationLogs: Record<string, OperationLog[]> = {}
+```
+
+#### 2.3.2 头像生成
+```typescript
+// 使用 DiceBear API 生成头像
+const getAvatar = (seed: string) =>
+  `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`
+
+// 示例:
+// getAvatar('zhangsan')
+// => "https://api.dicebear.com/7.x/avataaars/svg?seed=zhangsan"
+```
+
+#### 2.3.3 API实现
+所有API函数使用Mock数据实现:
+```typescript
+export async function getEmployeeList(params: EmployeeFilter & {
+  page: number
+  pageSize: number
+}): Promise<PaginationResponse<Employee>> {
+  await delay(300) // 模拟延迟
+
+  let filteredList = [...mockEmployees]
+
+  // 关键词搜索
+  if (params.keyword) {
+    filteredList = filteredList.filter(emp =>
+      emp.name.includes(params.keyword!) ||
+      emp.id.includes(params.keyword!) ||
+      emp.phone.includes(params.keyword!)
+    )
+  }
+
+  // ... 其他筛选逻辑
+
+  return {
+    list: filteredList.slice(start, end),
+    total: filteredList.length,
+    page: params.page,
+    pageSize: params.pageSize,
+  }
+}
+```
+
+### 2.4 API实现要求
 
 ```typescript
 // src/modules/employee/api/index.ts

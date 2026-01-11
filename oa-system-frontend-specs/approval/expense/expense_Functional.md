@@ -543,5 +543,115 @@ const canUploadProof = computed(() => checkPermission('expense:payment'))
 
 ---
 
+## 7. Mock数据支持
+
+费用报销模块提供了完整的Mock数据实现,便于前端独立开发和测试:
+
+**Mock数据结构** (`src/modules/expense/mock/data.ts`):
+- **6个预置报销单**,涵盖所有状态:
+  - 1个已打款(差旅费)
+  - 1个财务审批中(招待费)
+  - 1个部门审批中(办公用品)
+  - 1个已驳回(交通费)
+  - 1个草稿状态(其他费用)
+  - 1个大额部门审批中(差旅费>5000,需要总经理加签)
+- **4个打款记录**,展示不同打款方式:
+  - 银行转账(已完成/待打款)
+  - 现金(已完成)
+  - 支票(打款失败)
+- **完整的费用明细数据**,包含多种分类(交通费/住宿费/餐补/招待费/办公设备等)
+- **完整的发票数据**,包含三种类型:
+  - 增值税专用发票(20位)
+  - 增值税普通发票
+  - 电子发票
+
+**Mock API实现** (`src/modules/expense/api/index.ts`):
+- `getMyExpenses()`: 获取我的报销列表,支持筛选和分页
+- `getExpense()`: 获取报销详情
+- `createExpense()`: 创建报销单(自动生成EXP编号)
+- `updateExpense()`: 更新报销单(仅草稿状态)
+- `deleteExpense()`: 删除报销单(仅草稿状态)
+- `submitExpense()`: 提交审批,验证发票和金额一致性
+- `cancelExpense()`: 撤销报销单(待审批状态)
+- `getPendingApprovals()`: 获取待审批列表
+- `departmentApprove()`: 部门审批(通过/驳回)
+- `financeApprove()`: 财务审批(通过/驳回,自动创建打款记录)
+- `validateInvoice()`: 验证发票唯一性和格式
+- `ocrInvoice()`: OCR识别发票(模拟)
+- `createPayment()`: 创建打款记录
+- `uploadPaymentProof()`: 上传打款凭证
+- `getPayments()`: 获取打款列表
+- `getDepartmentStats()`: 按部门统计
+- `getTypeStats()`: 按类型统计
+- `getMonthlyStats()`: 按月份统计
+
+---
+
+## 8. 工具函数实现
+
+费用报销模块提供了丰富的工具函数 (`src/modules/expense/utils/index.ts`):
+
+**格式化函数**:
+- `formatDate(date)`: 格式化日期为 YYYY-MM-DD
+- `formatDateTime(date)`: 格式化日期时间为 YYYY-MM-DD HH:mm
+- `formatAmount(amount)`: 格式化金额为 ¥XX.XX
+
+**类型转换函数**:
+- `getExpenseTypeName(type)`: 获取报销类型中文名称
+  - travel → 差旅费
+  - hospitality → 招待费
+  - office → 办公用品
+  - transport → 交通费
+  - other → 其他费用
+- `getExpenseStatusName(status)`: 获取报销状态中文名称
+- `getExpenseStatusType(status)`: 获取Element Plus Tag类型
+- `getInvoiceTypeName(type)`: 获取发票类型中文名称
+- `getPaymentMethodName(method)`: 获取打款方式中文名称
+- `getPaymentStatusName(status)`: 获取打款状态中文名称
+
+**状态判断函数**:
+- `canEdit(status)`: 判断是否可编辑(仅草稿状态)
+- `canDelete(status)`: 判断是否可删除(仅草稿状态)
+- `canSubmit(status)`: 判断是否可提交(草稿或已驳回)
+- `canCancel(status)`: 判断是否可撤回(待审批状态)
+- `canDeptApprove(status)`: 判断是否可部门审批
+- `canFinanceApprove(status)`: 判断是否可财务审批
+- `canPayment(status)`: 判断是否可打款
+- `canResubmit(status)`: 判断是否可重新提交(已驳回)
+
+**发票验证函数**:
+- `validateInvoiceNumberFormat(invoiceNumber)`: 验证发票号码格式(8位或20位数字)
+- `validateInvoiceAmount(invoices, totalAmount)`: 验证发票金额一致性
+
+**大额加签规则**:
+- `checkSingleAmountApproval(amount)`: 检查单笔金额加签
+  - >10000: 总经理+特别审批人
+  - >5000: 总经理
+  - 其他: 默认审批层级
+- `getApprovalLevelName(level)`: 获取审批层级名称
+
+**报销单号生成**:
+- `generateExpenseId()`: 生成报销单号 EXP+YYYYMMDD+4位随机数
+
+**计算函数**:
+- `calculateItemsTotal(items)`: 计算费用明细总金额
+- `calculateInvoicesTotal(invoices)`: 计算发票总金额
+
+**筛选函数**:
+- `filterByDepartment(expenses, departmentId)`: 按部门筛选
+- `filterByType(expenses, type)`: 按类型筛选
+- `filterByStatus(expenses, status)`: 按状态筛选
+- `filterByDateRange(expenses, startDate, endDate)`: 按日期范围筛选
+
+**排序函数**:
+- `sortByAmount(expenses, order)`: 按金额排序
+- `sortByDate(expenses, order)`: 按日期排序
+
+**工具提示函数**:
+- `getStatusTip(status)`: 获取状态提示信息
+- `getTypeTip(type)`: 获取类型提示信息
+
+---
+
 **文档版本**: v1.0.0
-**最后更新**: 2026-01-09
+**最后更新**: 2026-01-11

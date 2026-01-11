@@ -315,97 +315,225 @@ interface DeleteDepartmentResponse {
 }
 ```
 
-### 2.3 API实现要求
+### 2.3 Mock数据实现
+
+部门管理模块提供了完整的Mock数据实现,便于前端独立开发和测试。
+
+**Mock数据位置**:
+```
+src/modules/department/mock/
+├── data.ts          # Mock部门数据
+└── index.ts         # Mock导出
+```
+
+**Mock数据结构**:
+
+```typescript
+// src/modules/department/mock/data.ts
+import { mockEmployees } from '@/modules/employee/mock/data'
+
+export const mockDepartments: Department[] = [
+  {
+    id: 'DEPT0001',
+    name: 'XX科技有限公司',
+    shortName: '总公司',
+    parentId: null,
+    leaderId: 'EMP20250111001',
+    leader: mockEmployees[0],
+    level: 1,
+    sort: 1,
+    establishedDate: '2020-01-01',
+    description: '公司总部',
+    status: 'active',
+    employeeCount: 0,
+    createdAt: '2020-01-01T00:00:00.000Z',
+    updatedAt: '2020-01-01T00:00:00.000Z'
+  },
+  // ... 12个预置部门,覆盖5级层级结构
+]
+```
+
+**Mock API实现示例**:
 
 ```typescript
 // src/modules/department/api/index.ts
-import request from '@/utils/request'
-import type {
-  Department,
-  DepartmentFilter,
-  DepartmentForm,
-  MoveDepartmentRequest,
-  DepartmentStatistics
-} from '../types'
+import { mockDepartments } from '../mock/data'
+import { buildTree, flattenTree, validateMove, validateDelete } from '../utils'
+
+// 模拟延迟
+const delay = (ms: number = 300) => new Promise(resolve => setTimeout(resolve, ms))
 
 /**
  * 获取部门列表
- * @param params 查询参数
  */
-export function getList(params?: DepartmentFilter & { type?: 'tree' | 'flat' }) {
-  return request.get<{
-    list?: Department[]
-    total?: number
-  } | Department[]>('/api/departments', { params })
-}
+export async function getList(
+  params?: DepartmentFilter & { type?: 'tree' | 'flat' }
+): Promise<Department[] | { list: Department[]; total: number }> {
+  await delay()
 
-/**
- * 获取部门详情
- * @param id 部门ID
- */
-export function getDetail(id: string) {
-  return request.get<Department>(`/api/departments/${id}`)
-}
+  let filteredList = [...mockDepartments]
 
-/**
- * 获取子部门列表
- * @param id 部门ID
- */
-export function getChildren(id: string) {
-  return request.get<Department[]>(`/api/departments/${id}/children`)
-}
+  // 关键词搜索
+  if (params?.keyword) {
+    const keyword = params.keyword.toLowerCase()
+    filteredList = filteredList.filter(
+      dept =>
+        dept.name.toLowerCase().includes(keyword) ||
+        dept.shortName?.toLowerCase().includes(keyword)
+    )
+  }
 
-/**
- * 获取部门成员
- * @param id 部门ID
- */
-export function getEmployees(id: string) {
-  return request.get(`/api/departments/${id}/employees`)
+  // 状态筛选
+  if (params?.status) {
+    filteredList = filteredList.filter(dept => dept.status === params.status)
+  }
+
+  // 返回树形或扁平数据
+  if (params?.type === 'tree') {
+    return buildTree(filteredList)
+  }
+
+  return {
+    list: filteredList,
+    total: filteredList.length
+  }
 }
 
 /**
  * 创建部门
- * @param data 表单数据
  */
-export function create(data: DepartmentForm) {
-  return request.post<{ id: string }>('/api/departments', data)
-}
+export async function create(data: DepartmentForm): Promise<Department> {
+  await delay()
 
-/**
- * 更新部门
- * @param id 部门ID
- * @param data 表单数据
- */
-export function update(id: string, data: Partial<DepartmentForm>) {
-  return request.put<Department>(`/api/departments/${id}`, data)
+  // 生成部门编号
+  const id = `DEPT${String(mockDepartments.length + 1).padStart(4, '0')}`
+
+  // 计算层级
+  const level = data.parentId
+    ? (mockDepartments.find(d => d.id === data.parentId)?.level || 0) + 1
+    : 1
+
+  const newDepartment: Department = {
+    id,
+    name: data.name,
+    shortName: data.shortName,
+    parentId: data.parentId || null,
+    leaderId: data.leaderId,
+    leader: mockEmployees.find(e => e.id === data.leaderId),
+    level,
+    sort: data.sort || 0,
+    establishedDate: data.establishedDate,
+    description: data.description,
+    icon: data.icon,
+    status: 'active',
+    employeeCount: 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+
+  mockDepartments.push(newDepartment)
+  return newDepartment
 }
 
 /**
  * 移动部门
- * @param data 移动请求
  */
-export function move(data: MoveDepartmentRequest) {
-  return request.put<Department>(
-    `/api/departments/${data.departmentId}/move`,
-    { newParentId: data.newParentId }
-  )
+export async function move(
+  departmentId: string,
+  newParentId: string | null
+): Promise<Department> {
+  await delay()
+
+  // 验证移动
+  const validation = validateMove(departmentId, newParentId, mockDepartments)
+  if (!validation.valid) {
+    throw new Error(validation.message)
+  }
+
+  const index = mockDepartments.findIndex(d => d.id === departmentId)
+  if (index === -1) {
+    throw new Error('部门不存在')
+  }
+
+  // 更新父级和层级
+  const newLevel = newParentId
+    ? mockDepartments.find(d => d.id === newParentId)!.level + 1
+    : 1
+
+  mockDepartments[index].parentId = newParentId
+  mockDepartments[index].level = newLevel
+
+  // 级联更新子部门层级
+  await updateChildrenLevel(departmentId, newLevel)
+
+  return mockDepartments[index]
 }
 
 /**
- * 删除部门
- * @param id 部门ID
+ * 获取统计数据
  */
-export function remove(id: string) {
-  return request.delete(`/api/departments/${id}`)
+export async function getStatistics(): Promise<DepartmentStatistics> {
+  await delay()
+
+  const total = mockDepartments.length
+  const level1Count = mockDepartments.filter(d => d.level === 1).length
+  const maxLevel = Math.max(...mockDepartments.map(d => d.level))
+  const withLeaderCount = mockDepartments.filter(d => d.leaderId).length
+  const totalEmployees = new Set(
+    mockEmployees.map(e => e.departmentId)
+  ).size
+
+  return {
+    total,
+    level1Count,
+    maxLevel,
+    withLeaderCount,
+    totalEmployees
+  }
 }
 
 /**
- * 获取部门统计
+ * 批量删除部门
  */
-export function getStatistics() {
-  return request.get<DepartmentStatistics>('/api/departments/statistics')
+export async function batchRemove(ids: string[]): Promise<void> {
+  await delay()
+
+  for (const id of ids) {
+    const index = mockDepartments.findIndex(d => d.id === id)
+    if (index !== -1) {
+      mockDepartments.splice(index, 1)
+    }
+  }
+}
+
+/**
+ * 导出部门列表
+ */
+export async function exportDepartments(): Promise<Blob> {
+  await delay(1000)
+
+  // 模拟导出Excel
+  const data = {
+    mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    data: new ArrayBuffer(0)
+  }
+
+  return new Blob([data.data], { type: data.mime })
 }
 ```
+
+**Mock数据特点**:
+- 5级部门层级结构(从总公司到工作组)
+- 12个预置部门,覆盖常见组织架构
+- 包含部门负责人信息(关联员工)
+- 部门人数统计(虚拟字段)
+- 支持完整CRUD操作
+- 实现搜索和筛选功能
+- 支持树形和扁平数据返回
+- 完整的验证逻辑(移动、删除)
+- 统计功能实现
+- 批量操作支持
+- 导出功能模拟
 
 ---
 

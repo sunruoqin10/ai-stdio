@@ -451,5 +451,165 @@ const canEditRoomInfo = computed(() => {
 
 ---
 
+## 7. Mock数据支持
+
+会议室预定模块提供了完整的Mock数据实现,便于前端独立开发和测试:
+
+**Mock数据结构** (`src/modules/meeting/mock/data.ts`):
+- **5个预置会议室**:
+  - 第一会议室: 容量20人,3楼东侧,配备投影仪、投影幕、白板、音响
+  - 第二会议室: 容量10人,3楼西侧,配备投影仪、白板
+  - 多功能厅: 容量100人,5楼,配备高清投影仪、LED大屏、专业音响、视频会议系统、白板
+  - VIP接待室: 容量8人,6楼,配备投影仪、白板、视频会议系统
+  - 培训室: 容量30人,4楼,配备投影仪、投影幕、白板、音响、30台计算机(维护中)
+- **7个会议预定记录**,涵盖所有状态:
+  - 2个已通过(产品需求评审会、全员大会)
+  - 2个待审批(技术方案讨论、项目启动会)
+  - 1个已取消(周例会)
+  - 1个已驳回(面试会议)
+  - 1个已完成且已评价(客户洽谈,包含签到签退记录)
+- **4个通知记录**:
+  - 会议提醒(提前30分钟)
+  - 审批通过通知
+  - 审批驳回通知
+- **统计数据**:
+  - 会议室使用统计(4个会议室)
+  - 部门使用统计(产品部、技术部、销售部)
+  - 时间段统计(9:00-16:00)
+  - 月度统计(10-12月)
+
+**Mock API实现** (`src/modules/meeting/api/index.ts`):
+
+**会议室管理接口**:
+- `getMeetingRooms()`: 获取会议室列表,支持容量、楼层、设备类型、状态筛选
+- `getMeetingRoomDetail()`: 获取会议室详情
+- `createMeetingRoom()`: 创建会议室
+- `updateMeetingRoom()`: 更新会议室信息
+- `deleteMeetingRoom()`: 删除会议室
+
+**会议预定管理接口**:
+- `getMeetingBookings()`: 获取会议预定列表,支持会议室、状态、预定人、部门、日期范围、关键词筛选和分页
+- `getMeetingBookingDetail()`: 获取会议预定详情
+- `createMeetingBooking()`: 创建会议预定,自动生成MB编号
+- `updateMeetingBooking()`: 更新会议预定(仅待审批状态)
+- `cancelMeetingBooking()`: 取消会议预定(待审批或已通过状态)
+
+**审批管理接口**:
+- `getPendingApprovals()`: 获取待审批列表
+- `approveMeetingBooking()`: 审批会议预定(通过/驳回)
+
+**签到签退接口**:
+- `checkInMeeting()`: 会议签到
+- `checkOutMeeting()`: 会议签退
+
+**评价接口**:
+- `submitMeetingRating()`: 提交会议评价
+
+**可用性检查接口**:
+- `checkRoomAvailability()`: 检查会议室可用性,返回冲突列表
+- `checkTimeConflicts()`: 检查时间冲突
+
+**统计分析接口**:
+- `getRoomUsageStats()`: 获取会议室使用统计
+- `getDepartmentUsageStats()`: 获取部门使用统计
+- `getTimeSlotStats()`: 获取时间段统计
+- `getMonthlyStats()`: 获取月度统计
+
+**日历接口**:
+- `getCalendarEvents()`: 获取日历事件,支持日期范围和会议室筛选
+- `getCalendarResources()`: 获取日历资源(会议室列表)
+
+**通知接口**:
+- `getNotifications()`: 获取用户通知列表
+- `markNotificationRead()`: 标记通知为已读
+- `sendMeetingReminder()`: 发送会议提醒
+
+---
+
+## 8. 工具函数实现
+
+会议室预定模块提供了丰富的工具函数 (`src/modules/meeting/utils/index.ts`):
+
+**格式化函数**:
+- `formatDate(date)`: 格式化日期为 YYYY-MM-DD
+- `formatDateTime(date)`: 格式化日期时间为 YYYY-MM-DD HH:mm
+- `formatTime(date)`: 格式化时间为 HH:mm
+- `formatDuration(minutes)`: 格式化时长(分钟 → X小时X分钟)
+
+**类型转换函数**:
+- `getBookingStatusName(status)`: 获取预定状态中文名称
+  - pending → 待审批
+  - approved → 已通过
+  - rejected → 已驳回
+  - cancelled → 已取消
+- `getBookingStatusType(status)`: 获取Element Plus Tag类型
+- `getRoomStatusName(status)`: 获取会议室状态中文名称(空闲/使用中/维护中)
+- `getRoomStatusType(status)`: 获取会议室状态标签类型
+- `getRecurrenceTypeName(type)`: 获取重复类型中文名称(不重复/每天/每周/每月)
+- `getReminderTimeName(time)`: 获取提醒时间中文名称(不提醒/提前15分钟/30分钟/1小时/1天)
+- `getMeetingLevelName(level)`: 获取会议等级中文名称(普通/重要/紧急)
+- `getMeetingLevelType(level)`: 获取会议等级标签类型
+- `getEquipmentTypeName(type)`: 获取设备类型中文名称(投影仪/投影幕/白板/音响设备/视频设备/计算机/其他)
+
+**状态判断函数**:
+- `canEdit(status)`: 判断是否可编辑(仅待审批状态)
+- `canCancel(status)`: 判断是否可取消(待审批或已通过状态)
+- `canApprove(status)`: 判断是否可审批(待审批状态)
+- `canCheckIn(booking)`: 判断是否可签到(已通过且在会议时间内且未签到)
+- `canCheckOut(booking)`: 判断是否可签退(已签到且未签退)
+- `canRate(booking)`: 判断是否可评价(已通过且已结束且未评价)
+
+**时间计算函数**:
+- `calculateDuration(startTime, endTime)`: 计算会议时长(分钟)
+- `isWorkingTime(date)`: 判断是否在工作时间(工作日9:00-18:00)
+- `calculateReminderTime(startTime, reminder)`: 计算提醒时间
+- `generateRecurrenceDates(startDate, recurrenceType, interval, endDate)`: 生成重复会议日期
+
+**冲突检测函数**:
+- `hasTimeConflict(booking1, booking2)`: 检查两个预定是否有时间冲突
+- `getConflictingBookings(roomId, startTime, endTime, existingBookings, excludeBookingId)`: 获取冲突的预定列表
+- `isRoomAvailable(room, bookings, startTime, endTime)`: 检查会议室是否可用
+
+**工作日计算**:
+- `calculateWorkingDays(startDate, endDate)`: 计算工作日天数(排除周末)
+- `isWorkingDay(date)`: 判断是否为工作日(周一到周五)
+
+**验证函数**:
+- `validateTimeFormat(time)`: 验证时间格式(HH:mm)
+- `validateTimeRange(startTime, endTime)`: 验证时间范围(开始时间必须早于结束时间)
+- `validateDuration(startTime, endTime)`: 验证会议时长(不超过8小时)
+- `validatePhoneNumber(phone)`: 验证手机号格式(1开头的11位数字)
+
+**筛选函数**:
+- `filterByStatus(bookings, status)`: 按状态筛选
+- `filterByRoom(bookings, roomId)`: 按会议室筛选
+- `filterByDepartment(bookings, departmentId)`: 按部门筛选
+- `filterByDateRange(bookings, startDate, endDate)`: 按日期范围筛选
+- `filterByKeyword(bookings, keyword)`: 按关键词筛选(标题、预定人、议程)
+
+**排序函数**:
+- `sortByStartTime(bookings, order)`: 按开始时间排序
+- `sortByCreatedAt(bookings, order)`: 按创建时间排序
+
+**统计函数**:
+- `calculateUtilizationRate(bookings, roomCapacity)`: 计算会议室使用率
+- `calculateAvgAttendees(bookings)`: 计算平均参会人数
+- `calculateCancellationRate(bookings)`: 计算取消率
+
+**工具提示函数**:
+- `getStatusTip(status)`: 获取状态提示信息
+- `getLevelTip(level)`: 获取会议等级提示
+- `getEquipmentTip(equipments)`: 获取设备提示
+
+**ID生成**:
+- `generateBookingId()`: 生成预定ID (MB+YYYYMMDD+4位随机数)
+- `generateRoomId()`: 生成会议室ID (MR+3位随机数)
+
+**颜色工具**:
+- `getStatusColor(status)`: 获取状态颜色(十六进制)
+- `getLevelColor(level)`: 获取等级颜色(十六进制)
+
+---
+
 **文档版本**: v1.0.0
-**最后更新**: 2026-01-09
+**最后更新**: 2026-01-11

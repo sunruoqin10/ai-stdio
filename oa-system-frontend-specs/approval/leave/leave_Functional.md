@@ -73,41 +73,41 @@
 ## 3. 功能清单
 
 ### 3.1 请假申请 (优先级: P0)
-- [ ] 创建请假申请
-- [ ] 选择请假类型
-- [ ] 选择开始/结束时间
-- [ ] 自动计算请假时长
-- [ ] 填写请假事由
+- [x] 创建请假申请
+- [x] 选择请假类型
+- [x] 选择开始/结束时间
+- [x] 自动计算请假时长
+- [x] 填写请假事由
 - [ ] 上传附件(病假证明等)
-- [ ] 保存草稿
-- [ ] 提交申请
-- [ ] 撤销申请(待审批时)
-- [ ] 查看我的申请列表
-- [ ] 查看申请详情
-- [ ] 重新提交被驳回的申请
+- [x] 保存草稿
+- [x] 提交申请
+- [x] 撤销申请(待审批时)
+- [x] 查看我的申请列表
+- [x] 查看申请详情
+- [x] 重新提交被驳回的申请
 
 ### 3.2 审批管理 (优先级: P0)
-- [ ] 查看待审批申请
-- [ ] 查看申请详情
-- [ ] 通过申请
-- [ ] 驳回申请(填写意见)
-- [ ] 查看审批历史
-- [ ] 查看已审批列表
+- [x] 查看待审批申请
+- [x] 查看申请详情
+- [x] 通过申请
+- [x] 驳回申请(填写意见)
+- [x] 查看审批历史
+- [x] 查看已审批列表
 - [ ] 批量审批
 
 ### 3.3 年假管理 (优先级: P1)
-- [ ] 查看年假余额
+- [x] 查看年假余额
 - [ ] 查看年假使用记录
-- [ ] 年假余额预警(<3天)
-- [ ] 自动计算年假额度
+- [x] 年假余额预警(<3天)
+- [x] 自动计算年假额度
 - [ ] 年假消耗统计
 
 ### 3.4 统计报表 (优先级: P1)
-- [ ] 个人请假统计
-- [ ] 部门请假统计
-- [ ] 全公司请假统计
-- [ ] 请假类型分布
-- [ ] 请假趋势分析
+- [x] 个人请假统计
+- [x] 部门请假统计
+- [x] 全公司请假统计
+- [x] 请假类型分布
+- [x] 请假趋势分析
 - [ ] 导出统计报表
 
 ### 3.5 日历视图 (优先级: P2)
@@ -116,6 +116,77 @@
 - [ ] 按部门筛选
 - [ ] 按类型筛选
 - [ ] 查看每日请假详情
+
+### 3.6 Mock数据支持
+
+请假管理模块提供了完整的Mock数据实现,便于前端独立开发和测试:
+
+**Mock数据结构** (`src/modules/leave/mock/data.ts`):
+- **6个预置请假申请**,涵盖6种状态(draft/pending/approving/approved/rejected/cancelled)
+- **4个年假余额记录**,展示不同工龄员工的年假额度
+- **12个节假日数据**(2026年),包含元旦、春节、清明、劳动节、端午节
+- **3个审批记录示例**,展示多级审批流程
+
+**Mock API实现** (`src/modules/leave/api/index.ts`):
+- `getMyLeaveRequests()`: 获取我的请假列表,支持状态筛选和分页
+- `getLeaveRequest()`: 获取请假详情
+- `createLeaveRequest()`: 创建请假申请(自动生成LEAVE编号)
+- `updateLeaveRequest()`: 更新请假申请(仅草稿状态)
+- `deleteLeaveRequest()`: 删除请假申请(仅草稿状态)
+- `submitLeaveRequest()`: 提交请假申请,检查年假余额,生成审批流程
+- `cancelLeaveRequest()`: 撤销请假申请(仅待审批状态)
+- `getPendingApprovals()`: 获取待审批列表
+- `getApprovedRequests()`: 获取已审批列表
+- `approveLeaveRequest()`: 审批请假申请(通过/驳回),自动扣减年假
+- `getLeaveBalance()`: 获取年假余额
+- `getLeaveBalances()`: 获取年假余额列表
+- `updateLeaveQuota()`: 更新年假额度
+- `getLeaveStatistics()`: 获取请假统计
+- `getHolidays()`: 获取节假日列表
+
+### 3.7 工具函数实现
+
+请假管理模块提供了丰富的工具函数 (`src/modules/leave/utils/index.ts`):
+
+**日期时间格式化**:
+- `formatDate(date)`: 格式化日期为 YYYY-MM-DD
+- `formatDateTime(date)`: 格式化日期时间为 YYYY-MM-DD HH:mm
+- `formatDateRange(startDate, endDate)`: 格式化日期范围
+
+**类型转换**:
+- `getLeaveTypeName(type)`: 获取请假类型中文名称
+- `getLeaveStatusName(status)`: 获取请假状态中文名称
+- `getLeaveStatusType(status)`: 获取Element Plus Tag类型
+- `getApprovalStatusName(status)`: 获取审批状态中文名称
+
+**时长计算**:
+- `calculateDuration(startTime, endTime, holidays)`: 计算请假时长(工作日)
+  - 只计算工作日(周一到周五)
+  - 自动排除周末和节假日
+  - 支持半天请假(0.5天)
+- `calculateWorkDays(startDate, endDate, holidays)`: 计算工作日数量
+- `getWorkDaysBetween(startDate, endDate)`: 获取两个日期之间的工作日列表
+
+**状态判断**:
+- `canCancel(request)`: 判断是否可撤销(待审批状态)
+- `canEdit(request)`: 判断是否可编辑(草稿状态或已驳回状态)
+- `canDelete(request)`: 判断是否可删除(草稿状态)
+- `canResubmit(request)`: 判断是否可重新提交(已驳回状态)
+
+**年假相关**:
+- `calculateAnnualQuota(joinDate)`: 根据入职日期计算年假额度
+  - 工龄<1年: 0天
+  - 工龄1-9年: 5天
+  - 工龄10-19年: 10天
+  - 工龄≥20年: 15天
+- `calculateWorkYears(joinDate)`: 计算工作年限
+
+**审批流程**:
+- `getApprovalLevels(duration)`: 根据请假时长获取审批层级
+  - ≤3天: 1级(部门负责人)
+  - 4-7天: 2级(部门负责人 + 人事)
+  - >7天: 3级(部门负责人 + 人事 + 总经理)
+- `isCurrentApprover(request, userId)`: 判断是否为当前审批人
 
 ---
 

@@ -2091,5 +2091,453 @@ export { http }
 
 ---
 
-**文档版本**: v1.1.0
-**最后更新**: 2026-01-10
+## 10. Mock数据实现
+
+费用报销模块提供了完整的Mock数据实现,支持前端独立开发和测试。
+
+### 10.1 Mock数据结构
+
+**报销单数据** (`mockExpenses`):
+```typescript
+export const mockExpenses: Expense[] = [
+  {
+    id: generateExpenseId(),
+    applicantId: 'U001',
+    applicantName: '张三',
+    departmentId: 'D001',
+    departmentName: '销售部',
+    type: 'travel',
+    amount: 3280.00,
+    reason: '上海客户拜访差旅费用',
+    applyDate: '2025-12-15T09:30:00.000Z',
+    expenseDate: '2025-12-10T00:00:00.000Z',
+    status: 'paid',
+    departmentApproval: {
+      approverId: 'U010',
+      approverName: '李经理',
+      status: 'approved',
+      opinion: '差旅费用合理,同意报销',
+      timestamp: '2025-12-15T14:20:00.000Z'
+    },
+    financeApproval: {
+      approverId: 'U020',
+      approverName: '王财务',
+      status: 'approved',
+      opinion: '发票齐全,金额核对无误',
+      timestamp: '2025-12-16T10:15:00.000Z'
+    },
+    paymentDate: '2025-12-17T14:30:00.000Z',
+    paymentProof: '/uploads/payments/EXP202512150001_proof.pdf',
+    items: [...],
+    invoices: [...]
+  },
+  // ... 更多报销单数据
+]
+```
+
+**打款记录数据** (`mockPayments`):
+```typescript
+export const mockPayments: PaymentRecord[] = [
+  {
+    id: 1,
+    expenseId: mockExpenses[0].id,
+    amount: 3280.00,
+    paymentMethod: 'bank_transfer',
+    paymentDate: '2025-12-17T14:30:00.000Z',
+    bankAccount: '6222021234567890123',
+    proof: '/uploads/payments/EXP202512150001_proof.pdf',
+    status: 'completed',
+    remark: '工商银行转账,流水号: TX202512171430001'
+  },
+  // ... 更多打款记录
+]
+```
+
+### 10.2 Mock API实现
+
+**创建报销单**:
+```typescript
+export async function createExpense(data: ExpenseForm): Promise<Expense> {
+  await mockDelay()
+
+  // 计算总金额
+  const totalAmount = data.items.reduce((sum, item) => sum + item.amount, 0)
+
+  // 生成报销单号
+  const expenseId = generateExpenseId()
+
+  const now = new Date().toISOString()
+
+  const newExpense: Expense = {
+    id: expenseId,
+    applicantId: 'U001',
+    applicantName: '张三',
+    departmentId: 'D001',
+    departmentName: '销售部',
+    type: data.type,
+    amount: totalAmount,
+    items: data.items,
+    invoices: data.invoices,
+    reason: data.reason,
+    applyDate: now,
+    expenseDate: data.expenseDate,
+    status: 'draft',
+    createdAt: now,
+    updatedAt: now
+  }
+
+  mockExpenses.unshift(newExpense)
+  return newExpense
+}
+```
+
+**提交审批**:
+```typescript
+export async function submitExpense(id: string): Promise<Expense> {
+  await mockDelay()
+
+  const expense = mockExpenses.find(e => e.id === id)
+  if (!expense) {
+    throw new Error(`报销单 ${id} 不存在`)
+  }
+
+  if (expense.status !== 'draft') {
+    throw new Error('只能提交草稿状态的报销单')
+  }
+
+  // 验证发票
+  if (!expense.invoices || expense.invoices.length === 0) {
+    throw new Error('请至少上传一张发票')
+  }
+
+  // 验证金额一致性
+  const invoiceTotal = expense.invoices.reduce((sum, inv) => sum + inv.amount, 0)
+  if (Math.abs(invoiceTotal - expense.amount) > 0.01) {
+    throw new Error(`发票总金额(${invoiceTotal})与报销金额(${expense.amount})不一致`)
+  }
+
+  // 更新状态为部门审批中
+  expense.status = 'dept_pending'
+  expense.departmentApproval = {
+    status: 'pending'
+  }
+  expense.updatedAt = new Date().toISOString()
+
+  return expense
+}
+```
+
+**部门审批**:
+```typescript
+export async function departmentApprove(
+  id: string,
+  approval: ApprovalForm
+): Promise<Expense> {
+  await mockDelay()
+
+  const expense = mockExpenses.find(e => e.id === id)
+  if (!expense) {
+    throw new Error(`报销单 ${id} 不存在`)
+  }
+
+  if (expense.status !== 'dept_pending') {
+    throw new Error('当前状态不允许部门审批')
+  }
+
+  const now = new Date().toISOString()
+
+  if (approval.status === 'approved') {
+    // 审批通过,进入财务审批
+    expense.status = 'finance_pending'
+    expense.departmentApproval = {
+      approverId: 'U010',
+      approverName: '李经理',
+      status: 'approved',
+      opinion: approval.opinion,
+      timestamp: now
+    }
+    expense.financeApproval = {
+      status: 'pending'
+    }
+  } else {
+    // 驳回
+    expense.status = 'rejected'
+    expense.departmentApproval = {
+      approverId: 'U010',
+      approverName: '李经理',
+      status: 'rejected',
+      opinion: approval.opinion,
+      timestamp: now
+    }
+  }
+
+  expense.updatedAt = now
+  return expense
+}
+```
+
+**财务审批**:
+```typescript
+export async function financeApprove(
+  id: string,
+  approval: ApprovalForm
+): Promise<Expense> {
+  await mockDelay()
+
+  const expense = mockExpenses.find(e => e.id === id)
+  if (!expense) {
+    throw new Error(`报销单 ${id} 不存在`)
+  }
+
+  if (expense.status !== 'finance_pending') {
+    throw new Error('当前状态不允许财务审批')
+  }
+
+  const now = new Date().toISOString()
+
+  if (approval.status === 'approved') {
+    // 审批通过,自动创建打款记录
+    expense.status = 'paid'
+    expense.financeApproval = {
+      approverId: 'U020',
+      approverName: '王财务',
+      status: 'approved',
+      opinion: approval.opinion,
+      timestamp: now
+    }
+
+    // 创建打款记录
+    const payment: PaymentRecord = {
+      id: mockPayments.length + 1,
+      expenseId: expense.id,
+      amount: expense.amount,
+      paymentMethod: 'bank_transfer',
+      paymentDate: now,
+      bankAccount: '6222021234567890123',
+      status: 'pending',
+      remark: '财务审批通过,等待打款'
+    }
+    mockPayments.push(payment)
+  } else {
+    // 驳回
+    expense.status = 'rejected'
+    expense.financeApproval = {
+      approverId: 'U020',
+      approverName: '王财务',
+      status: 'rejected',
+      opinion: approval.opinion,
+      timestamp: now
+    }
+  }
+
+  expense.updatedAt = now
+  return expense
+}
+```
+
+**发票验证**:
+```typescript
+export async function validateInvoice(invoiceNumber: string): Promise<{
+  valid: boolean
+  message: string
+}> {
+  await mockDelay()
+
+  // 检查发票号码格式
+  const regex = /^\d{8}$|^\d{20}$/
+  if (!regex.test(invoiceNumber)) {
+    return {
+      valid: false,
+      message: '发票号码格式不正确,应为8位或20位数字'
+    }
+  }
+
+  // 检查是否已被使用
+  for (const expense of mockExpenses) {
+    for (const invoice of expense.invoices) {
+      if (invoice.number === invoiceNumber) {
+        return {
+          valid: false,
+          message: `发票号 ${invoiceNumber} 已被使用,不能重复报销`
+        }
+      }
+    }
+  }
+
+  return {
+    valid: true,
+    message: '发票号可用'
+  }
+}
+```
+
+**OCR识别发票(模拟)**:
+```typescript
+export async function ocrInvoice(imageUrl: string): Promise<Partial<Invoice>> {
+  await delay(500) // OCR识别延迟500ms
+
+  // 模拟OCR识别结果
+  const mockInvoice: Partial<Invoice> = {
+    type: 'vat_common',
+    number: Math.floor(Math.random() * 90000000 + 10000000).toString(),
+    amount: Math.floor(Math.random() * 5000 * 100) / 100,
+    date: new Date().toISOString().split('T')[0],
+    imageUrl: imageUrl,
+    verified: false
+  }
+
+  return mockInvoice
+}
+```
+
+### 10.3 统计API实现
+
+**按部门统计**:
+```typescript
+export async function getDepartmentStats(params: StatsQueryParams): Promise<DepartmentStats[]> {
+  await mockDelay()
+
+  // 筛选日期范围内的报销单
+  let filtered = mockExpenses.filter(expense => {
+    const applyDate = expense.applyDate.split('T')[0]
+    return applyDate >= params.startDate && applyDate <= params.endDate
+  })
+
+  // 按部门分组统计
+  const deptMap = new Map<string, DepartmentStats>()
+
+  filtered.forEach(expense => {
+    const existing = deptMap.get(expense.departmentId)
+    if (existing) {
+      existing.totalAmount += expense.amount
+      existing.count += 1
+    } else {
+      deptMap.set(expense.departmentId, {
+        departmentId: expense.departmentId,
+        departmentName: expense.departmentName,
+        totalAmount: expense.amount,
+        count: 1,
+        avgAmount: expense.amount
+      })
+    }
+  })
+
+  // 计算平均金额
+  const result = Array.from(deptMap.values())
+  result.forEach(stat => {
+    stat.avgAmount = stat.totalAmount / stat.count
+  })
+
+  // 按总金额降序排序
+  result.sort((a, b) => b.totalAmount - a.totalAmount)
+
+  return result
+}
+```
+
+**按类型统计**:
+```typescript
+export async function getTypeStats(params: StatsQueryParams): Promise<TypeStats[]> {
+  await mockDelay()
+
+  // 筛选日期范围内的报销单
+  let filtered = mockExpenses.filter(expense => {
+    const applyDate = expense.applyDate.split('T')[0]
+    return applyDate >= params.startDate && applyDate <= params.endDate
+  })
+
+  // 类型筛选
+  if (params.type) {
+    filtered = filtered.filter(expense => expense.type === params.type)
+  }
+
+  // 按类型分组统计
+  const typeMap = new Map<string, TypeStats>()
+
+  filtered.forEach(expense => {
+    const existing = typeMap.get(expense.type)
+    if (existing) {
+      existing.totalAmount += expense.amount
+      existing.count += 1
+    } else {
+      typeMap.set(expense.type, {
+        type: expense.type,
+        totalAmount: expense.amount,
+        count: 1,
+        percentage: 0
+      })
+    }
+  })
+
+  // 计算总金额
+  const totalAmount = Array.from(typeMap.values()).reduce((sum, stat) => sum + stat.totalAmount, 0)
+
+  // 计算百分比
+  const result = Array.from(typeMap.values())
+  result.forEach(stat => {
+    stat.percentage = totalAmount > 0 ? (stat.totalAmount / totalAmount) * 100 : 0
+  })
+
+  // 按总金额降序排序
+  result.sort((a, b) => b.totalAmount - a.totalAmount)
+
+  return result
+}
+```
+
+### 10.4 工具函数实现
+
+**报销单号生成**:
+```typescript
+export function generateExpenseId(): string {
+  const now = new Date()
+  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '')
+  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
+  return `EXP${dateStr}${random}`
+}
+```
+
+**状态判断函数**:
+```typescript
+export function canEdit(status: ExpenseStatus): boolean {
+  return status === 'draft'
+}
+
+export function canDelete(status: ExpenseStatus): boolean {
+  return status === 'draft'
+}
+
+export function canSubmit(status: ExpenseStatus): boolean {
+  return status === 'draft' || status === 'rejected'
+}
+
+export function canCancel(status: ExpenseStatus): boolean {
+  return status === 'dept_pending' || status === 'finance_pending'
+}
+```
+
+**大额加签规则**:
+```typescript
+export function checkSingleAmountApproval(amount: number): number {
+  if (amount > 10000) return 3 // 总经理+特别审批人
+  if (amount > 5000) return 2 // 总经理
+  return 1 // 默认审批层级
+}
+```
+
+**格式化函数**:
+```typescript
+export function formatDate(date: string): string {
+  if (!date) return ''
+  return date.split('T')[0]
+}
+
+export function formatAmount(amount: number): string {
+  return `¥${amount.toFixed(2)}`
+}
+```
+
+---
+
+**文档版本**: v1.0.0
+**最后更新**: 2026-01-11
