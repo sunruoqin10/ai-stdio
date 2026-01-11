@@ -361,18 +361,20 @@ enum DataScope {
 | PUT | /api/roles/:id/permissions | 更新角色权限 | 系统管理员 |
 | GET | /api/roles/:id/users | 获取角色成员 | 系统管理员 |
 | POST | /api/roles/copy | 复制角色 | 系统管理员 |
+| GET | /api/roles/statistics | 获取角色统计 | 系统管理员 |
 
 ### 2.2 权限管理接口
 
 | 方法 | 路径 | 说明 | 权限 |
 |------|------|------|------|
-| GET | /api/permissions | 获取权限列表(树形) | 系统管理员 |
+| GET | /api/permissions/tree | 获取权限树 | 系统管理员 |
+| GET | /api/permissions | 获取权限列表(分页) | 系统管理员 |
 | GET | /api/permissions/:id | 获取权限详情 | 系统管理员 |
 | POST | /api/permissions | 创建权限 | 系统管理员 |
 | PUT | /api/permissions/:id | 更新权限信息 | 系统管理员 |
 | DELETE | /api/permissions/:id | 删除权限 | 系统管理员 |
-| GET | /api/permissions/tree | 获取权限树 | 系统管理员 |
 | GET | /api/permissions/modules | 获取所有模块 | 系统管理员 |
+| GET | /api/permissions/statistics | 获取权限统计 | 系统管理员 |
 
 ### 2.3 用户角色接口
 
@@ -1381,7 +1383,64 @@ export function requirePermission(permissionCode?: string, needLogin = true) {
 
 ## 6. 性能优化
 
-### 6.1 权限缓存
+### 6.1 权限缓存策略
+
+#### 6.1.1 开发环境与生产环境缓存策略
+
+**开发环境**:
+- ✅ **禁用缓存读取**: 每次刷新页面都重新加载最新 Mock 数据
+- ✅ **禁用缓存写入**: 不将权限数据写入 sessionStorage
+- ✅ **确保数据一致性**: 修改 Mock 数据后立即生效
+
+**生产环境**:
+- ✅ **启用缓存读取**: 从 sessionStorage 读取缓存的权限数据
+- ✅ **启用缓存写入**: 将权限数据缓存到 sessionStorage
+- ✅ **缓存有效期**: 30 分钟
+- ✅ **自动刷新**: 权限变更后清除缓存
+
+#### 6.1.2 权限缓存实现
+
+```typescript
+/**
+ * 加载用户权限
+ * @param forceRefresh 是否强制刷新(忽略缓存)
+ */
+async function loadUserPermissions(forceRefresh = false) {
+  try {
+    const userId = localStorage.getItem('userId') || 'USER001'
+
+    // 开发环境不使用缓存，确保使用最新的 Mock 数据
+    if (!forceRefresh && !import.meta.env.DEV) {
+      const cached = getCachedPermissions(userId)
+      if (cached) {
+        userPermissions.value = cached
+        hasLoadedPermissions.value = true
+        return
+      }
+    }
+
+    // 开发环境使用 Mock 数据
+    if (import.meta.env.DEV) {
+      const mockData = permissionApi.getMockUserPermissions()
+      userPermissions.value = mockData
+    } else {
+      const response = await permissionApi.getUserPermissions(userId)
+      userPermissions.value = response.data || { /* 默认值 */ }
+    }
+
+    // 生产环境才缓存权限
+    if (!import.meta.env.DEV) {
+      cacheUserPermissions(userId, userPermissions.value)
+    }
+    hasLoadedPermissions.value = true
+  } catch (error: any) {
+    ElMessage.error('加载用户权限失败: ' + error.message)
+    throw error
+  }
+}
+```
+
+#### 6.1.3 缓存工具类
 
 ```typescript
 // 权限缓存类
@@ -1418,6 +1477,44 @@ class PermissionCache {
 }
 
 export const permissionCache = new PermissionCache()
+
+/**
+ * 缓存用户权限
+ * @param userId 用户ID
+ * @param permissions 用户权限
+ */
+export function cacheUserPermissions(userId: string, permissions: UserPermissions): void {
+  const cacheKey = `user:permissions:${userId}`
+  const cacheData = {
+    data: permissions,
+    timestamp: Date.now()
+  }
+  sessionStorage.setItem(cacheKey, JSON.stringify(cacheData))
+}
+
+/**
+ * 获取缓存的用户权限
+ * @param userId 用户ID
+ * @returns 用户权限或null
+ */
+export function getCachedPermissions(userId: string): UserPermissions | null {
+  const cacheKey = `user:permissions:${userId}`
+  const cacheStr = sessionStorage.getItem(cacheKey)
+
+  if (!cacheStr) return null
+
+  try {
+    const cache = JSON.parse(cacheStr)
+    // 缓存有效期30分钟
+    if (Date.now() - cache.timestamp > 30 * 60 * 1000) {
+      sessionStorage.removeItem(cacheKey)
+      return null
+    }
+    return cache.data
+  } catch {
+    return null
+  }
+}
 ```
 
 ### 6.2 权限预加载

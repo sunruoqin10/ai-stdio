@@ -116,13 +116,25 @@
 - [ ] 预置模板(管理员、普通用户等)
 
 ### 3.6 权限验证功能
-- [ ] 路由级权限验证
-- [ ] 菜单级权限显示
-- [ ] 按钮级权限控制
-- [ ] 接口级权限验证
-- [ ] 数据级权限过滤
-- [ ] 权限指令(v-auth)
-- [ ] 权限工具函数
+- [x] 路由级权限验证
+- [x] 菜单级权限显示
+- [x] 按钮级权限控制
+- [x] 接口级权限验证
+- [x] 数据级权限过滤
+- [x] 权限指令(v-auth, v-role, v-super-admin)
+- [x] 权限工具函数(hasPermission, hasRole, isSuperAdmin)
+
+### 3.7 权限统计功能
+- [x] 角色统计(总数、系统角色、自定义角色、启用数)
+- [x] 权限统计(总数、菜单权限、按钮权限、接口权限、数据权限)
+- [x] 统计卡片展示
+- [x] 实时数据更新
+
+### 3.8 开发环境优化
+- [x] 开发环境禁用权限缓存
+- [x] Mock 数据实时更新
+- [x] 权限数据热重载
+- [x] 生产环境启用缓存优化
 
 ---
 
@@ -301,17 +313,56 @@ graph TD
 ### 5.4 权限缓存规则
 
 #### 5.4.1 缓存策略
-- 用户权限缓存到Redis
-- 缓存键: `user:permissions:{userId}`
-- 缓存时间: 30分钟
-- 权限变更时自动清除缓存
+- **生产环境**: 用户权限缓存到 sessionStorage
+- **开发环境**: 禁用缓存，每次加载最新 Mock 数据
+- **缓存键**: `user:permissions:{userId}`
+- **缓存时间**: 30分钟
+- **权限变更**: 自动清除缓存
 
-#### 5.4.2 缓存更新
+#### 5.4.2 缓存更新规则
 - 角色权限变更 → 清除所有该角色成员缓存
 - 用户角色分配 → 清除该用户缓存
 - 权限删除 → 清除所有相关缓存
 
-### 5.5 业务场景
+#### 5.4.3 开发环境特殊处理
+```typescript
+// 判断开发环境
+if (import.meta.env.DEV) {
+  // 开发环境：跳过缓存，直接使用 Mock 数据
+  const mockData = permissionApi.getMockUserPermissions()
+  userPermissions.value = mockData
+} else {
+  // 生产环境：检查缓存
+  const cached = getCachedPermissions(userId)
+  if (cached) {
+    userPermissions.value = cached
+    hasLoadedPermissions.value = true
+    return
+  }
+}
+
+// 生产环境才写入缓存
+if (!import.meta.env.DEV) {
+  cacheUserPermissions(userId, userPermissions.value)
+}
+```
+
+### 5.5 统计数据规则
+
+#### 5.5.1 角色统计
+- **总角色数**: 所有角色数量
+- **系统角色数**: type='system' 的角色数量
+- **自定义角色数**: type='custom' 的角色数量
+- **启用角色数**: status='active' 的角色数量
+
+#### 5.5.2 权限统计
+- **总权限数**: 所有权限数量
+- **菜单权限数**: type='menu' 的权限数量
+- **按钮权限数**: type='button' 的权限数量
+- **接口权限数**: type='api' 的权限数量
+- **数据权限数**: type='data' 的权限数量
+
+### 5.6 业务场景
 
 #### 5.5.1 新员工入职权限配置
 场景: 新员工入职,需要配置系统访问权限
@@ -341,6 +392,12 @@ graph TD
 2. 识别异常权限分配
 3. 清理不合理的权限
 4. 生成权限审计报告
+
+#### 5.5.3 统计数据展示
+- 统计卡片在页面顶部展示
+- 实时更新（角色/权限变更后自动刷新）
+- 图标区分不同类型统计
+- 数值突出显示
 
 ---
 
