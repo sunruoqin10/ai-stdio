@@ -35,6 +35,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '员工详情' },
   },
   {
+    path: '/department',
+    name: 'Department',
+    component: () => import('@/modules/department/views/index.vue'),
+    meta: { title: '部门管理', requiresAuth: true },
+  },
+  {
     path: '/dict',
     name: 'DictManagement',
     component: () => import('@/modules/dict/views/DictManagement.vue'),
@@ -52,6 +58,34 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/modules/menu/views/index.vue'),
     meta: { title: '菜单管理', requiresAuth: true },
   },
+  // 资产管理路由
+  {
+    path: '/asset',
+    name: 'Asset',
+    component: () => import('@/modules/asset/views/index.vue'),
+    meta: { title: '资产管理', requiresAuth: true },
+  },
+  // 请假管理路由
+  {
+    path: '/leave',
+    name: 'Leave',
+    component: () => import('@/modules/leave/views/index.vue'),
+    meta: { title: '请假管理', requiresAuth: true },
+  },
+  // 费用报销路由
+  {
+    path: '/expense',
+    name: 'Expense',
+    component: () => import('@/modules/expense/views/index.vue'),
+    meta: { title: '费用报销', requiresAuth: true },
+  },
+  // 会议室预定路由
+  {
+    path: '/meeting',
+    name: 'Meeting',
+    component: () => import('@/modules/meeting/views/index.vue'),
+    meta: { title: '会议室预定', requiresAuth: true },
+  },
 
   // 权限管理路由
   ...permissionRoutes,
@@ -67,24 +101,6 @@ const routes: RouteRecordRaw[] = [
   //   name: 'DepartmentList',
   //   component: () => import('@/modules/department/views/DepartmentList.vue'),
   //   meta: { title: '部门列表' },
-  // },
-  // {
-  //   path: '/asset',
-  //   name: 'Asset',
-  //   component: () => import('@/modules/asset/views/AssetList.vue'),
-  //   meta: { title: '资产列表' },
-  // },
-  // {
-  //   path: '/asset/:id',
-  //   name: 'AssetDetail',
-  //   component: () => import('@/modules/asset/views/AssetDetail.vue'),
-  //   meta: { title: '资产详情' },
-  // },
-  // {
-  //   path: '/asset/statistics',
-  //   name: 'AssetStatistics',
-  //   component: () => import('@/modules/asset/views/AssetStatistics.vue'),
-  //   meta: { title: '资产统计' },
   // },
 ]
 

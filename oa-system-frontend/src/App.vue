@@ -27,13 +27,25 @@
             <el-icon><User /></el-icon>
             <span>员工管理</span>
           </el-menu-item>
-          <el-menu-item index="/department/org">
+          <el-menu-item index="/department">
             <el-icon><Office-building /></el-icon>
-            <span>部门架构</span>
+            <span>部门管理</span>
           </el-menu-item>
           <el-menu-item index="/asset">
             <el-icon><Box /></el-icon>
             <span>资产管理</span>
+          </el-menu-item>
+          <el-menu-item index="/leave">
+            <el-icon><Calendar /></el-icon>
+            <span>请假管理</span>
+          </el-menu-item>
+          <el-menu-item index="/expense">
+            <el-icon><Wallet /></el-icon>
+            <span>费用报销</span>
+          </el-menu-item>
+          <el-menu-item index="/meeting">
+            <el-icon><VideoCamera /></el-icon>
+            <span>会议室预定</span>
           </el-menu-item>
 
           <!-- 设置菜单 -->
@@ -81,11 +93,14 @@ import {
   User,
   OfficeBuilding,
   Box,
+  Calendar,
+  Wallet,
   Setting,
   UserFilled,
   Key,
   Notebook,
-  Menu
+  Menu,
+  VideoCamera
 } from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 
@@ -104,9 +119,15 @@ watch(
     if (newPath.startsWith('/employee')) {
       activeMenu.value = '/employee'
     } else if (newPath.startsWith('/department')) {
-      activeMenu.value = '/department/org'
+      activeMenu.value = '/department'
     } else if (newPath.startsWith('/asset')) {
       activeMenu.value = '/asset'
+    } else if (newPath.startsWith('/leave')) {
+      activeMenu.value = '/leave'
+    } else if (newPath.startsWith('/expense')) {
+      activeMenu.value = '/expense'
+    } else if (newPath.startsWith('/meeting')) {
+      activeMenu.value = '/meeting'
     } else if (newPath.startsWith('/permission')) {
       // 权限管理页面，设置菜单保持激活状态
       activeMenu.value = 'settings'

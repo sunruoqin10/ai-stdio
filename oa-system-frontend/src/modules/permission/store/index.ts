@@ -78,8 +78,8 @@ export const usePermissionStore = defineStore('permission', () => {
     try {
       const userId = localStorage.getItem('userId') || 'USER001'
 
-      // 检查缓存
-      if (!forceRefresh) {
+      // 开发环境不使用缓存，确保使用最新的 Mock 数据
+      if (!forceRefresh && !import.meta.env.DEV) {
         const cached = getCachedPermissions(userId)
         if (cached) {
           userPermissions.value = cached
@@ -105,8 +105,10 @@ export const usePermissionStore = defineStore('permission', () => {
         }
       }
 
-      // 缓存权限
-      cacheUserPermissions(userId, userPermissions.value)
+      // 生产环境才缓存权限
+      if (!import.meta.env.DEV) {
+        cacheUserPermissions(userId, userPermissions.value)
+      }
       hasLoadedPermissions.value = true
     } catch (error: any) {
       ElMessage.error('加载用户权限失败: ' + error.message)

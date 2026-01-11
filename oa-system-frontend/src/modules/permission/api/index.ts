@@ -463,7 +463,7 @@ export function getMockUserPermissions(): UserPermissions {
       }
     ],
     permissions: getMockPermissionTree(),
-    permissionCodes: ['system', 'system:user:list', 'system:user:add', 'system:user:edit', 'system:user:delete', 'system:role:list', 'employee', 'employee:view:list', 'employee:add', 'employee:edit', 'employee:delete', 'department'],
+    permissionCodes: ['system', 'system:user:list', 'system:user:add', 'system:user:edit', 'system:user:delete', 'system:role:list', 'system:role:add', 'system:role:edit', 'system:role:delete', 'system:permission:list', 'system:permission:add', 'system:permission:edit', 'system:permission:delete', 'system:dict:list', 'system:menu:list', 'employee', 'employee:view:list', 'employee:add', 'employee:edit', 'employee:delete', 'department'],
     buttonPermissions: ['system:user:add', 'system:user:edit', 'system:user:delete', 'employee:add', 'employee:edit', 'employee:delete'],
     apiPermissions: [],
     menuPermissions: getMockPermissionTree().filter(p => p.type === 'menu'),

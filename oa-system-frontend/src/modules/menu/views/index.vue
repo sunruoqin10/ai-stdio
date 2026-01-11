@@ -8,6 +8,15 @@
     <!-- 操作栏 -->
     <div class="toolbar">
       <el-button
+        v-if="!isInitialized"
+        type="warning"
+        :icon="Setting"
+        @click="handleInitMenus"
+      >
+        初始化系统菜单
+      </el-button>
+
+      <el-button
         v-if="canCreate"
         type="primary"
         :icon="Plus"
@@ -103,14 +112,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Plus, Download, Refresh } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { Plus, Download, Refresh, Setting } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import MenuTree from '../components/MenuTree.vue'
 import MenuForm from '../components/MenuForm.vue'
 import { useMenuStore } from '../stores/menuStore'
 import { useMenuDict } from '../composables/useMenuDict'
 import { useMenuPermission } from '../composables/useMenuPermission'
-import type { MenuItem, MenuQuery } from '../types'
+import type { MenuItem, MenuQuery, MenuForm as MenuFormType } from '../types'
+import { getInitMenusWithCode, isMenuInitialized, setMenuInitialized } from '../data/initMenus'
 
 const menuStore = useMenuStore()
 const { menuTypeOptions } = useMenuDict()
@@ -132,8 +142,13 @@ const currentMenu = ref<MenuItem | undefined>(undefined)
 const menuList = computed(() => menuStore.treeMenuList)
 const loading = computed(() => menuStore.loading)
 
+// 是否已初始化
+const isInitialized = ref(false)
+
 // 初始化
 onMounted(() => {
+  // 检查是否已初始化
+  isInitialized.value = isMenuInitialized()
   loadMenuList()
 })
 
@@ -225,6 +240,93 @@ function handleRefresh() {
 // 导出
 function handleExport() {
   ElMessage.info('导出功能开发中')
+}
+
+// 初始化系统菜单
+async function handleInitMenus() {
+  try {
+    await ElMessageBox.confirm(
+      '确定要初始化系统菜单吗？这将创建系统的所有基础菜单数据。',
+      '初始化确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    // 获取初始化数据
+    const initMenus = getInitMenusWithCode()
+
+    // 用于存储创建的菜单ID映射
+    const menuIdMap = new Map<string, number>()
+
+    // 逐个创建菜单
+    let successCount = 0
+    let failCount = 0
+
+    for (const menu of initMenus) {
+      try {
+        // 检查是否需要设置父级ID
+        const menuData: MenuFormType = { ...menu }
+
+        // 根据菜单名称调整父子关系
+        if (menu.menuName === '员工详情') {
+          const employeeMenu = initMenus.find(m => m.menuName === '员工名录')
+          if (employeeMenu && menuIdMap.has('员工名录')) {
+            menuData.parentId = menuIdMap.get('员工名录')!
+          }
+        } else if (menu.menuName === '字典项管理') {
+          const dictMenu = initMenus.find(m => m.menuName === '数据字典管理')
+          if (dictMenu && menuIdMap.has('数据字典管理')) {
+            menuData.parentId = menuIdMap.get('数据字典管理')!
+          }
+        } else if (menu.menuName === '角色管理' || menu.menuName === '权限管理') {
+          const permissionDir = initMenus.find(m => m.menuName === '权限管理' && m.menuType === 'directory')
+          if (permissionDir && menuIdMap.has('权限管理目录')) {
+            menuData.parentId = menuIdMap.get('权限管理目录')!
+          }
+        }
+
+        const result = await menuStore.createMenu(menuData)
+        const createdMenu = (result as any)?.data || result
+
+        if (createdMenu?.id) {
+          // 使用特殊的key来存储ID，避免同名菜单冲突
+          const mapKey = menu.menuName === '权限管理' && menu.menuType === 'menu'
+            ? '权限管理_子'
+            : menu.menuName === '权限管理' && menu.menuType === 'directory'
+            ? '权限管理目录'
+            : menu.menuName
+
+          menuIdMap.set(mapKey, createdMenu.id)
+          successCount++
+        }
+      } catch (error) {
+        console.error(`创建菜单失败: ${menu.menuName}`, error)
+        failCount++
+      }
+    }
+
+    // 标记为已初始化
+    setMenuInitialized(true)
+    isInitialized.value = true
+
+    // 显示结果
+    if (failCount === 0) {
+      ElMessage.success(`菜单初始化成功！共创建 ${successCount} 个菜单`)
+    } else {
+      ElMessage.warning(`菜单初始化完成！成功 ${successCount} 个，失败 ${failCount} 个`)
+    }
+
+    // 刷新菜单列表
+    await loadMenuList(filterForm.value)
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('菜单初始化失败')
+      console.error('初始化菜单时出错:', error)
+    }
+  }
 }
 </script>
 

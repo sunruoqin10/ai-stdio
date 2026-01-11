@@ -14,7 +14,15 @@
       "Bash(dir:*)",
       "Bash(ls:*)",
       "Bash(grep:*)",
-      "Bash(if exist node_modules.vite rmdir /s /q node_modules.vite)"
+      "Bash(if exist node_modules.vite rmdir /s /q node_modules.vite)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm search:*)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(if [ ! -d \"c:\\\\Users\\\\sunru\\\\Downloads\\\\oa-system\\\\oa-system-frontend\\\\src\\\\modules\\\\expense\\\\components\" ])",
+      "Bash(then mkdir \"c:\\\\Users\\\\sunru\\\\Downloads\\\\oa-system\\\\oa-system-frontend\\\\src\\\\modules\\\\expense\\\\components\")",
+      "Bash(fi)",
+      "Bash(test:*)"
     ]
   }
 }

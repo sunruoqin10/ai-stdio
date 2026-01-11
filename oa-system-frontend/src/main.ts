@@ -9,13 +9,6 @@ import App from './App.vue'
 import router from './router'
 import '@/assets/styles/index.scss'
 
-// 启用Mock API (仅开发环境)
-if (import.meta.env.DEV) {
-  import('@/modules/auth/api/mock').then(({ setupMockApi }) => {
-    setupMockApi()
-  })
-}
-
 const app = createApp(App)
 const pinia = createPinia()
 
@@ -27,5 +20,13 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 app.use(pinia)
 app.use(router)
 app.use(ElementPlus, { locale: zhCn })
+
+// 启用Mock API (仅开发环境)
+if (import.meta.env.DEV) {
+  // 启用认证模块的Mock API
+  import('@/modules/auth/api/mock').then(({ setupMockApi }) => {
+    setupMockApi()
+  })
+}
 
 app.mount('#app')
