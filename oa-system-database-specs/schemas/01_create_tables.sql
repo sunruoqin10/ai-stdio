@@ -125,7 +125,7 @@ DROP TABLE IF EXISTS auth_user;
 CREATE TABLE auth_user (
   id VARCHAR(20) PRIMARY KEY COMMENT '用户ID(关联employees.id)',
   username VARCHAR(50) NOT NULL UNIQUE COMMENT '登录用户名',
-  password_hash VARCHAR(255) NOT NULL COMMENT '密码哈希',
+  password VARCHAR(255) NOT NULL COMMENT '密码(明文存储)',
   email VARCHAR(100) NOT NULL UNIQUE COMMENT '邮箱',
   mobile VARCHAR(20) NOT NULL UNIQUE COMMENT '手机号',
   status ENUM('active', 'locked', 'disabled') DEFAULT 'active' COMMENT '账号状态',

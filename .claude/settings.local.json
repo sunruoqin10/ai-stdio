@@ -22,7 +22,9 @@
       "Bash(if [ ! -d \"c:\\\\Users\\\\sunru\\\\Downloads\\\\oa-system\\\\oa-system-frontend\\\\src\\\\modules\\\\expense\\\\components\" ])",
       "Bash(then mkdir \"c:\\\\Users\\\\sunru\\\\Downloads\\\\oa-system\\\\oa-system-frontend\\\\src\\\\modules\\\\expense\\\\components\")",
       "Bash(fi)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "mcp__mysql__mysql_query",
+      "mcp__mysql__mysql_databases"
     ]
   }
 }
