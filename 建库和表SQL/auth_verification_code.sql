@@ -9,5 +9,6 @@ CREATE TABLE `auth_verification_code` (
   `used_at` timestamp NULL DEFAULT NULL COMMENT '使用时间',
   `expires_at` timestamp NOT NULL COMMENT '过期时间',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='验证码表';

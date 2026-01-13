@@ -11,6 +11,7 @@ CREATE TABLE `auth_login_log` (
   `device_type` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '设备类型',
   `user_agent` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '用户代理',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间',
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '逻辑删除标记(0-未删除 1-已删除)',
   PRIMARY KEY (`id`),
   KEY `idx_log_user` (`user_id`),
   KEY `idx_log_status` (`status`),

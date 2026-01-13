@@ -1,0 +1,9 @@
+-- Data for table: admin_meeting_room
+-- Generated on: 2026-01-13
+
+INSERT INTO `admin_meeting_room` (`id`, `name`, `location`, `capacity`, `facilities`, `description`, `status`, `created_at`, `updated_at`) VALUES
+('ROOM001', '大会议室', 'A座5楼', 50, '["投影仪", "音响系统", "白板", "视频会议设备"]', NULL, 'available', '2026-01-12 13:16:28', '2026-01-12 13:16:28'),
+('ROOM002', '中会议室A', 'A座4楼', 20, '["投影仪", "白板"]', NULL, 'available', '2026-01-12 13:16:28', '2026-01-12 13:16:28'),
+('ROOM003', '中会议室B', 'A座4楼', 20, '["投影仪", "白板", "视频会议设备"]', NULL, 'available', '2026-01-12 13:16:28', '2026-01-12 13:16:28'),
+('ROOM004', '小会议室A', 'A座3楼', 10, '["白板"]', NULL, 'available', '2026-01-12 13:16:28', '2026-01-12 13:16:28'),
+('ROOM005', '小会议室B', 'A座3楼', 10, '["白板", "视频会议设备"]', NULL, 'available', '2026-01-12 13:16:28', '2026-01-12 13:16:28');

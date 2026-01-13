@@ -28,7 +28,8 @@
       "Bash(mvn compile:*)",
       "Bash(mysql:*)",
       "mcp__mysql__mysql_describe",
-      "mcp__mysql__mysql_tables"
+      "mcp__mysql__mysql_tables",
+      "Bash(if not exist \"c:\\\\Users\\\\sunru\\\\Downloads\\\\oa-system\\\\DB_DATA\" mkdir \"c:\\\\Users\\\\sunru\\\\Downloads\\\\oa-system\\\\DB_DATA\")"
     ]
   }
 }
