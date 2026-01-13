@@ -24,7 +24,11 @@
       "Bash(fi)",
       "Bash(test:*)",
       "mcp__mysql__mysql_query",
-      "mcp__mysql__mysql_databases"
+      "mcp__mysql__mysql_databases",
+      "Bash(mvn compile:*)",
+      "Bash(mysql:*)",
+      "mcp__mysql__mysql_describe",
+      "mcp__mysql__mysql_tables"
     ]
   }
 }

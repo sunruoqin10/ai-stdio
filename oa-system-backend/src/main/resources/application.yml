@@ -1,24 +1,49 @@
-server:
-  port: 8080
-
 spring:
   application:
     name: oa-system-backend
+
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/oa_system?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/oa_system?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
     username: root
-    password: password # 请修改为实际数据库密码
-  jackson:
-    date-format: yyyy-MM-dd HH:mm:ss
-    time-zone: GMT+8
+    password: root
+
+  mail:
+    host: smtp.example.com
+    port: 587
+    username: your-email@example.com
+    password: your-email-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 mybatis-plus:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.example.oa_system_backend.module.*.entity
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # 开发环境开启SQL日志
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
     db-config:
+      id-type: auto
       logic-delete-field: isDeleted
       logic-delete-value: 1
       logic-not-delete-value: 0
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+jwt:
+  secret: YourSecretKeyForJWTTokenGenerationShouldBeLongEnough
+  expiration: 7200000  # 2 hours in milliseconds
+  refresh-expiration: 604800000  # 7 days in milliseconds
+
+logging:
+  level:
+    com.example.oa_system_backend: debug
+    org.springframework.security: debug

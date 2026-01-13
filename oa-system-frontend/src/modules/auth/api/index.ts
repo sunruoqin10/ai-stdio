@@ -23,12 +23,6 @@ import type {
  * @returns 登录响应数据
  */
 export async function login(data: LoginRequest): Promise<ApiResponse<LoginResponse>> {
-  // 开发环境使用Mock数据
-  if (import.meta.env.DEV) {
-    const { mockApiHandlers } = await import('./mock')
-    console.log('[Mock API] login', data)
-    return await mockApiHandlers.login(data)
-  }
   return http.post<ApiResponse<LoginResponse>>('/auth/login', data)
 }
 
@@ -37,12 +31,6 @@ export async function login(data: LoginRequest): Promise<ApiResponse<LoginRespon
  * @returns 退出响应
  */
 export async function logout(): Promise<ApiResponse<void>> {
-  // 开发环境使用Mock数据
-  if (import.meta.env.DEV) {
-    const { mockApiHandlers } = await import('./mock')
-    console.log('[Mock API] logout')
-    return await mockApiHandlers.logout()
-  }
   return http.post<ApiResponse<void>>('/auth/logout')
 }
 
@@ -52,12 +40,6 @@ export async function logout(): Promise<ApiResponse<void>> {
  * @returns 新Token信息
  */
 export async function refreshToken(data: RefreshTokenRequest): Promise<ApiResponse<RefreshTokenResponse>> {
-  // 开发环境使用Mock数据
-  if (import.meta.env.DEV) {
-    const { mockApiHandlers } = await import('./mock')
-    console.log('[Mock API] refreshToken')
-    return await mockApiHandlers.refreshToken(data)
-  }
   return http.post<ApiResponse<RefreshTokenResponse>>('/auth/refresh', data)
 }
 
@@ -66,12 +48,6 @@ export async function refreshToken(data: RefreshTokenRequest): Promise<ApiRespon
  * @returns 验证码数据
  */
 export async function getCaptcha(): Promise<ApiResponse<CaptchaResponse>> {
-  // 开发环境使用Mock数据
-  if (import.meta.env.DEV) {
-    const { mockApiHandlers } = await import('./mock')
-    console.log('[Mock API] getCaptcha')
-    return await mockApiHandlers.getCaptcha()
-  }
   return http.get<ApiResponse<CaptchaResponse>>('/auth/captcha')
 }
 
@@ -81,12 +57,6 @@ export async function getCaptcha(): Promise<ApiResponse<CaptchaResponse>> {
  * @returns 发送结果
  */
 export async function sendCode(data: SendCodeRequest): Promise<ApiResponse<void>> {
-  // 开发环境使用Mock数据
-  if (import.meta.env.DEV) {
-    const { mockApiHandlers } = await import('./mock')
-    console.log('[Mock API] sendCode', data)
-    return await mockApiHandlers.sendCode(data)
-  }
   return http.post<ApiResponse<void>>('/auth/send-code', data)
 }
 
@@ -96,21 +66,19 @@ export async function sendCode(data: SendCodeRequest): Promise<ApiResponse<void>
  * @returns 重置结果
  */
 export async function resetPassword(data: ResetPasswordRequest): Promise<ApiResponse<void>> {
-  // 开发环境使用Mock数据
-  if (import.meta.env.DEV) {
-    const { mockApiHandlers } = await import('./mock')
-    console.log('[Mock API] resetPassword', data)
-    return await mockApiHandlers.resetPassword(data)
-  }
   return http.post<ApiResponse<void>>('/auth/reset-password', data)
 }
 
 /**
  * 获取活跃会话列表
+ * @param page 页码
+ * @param size 每页数量
  * @returns 会话列表
  */
-export function getSessions(): Promise<ApiResponse<{ total: number; list: UserSession[] }>> {
-  return http.get<ApiResponse<{ total: number; list: UserSession[] }>>('/auth/sessions')
+export function getSessions(page: number = 1, size: number = 10): Promise<ApiResponse<{ records: UserSession[], total: number, size: number, current: number, pages: number }>> {
+  return http.get<ApiResponse<{ records: UserSession[], total: number, size: number, current: number, pages: number }>>('/auth/sessions', {
+    params: { page, size }
+  })
 }
 
 /**
@@ -124,16 +92,19 @@ export function deleteSession(sessionId: string): Promise<ApiResponse<void>> {
 
 /**
  * 获取登录日志
- * @param params 查询参数
+ * @param page 页码
+ * @param size 每页数量
+ * @param startDate 开始日期
+ * @param endDate 结束日期
  * @returns 登录日志列表
  */
-export function getLoginLogs(params?: {
-  page?: number
-  pageSize?: number
-  startDate?: string
+export function getLoginLogs(
+  page: number = 1,
+  size: number = 10,
+  startDate?: string,
   endDate?: string
-}): Promise<ApiResponse<{ total: number; list: LoginLog[] }>> {
-  return http.get<ApiResponse<{ total: number; list: LoginLog[] }>>('/auth/login-logs', {
-    params,
+): Promise<ApiResponse<{ records: LoginLog[], total: number, size: number, current: number, pages: number }>> {
+  return http.get<ApiResponse<{ records: LoginLog[], total: number, size: number, current: number, pages: number }>>('/auth/login-logs', {
+    params: { page, size, startDate, endDate }
   })
 }

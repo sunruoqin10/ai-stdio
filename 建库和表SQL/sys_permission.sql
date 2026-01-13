@@ -1,0 +1,26 @@
+DROP TABLE IF EXISTS `sys_permission`;
+CREATE TABLE `sys_permission` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '权限ID',
+  `permission_code` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '权限编码',
+  `permission_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '权限名称',
+  `permission_type` enum('menu','button','api','data') COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '权限类型',
+  `module` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '所属模块',
+  `parent_id` bigint NOT NULL DEFAULT '0' COMMENT '父级权限ID',
+  `route_path` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '路由路径',
+  `component_path` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '组件路径',
+  `icon` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '图标',
+  `api_path` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '接口地址',
+  `api_method` enum('GET','POST','PUT','DELETE','PATCH') COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '请求方式',
+  `data_scope` enum('all','dept','dept_and_sub','self') COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '数据范围',
+  `sort_order` int NOT NULL DEFAULT '0' COMMENT '排序号',
+  `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '状态(1正常 0停用)',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted_at` datetime DEFAULT NULL COMMENT '删除时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `permission_code` (`permission_code`),
+  KEY `idx_perm_parent_id` (`parent_id`),
+  KEY `idx_perm_type` (`permission_type`),
+  KEY `idx_perm_module` (`module`),
+  KEY `idx_perm_status` (`status`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限表';

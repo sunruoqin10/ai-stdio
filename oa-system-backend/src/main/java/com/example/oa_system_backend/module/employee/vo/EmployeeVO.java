@@ -1,0 +1,133 @@
+package com.example.oa_system_backend.module.employee.vo;
+
+import lombok.Data;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+/**
+ * 员工视图对象
+ */
+@Data
+public class EmployeeVO {
+
+    /**
+     * 员工编号
+     */
+    private String id;
+
+    /**
+     * 姓名
+     */
+    private String name;
+
+    /**
+     * 英文名
+     */
+    private String englishName;
+
+    /**
+     * 性别
+     */
+    private String gender;
+
+    /**
+     * 出生日期
+     */
+    private LocalDate birthDate;
+
+    /**
+     * 联系电话
+     */
+    private String phone;
+
+    /**
+     * 邮箱
+     */
+    private String email;
+
+    /**
+     * 头像URL
+     */
+    private String avatar;
+
+    /**
+     * 部门ID
+     */
+    private String departmentId;
+
+    /**
+     * 部门名称
+     */
+    private String departmentName;
+
+    /**
+     * 职位
+     */
+    private String position;
+
+    /**
+     * 职级
+     */
+    private String level;
+
+    /**
+     * 直属上级ID
+     */
+    private String managerId;
+
+    /**
+     * 直属上级姓名
+     */
+    private String managerName;
+
+    /**
+     * 入职日期
+     */
+    private LocalDate joinDate;
+
+    /**
+     * 试用期状态
+     */
+    private String probationStatus;
+
+    /**
+     * 试用期结束日期
+     */
+    private LocalDate probationEndDate;
+
+    /**
+     * 工龄(年)
+     */
+    private Integer workYears;
+
+    /**
+     * 员工状态
+     */
+    private String status;
+
+    /**
+     * 办公位置
+     */
+    private String officeLocation;
+
+    /**
+     * 紧急联系人
+     */
+    private String emergencyContact;
+
+    /**
+     * 紧急联系电话
+     */
+    private String emergencyPhone;
+
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createdAt;
+
+    /**
+     * 更新时间
+     */
+    private LocalDateTime updatedAt;
+}

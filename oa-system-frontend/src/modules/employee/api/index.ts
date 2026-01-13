@@ -1,6 +1,7 @@
 /**
  * 员工管理模块 API 接口
  * 基于 employee_Technical.md 规范实现
+ * 连接后端 REST API
  */
 
 import type {
@@ -13,18 +14,7 @@ import type {
   ImportResult,
   ExportConfig
 } from '../types'
-import {
-  mockEmployees,
-  mockOperationLogs,
-  mockDepartments,
-  mockPositions,
-} from '../mock/data'
-import { calculateWorkYears, generateEmployeeId } from '../utils'
-
-// ==================== 工具函数 ====================
-
-// 模拟延迟
-const delay = (ms: number = 300) => new Promise(resolve => setTimeout(resolve, ms))
+import { http } from '@/utils/request'
 
 // ==================== 员工 CRUD 接口 ====================
 
@@ -35,68 +25,42 @@ export async function getEmployeeList(params: EmployeeFilter & {
   page: number
   pageSize: number
 }): Promise<PaginationResponse<Employee>> {
-  await delay()
-
-  let filteredList = [...mockEmployees]
-
-  // 关键词搜索
-  if (params.keyword) {
-    const keyword = params.keyword.toLowerCase()
-    filteredList = filteredList.filter(
-      emp =>
-        emp.name.toLowerCase().includes(keyword) ||
-        emp.id.toLowerCase().includes(keyword) ||
-        emp.phone.includes(keyword) ||
-        emp.email.toLowerCase().includes(keyword)
-    )
-  }
-
-  // 状态筛选
-  if (params.status) {
-    filteredList = filteredList.filter(emp => emp.status === params.status)
-  }
-
-  // 部门筛选
-  if (params.departmentIds && params.departmentIds.length > 0) {
-    filteredList = filteredList.filter(emp =>
-      params.departmentIds!.includes(emp.departmentId)
-    )
-  }
-
-  // 试用期状态筛选
-  if (params.probationStatus) {
-    filteredList = filteredList.filter(emp => emp.probationStatus === params.probationStatus)
-  }
-
-  // 职位筛选
-  if (params.position) {
-    filteredList = filteredList.filter(emp => emp.position === params.position)
-  }
-
-  // 性别筛选
-  if (params.gender) {
-    filteredList = filteredList.filter(emp => emp.gender === params.gender)
-  }
-
-  // 入职日期范围筛选
-  if (params.joinDateRange && params.joinDateRange.length === 2) {
-    const [startDate, endDate] = params.joinDateRange
-    filteredList = filteredList.filter(emp => {
-      const joinDate = new Date(emp.joinDate)
-      return joinDate >= new Date(startDate) && joinDate <= new Date(endDate)
-    })
-  }
-
-  // 分页
-  const start = (params.page - 1) * params.pageSize
-  const end = start + params.pageSize
-  const list = filteredList.slice(start, end)
-
-  return {
-    list,
-    total: filteredList.length,
+  // 构建查询参数
+  const queryParams: Record<string, any> = {
     page: params.page,
     pageSize: params.pageSize,
+  }
+
+  if (params.keyword) queryParams.keyword = params.keyword
+  if (params.status) queryParams.status = params.status
+  if (params.departmentIds && params.departmentIds.length > 0) {
+    queryParams.departmentIds = params.departmentIds.join(',')
+  }
+  if (params.position) queryParams.position = params.position
+  if (params.probationStatus) queryParams.probationStatus = params.probationStatus
+  if (params.gender) queryParams.gender = params.gender
+  if (params.joinDateRange && params.joinDateRange.length === 2) {
+    queryParams.joinDateStart = params.joinDateRange[0]
+    queryParams.joinDateEnd = params.joinDateRange[1]
+  }
+
+  const response = await http.get<{
+    code: number
+    message: string
+    data: {
+      records: Employee[]
+      total: number
+      current: number
+      size: number
+    }
+  }>('/employees', { params: queryParams })
+
+  // 转换MyBatis Plus的分页格式为前端格式
+  return {
+    list: response.data.records,
+    total: response.data.total,
+    page: response.data.current,
+    pageSize: response.data.size,
   }
 }
 
@@ -104,73 +68,39 @@ export async function getEmployeeList(params: EmployeeFilter & {
  * 获取员工详情
  */
 export async function getEmployeeDetail(id: string): Promise<Employee | null> {
-  await delay()
-  return mockEmployees.find(emp => emp.id === id) || null
+  const response = await http.get<{
+    code: number
+    message: string
+    data: Employee
+  }>(`/employees/${id}`)
+
+  return response.data
 }
 
 /**
  * 创建员工
  */
 export async function createEmployee(data: EmployeeForm): Promise<Employee> {
-  await delay()
+  const response = await http.post<{
+    code: number
+    message: string
+    data: Employee
+  }>('/employees', data)
 
-  // 自动生成员工编号
-  const joinDate = data.joinDate
-  const todayCount = mockEmployees.filter(emp => emp.joinDate === joinDate).length
-  const employeeId = generateEmployeeId(joinDate, todayCount + 1)
-
-  // 计算试用期结束日期 (默认3个月)
-  const probationEndDate = new Date(joinDate)
-  probationEndDate.setMonth(probationEndDate.getMonth() + 3)
-
-  const newEmployee: Employee = {
-    id: employeeId,
-    name: data.name,
-    englishName: data.englishName,
-    gender: data.gender,
-    birthDate: data.birthDate,
-    phone: data.phone,
-    email: data.email,
-    avatar: data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.name)}`,
-    departmentId: data.departmentId,
-    departmentName: mockDepartments.find(d => d.id === data.departmentId)?.name,
-    position: data.position,
-    managerId: data.managerId,
-    managerName: data.managerId ? mockEmployees.find(e => e.id === data.managerId)?.name : undefined,
-    joinDate: data.joinDate,
-    probationStatus: data.probationEndDate ? 'regular' : 'probation',
-    probationEndDate: data.probationEndDate || probationEndDate.toISOString().split('T')[0],
-    workYears: calculateWorkYears(data.joinDate),
-    status: 'active',
-    officeLocation: data.officeLocation,
-    emergencyContact: data.emergencyContact,
-    emergencyPhone: data.emergencyPhone,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-
-  mockEmployees.push(newEmployee)
-  return newEmployee
+  return response.data
 }
 
 /**
  * 更新员工信息
  */
 export async function updateEmployee(id: string, data: Partial<EmployeeForm>): Promise<Employee | null> {
-  await delay()
-  const index = mockEmployees.findIndex(emp => emp.id === id)
-  if (index === -1) return null
+  const response = await http.put<{
+    code: number
+    message: string
+    data: Employee
+  }>(`/employees/${id}`, data)
 
-  mockEmployees[index] = {
-    ...mockEmployees[index],
-    ...data,
-    departmentName: data.departmentId ? mockDepartments.find(d => d.id === data.departmentId)?.name : mockEmployees[index].departmentName,
-    managerName: data.managerId ? mockEmployees.find(e => e.id === data.managerId)?.name : mockEmployees[index].managerName,
-    workYears: data.joinDate ? calculateWorkYears(data.joinDate) : mockEmployees[index].workYears,
-    updatedAt: new Date().toISOString(),
-  }
-
-  return mockEmployees[index]
+  return response.data
 }
 
 /**
@@ -181,42 +111,28 @@ export async function updateEmployeeStatus(
   status: Employee['status'],
   reason?: string
 ): Promise<Employee | null> {
-  await delay()
-  const index = mockEmployees.findIndex(emp => emp.id === id)
-  if (index === -1) return null
-
-  mockEmployees[index] = {
-    ...mockEmployees[index],
+  const response = await http.put<{
+    code: number
+    message: string
+    data: Employee
+  }>(`/employees/${id}/status`, {
     status,
-    probationStatus: status === 'resigned' ? 'resigned' : mockEmployees[index].probationStatus,
-    updatedAt: new Date().toISOString(),
-  }
+    reason,
+  })
 
-  // 记录操作日志
-  if (status === 'resigned') {
-    const logs = mockOperationLogs[id] || []
-    logs.push({
-      id: `log_${Date.now()}`,
-      employeeId: id,
-      operation: '办理离职',
-      operator: '系统管理员',
-      timestamp: new Date().toISOString(),
-      details: reason || '无',
-    })
-  }
-
-  return mockEmployees[index]
+  return response.data
 }
 
 /**
  * 删除员工
  */
 export async function deleteEmployee(id: string): Promise<boolean> {
-  await delay()
-  const index = mockEmployees.findIndex(emp => emp.id === id)
-  if (index === -1) return false
+  await http.delete<{
+    code: number
+    message: string
+    data: null
+  }>(`/employees/${id}`)
 
-  mockEmployees.splice(index, 1)
   return true
 }
 
@@ -225,9 +141,23 @@ export async function deleteEmployee(id: string): Promise<boolean> {
 /**
  * 获取操作记录
  */
-export async function getOperationLogs(employeeId: string): Promise<OperationLog[]> {
-  await delay()
-  return mockOperationLogs[employeeId] || []
+export async function getOperationLogs(
+  employeeId: string,
+  page: number = 1,
+  pageSize: number = 20
+): Promise<OperationLog[]> {
+  const response = await http.get<{
+    code: number
+    message: string
+    data: {
+      records: OperationLog[]
+      total: number
+    }
+  }>(`/employees/${employeeId}/logs`, {
+    params: { page, pageSize },
+  })
+
+  return response.data.records
 }
 
 // ==================== 统计数据接口 ====================
@@ -236,81 +166,98 @@ export async function getOperationLogs(employeeId: string): Promise<OperationLog
  * 获取统计数据
  */
 export async function getStatistics(): Promise<EmployeeStatistics> {
-  await delay()
+  const response = await http.get<{
+    code: number
+    message: string
+    data: EmployeeStatistics
+  }>('/employees/statistics')
 
-  const total = mockEmployees.length
-  const active = mockEmployees.filter(e => e.status === 'active').length
-  const resigned = mockEmployees.filter(e => e.status === 'resigned').length
-  const probation = mockEmployees.filter(e => e.probationStatus === 'probation').length
+  return response.data
+}
 
-  // 计算本月新入职
-  const now = new Date()
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  const newThisMonth = mockEmployees.filter(e => e.joinDate.startsWith(thisMonth)).length
+// ==================== 唯一性验证接口 ====================
 
-  // 按部门统计
-  const deptMap = new Map<string, number>()
-  mockEmployees.forEach(emp => {
-    const count = deptMap.get(emp.departmentId) || 0
-    deptMap.set(emp.departmentId, count + 1)
+/**
+ * 检查邮箱是否存在
+ */
+export async function checkEmailExists(email: string, excludeId?: string): Promise<boolean> {
+  const response = await http.get<{
+    code: number
+    message: string
+    data: boolean
+  }>('/employees/check-email', {
+    params: { email, excludeId },
   })
 
-  const byDepartment = Array.from(deptMap.entries()).map(([deptId, count]) => ({
-    departmentId: deptId,
-    departmentName: mockDepartments.find(d => d.id === deptId)?.name || deptId,
-    count,
-  }))
+  return response.data
+}
 
-  return {
-    total,
-    active,
-    resigned,
-    probation,
-    newThisMonth,
-    byDepartment,
-  }
+/**
+ * 检查手机号是否存在
+ */
+export async function checkPhoneExists(phone: string, excludeId?: string): Promise<boolean> {
+  const response = await http.get<{
+    code: number
+    message: string
+    data: boolean
+  }>('/employees/check-phone', {
+    params: { phone, excludeId },
+  })
+
+  return response.data
 }
 
 // ==================== 部门和职位接口 ====================
+// 注意：这些接口需要在department模块实现后才能使用
+// 当前暂时使用Mock数据或静态数据
 
 /**
  * 获取部门列表
  */
 export async function getDepartmentList(): Promise<Array<{ id: string; name: string }>> {
-  await delay()
-  return mockDepartments
+  // TODO: 连接到department模块的API
+  // 当前返回空数组或Mock数据
+  return []
 }
 
 /**
  * 获取职位列表
  */
 export async function getPositionList(): Promise<string[]> {
-  await delay()
-  return mockPositions
+  // TODO: 从后端配置获取或使用字典数据
+  return [
+    '软件工程师',
+    '高级软件工程师',
+    '技术经理',
+    '产品经理',
+    'UI设计师',
+    '测试工程师',
+    '人力资源专员',
+    '财务专员',
+    '行政专员',
+  ]
 }
 
 // ==================== 导入导出接口 ====================
+// 注意：导入导出功能需要后端实现对应接口
 
 /**
  * 批量导入员工
  */
 export async function importEmployees(file: File): Promise<ImportResult> {
-  await delay(1000)
+  // TODO: 实现文件上传和导入逻辑
+  const formData = new FormData()
+  formData.append('file', file)
 
-  // 模拟导入结果
-  // 实际项目中需要使用 xlsx 库解析 Excel 文件
-  const success = Math.floor(Math.random() * 10) + 1
-  const failed = Math.floor(Math.random() * 3)
-  const errors: string[] = []
+  // const response = await http.post('/employees/import', formData, {
+  //   headers: { 'Content-Type': 'multipart/form-data' }
+  // })
 
-  for (let i = 0; i < failed; i++) {
-    errors.push(`第${i + 2}行: 邮箱格式不正确`)
-  }
-
+  // 临时返回Mock数据
   return {
-    success,
-    failed,
-    errors,
+    success: 0,
+    failed: 0,
+    errors: [],
   }
 }
 
@@ -318,14 +265,12 @@ export async function importEmployees(file: File): Promise<ImportResult> {
  * 导出员工列表
  */
 export async function exportEmployees(config: ExportConfig): Promise<Blob> {
-  await delay(1000)
+  // TODO: 实现导出逻辑
+  // const response = await http.post('/employees/export', config, {
+  //   responseType: 'blob'
+  // })
+  // return response
 
-  // 模拟导出 Excel
-  // 实际项目中需要使用 xlsx 库生成 Excel 文件
-  const data = {
-    mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    data: new ArrayBuffer(0),
-  }
-
-  return new Blob([data.data], { type: data.mime })
+  // 临时返回空Blob
+  return new Blob()
 }
