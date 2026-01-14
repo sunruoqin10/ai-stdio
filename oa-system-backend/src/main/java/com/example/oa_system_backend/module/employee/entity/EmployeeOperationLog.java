@@ -32,21 +32,27 @@ public class EmployeeOperationLog {
     private String operation;
 
     /**
-     * 操作人ID
+     * 操作人
      */
-    @TableField("operator_id")
+    @TableField("operator")
+    private String operator;
+
+    /**
+     * 操作人ID (暂不存储到数据库)
+     */
+    @TableField(exist = false)
     private String operatorId;
 
     /**
-     * 操作人姓名
+     * 操作人姓名 (暂不存储到数据库)
      */
-    @TableField("operator_name")
+    @TableField(exist = false)
     private String operatorName;
 
     /**
-     * 操作时间
+     * 操作时间 (使用created_at代替)
      */
-    @TableField("operation_time")
+    @TableField(exist = false)
     private LocalDateTime operationTime;
 
     /**
@@ -55,27 +61,26 @@ public class EmployeeOperationLog {
     private String details;
 
     /**
-     * IP地址
+     * IP地址 (暂不存储到数据库)
      */
-    @TableField("ip_address")
+    @TableField(exist = false)
     private String ipAddress;
 
     /**
-     * 用户代理
+     * 用户代理 (暂不存储到数据库)
      */
-    @TableField("user_agent")
+    @TableField(exist = false)
     private String userAgent;
 
     /**
-     * 创建时间
+     * 创建时间 (暂不存储到数据库)
      */
-    @TableField("created_at")
+    @TableField(exist = false)
     private LocalDateTime createdAt;
 
     /**
-     * 逻辑删除标记
+     * 逻辑删除标记 (暂不存储到数据库)
      */
-    @TableLogic
-    @TableField("is_deleted")
+    @TableField(exist = false)
     private Integer isDeleted;
 }

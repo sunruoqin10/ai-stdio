@@ -281,7 +281,7 @@ async function handleSubmit() {
     // 验证项值唯一性
     if (formData.value.value !== originalValue.value) {
       const exists = await dictStore.checkDictValueExists(
-        dictType.code,
+        dictType.id,
         formData.value.value,
         isEdit.value ? props.dictItem?.id : undefined
       )

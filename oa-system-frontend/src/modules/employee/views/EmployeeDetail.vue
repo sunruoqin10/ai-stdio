@@ -139,7 +139,7 @@
                   <el-col :span="12">
                     <el-form-item label="入职日期">
                       <el-date-picker
-                        v-model="form.entryDate"
+                        v-model="form.joinDate"
                         type="date"
                         value-format="YYYY-MM-DD"
                         style="width: 100%"
@@ -147,29 +147,21 @@
                     </el-form-item>
                   </el-col>
                   <el-col :span="12">
-                    <el-form-item label="试用期状态">
-                      <el-select v-model="form.probationStatus" style="width: 100%">
-                        <el-option label="试用期内" value="probation" />
-                        <el-option label="已转正" value="regular" />
-                      </el-select>
+                    <el-form-item label="试用期结束日">
+                      <el-date-picker
+                        v-model="form.probationEndDate"
+                        type="date"
+                        value-format="YYYY-MM-DD"
+                        style="width: 100%"
+                      />
                     </el-form-item>
                   </el-col>
                 </el-row>
                 <el-row :gutter="16">
                   <el-col :span="12">
-                    <el-form-item label="转正日期">
-                      <el-date-picker
-                        v-model="form.regularDate"
-                        type="date"
-                        value-format="YYYY-MM-DD"
-                        style="width: 100%"
-                      />
-                    </el-form-item>
-                  </el-col>
-                  <el-col :span="12">
                     <el-form-item label="直属上级">
                       <el-select
-                        v-model="form.superiorId"
+                        v-model="form.managerId"
                         filterable
                         style="width: 100%"
                       >
@@ -245,19 +237,19 @@ const form = ref<EmployeeForm>({
   department: '',
   departmentId: '',
   position: '',
-  entryDate: '',
-  probationStatus: 'probation',
+  joinDate: '',
   birthDate: '',
   officeLocation: '',
   emergencyContact: '',
   emergencyPhone: '',
-  superiorId: '',
-  superior: '',
+  managerId: '',
+  avatar: '',
+  probationEndDate: '',
 })
 
 const workYears = computed(() => {
-  if (!employee.value?.entryDate) return 0
-  return calculateWorkYears(employee.value.entryDate)
+  if (!employee.value?.joinDate) return 0
+  return calculateWorkYears(employee.value.joinDate)
 })
 
 onMounted(async () => {

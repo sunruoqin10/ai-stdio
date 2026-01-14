@@ -1,6 +1,6 @@
 <template>
   <span v-if="status" class="status-tag" :class="tagClass">
-    <slot>{{ statusText }}</slot>
+    <slot>{{ label || statusText }}</slot>
   </span>
 </template>
 
@@ -10,6 +10,7 @@ import type { EmployeeStatus, ProbationStatus, Gender } from '@/modules/employee
 
 interface Props {
   status?: string
+  label?: string  // 优先使用这个标签（从字典获取）
   type?: 'employee' | 'probation' | 'gender' | 'asset' | 'auto'
   customClass?: string
 }

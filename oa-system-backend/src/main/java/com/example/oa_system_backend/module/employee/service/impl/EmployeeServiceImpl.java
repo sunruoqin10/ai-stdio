@@ -10,6 +10,7 @@ import com.example.oa_system_backend.module.employee.entity.EmployeeOperationLog
 import com.example.oa_system_backend.module.employee.mapper.EmployeeMapper;
 import com.example.oa_system_backend.module.employee.mapper.EmployeeOperationLogMapper;
 import com.example.oa_system_backend.module.employee.service.EmployeeService;
+import com.example.oa_system_backend.module.employee.util.DictLabelUtil;
 import com.example.oa_system_backend.module.employee.vo.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeMapper employeeMapper;
     private final EmployeeOperationLogMapper operationLogMapper;
+    private final DictLabelUtil dictLabelUtil;
 
     @Override
     public IPage<EmployeeVO> getEmployeeList(EmployeeQueryRequest request) {
@@ -49,6 +51,9 @@ public class EmployeeServiceImpl implements EmployeeService {
                 request.getJoinDateStart(),
                 request.getJoinDateEnd()
         );
+
+        // 填充字典标签
+        dictLabelUtil.fillDictLabelsForList(result.getRecords());
 
         return result;
     }
@@ -74,6 +79,9 @@ public class EmployeeServiceImpl implements EmployeeService {
                 vo.setManagerName(employeeWithDetails.getManagerName());
             }
         }
+
+        // 填充字典标签
+        dictLabelUtil.fillDictLabels(vo);
 
         return vo;
     }
@@ -332,7 +340,8 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         QueryWrapper<EmployeeOperationLog> wrapper = new QueryWrapper<>();
         wrapper.eq("employee_id", employeeId);
-        wrapper.orderByDesc("operation_time");
+        // 按ID降序排序（ID通常是自增的，可以作为时间排序的替代）
+        wrapper.orderByDesc("id");
 
         IPage<EmployeeOperationLog> logPage = operationLogMapper.selectPage(pageInfo, wrapper);
 
@@ -431,6 +440,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         EmployeeOperationLog log = new EmployeeOperationLog();
         log.setEmployeeId(employeeId);
         log.setOperation(operation);
+        log.setOperator("system"); // 设置操作人
         log.setOperatorId("system"); // TODO: 从SecurityContext获取当前用户ID
         log.setOperatorName("系统管理员"); // TODO: 从SecurityContext获取当前用户名
         log.setOperationTime(LocalDateTime.now());
@@ -449,7 +459,9 @@ public class EmployeeServiceImpl implements EmployeeService {
         vo.setEmployeeId(log.getEmployeeId());
         vo.setOperation(log.getOperation());
         vo.setOperatorId(log.getOperatorId());
-        vo.setOperatorName(log.getOperatorName());
+        // 使用operator字段作为operatorName（因为数据库中存储的是operator字段）
+        vo.setOperatorName(log.getOperator() != null ? log.getOperator() : "系统");
+        // operationTime不在数据库中，用当前时间代替或可以为null
         vo.setOperationTime(log.getOperationTime());
         vo.setDetails(log.getDetails());
         vo.setIpAddress(log.getIpAddress());

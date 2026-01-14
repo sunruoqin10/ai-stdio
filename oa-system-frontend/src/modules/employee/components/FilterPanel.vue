@@ -12,9 +12,12 @@
 
       <el-form-item label="员工状态">
         <el-select v-model="form.status" placeholder="请选择" clearable>
-          <el-option label="在职" value="active" />
-          <el-option label="离职" value="inactive" />
-          <el-option label="停薪留职" value="leave" />
+          <el-option
+            v-for="item in employeeStatusOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
         </el-select>
       </el-form-item>
 
@@ -31,8 +34,12 @@
 
       <el-form-item label="试用期">
         <el-select v-model="form.probationStatus" placeholder="请选择" clearable>
-          <el-option label="试用期内" value="probation" />
-          <el-option label="已转正" value="regular" />
+          <el-option
+            v-for="item in probationStatusOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
         </el-select>
       </el-form-item>
 
@@ -49,8 +56,12 @@
 
       <el-form-item label="性别">
         <el-select v-model="form.gender" placeholder="请选择" clearable>
-          <el-option label="男" value="male" />
-          <el-option label="女" value="female" />
+          <el-option
+            v-for="item in genderOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
         </el-select>
       </el-form-item>
 
@@ -77,11 +88,14 @@
 import { ref, onMounted } from 'vue'
 import type { EmployeeFilter } from '../types'
 import * as employeeApi from '../api'
+import { useDictStore } from '@/modules/dict/store'
 
 const emit = defineEmits<{
   (e: 'search', filter: EmployeeFilter): void
   (e: 'reset'): void
 }>()
+
+const dictStore = useDictStore()
 
 const form = ref<EmployeeFilter>({
   keyword: '',
@@ -96,10 +110,32 @@ const form = ref<EmployeeFilter>({
 const departments = ref<Array<{ id: string; name: string }>>([])
 const positions = ref<string[]>([])
 
+// 字典选项数据
+const genderOptions = ref<Array<{ label: string; value: string }>>([])
+const employeeStatusOptions = ref<Array<{ label: string; value: string }>>([])
+const probationStatusOptions = ref<Array<{ label: string; value: string }>>([])
+
 onMounted(async () => {
   // 加载部门和职位数据
   departments.value = await employeeApi.getDepartmentList()
   positions.value = await employeeApi.getPositionList()
+
+  // 加载字典数据
+  try {
+    // 性别字典 (code: gender)
+    const genderDict = await dictStore.fetchDictData('gender')
+    genderOptions.value = genderDict.items
+
+    // 员工状态字典 (code: employee_status)
+    const employeeStatusDict = await dictStore.fetchDictData('employee_status')
+    employeeStatusOptions.value = employeeStatusDict.items
+
+    // 试用期状态字典 (code: probation_status)
+    const probationStatusDict = await dictStore.fetchDictData('probation_status')
+    probationStatusOptions.value = probationStatusDict.items
+  } catch (error) {
+    console.error('加载字典数据失败:', error)
+  }
 })
 
 function handleSearch() {

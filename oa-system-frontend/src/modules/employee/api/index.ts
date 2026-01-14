@@ -238,6 +238,53 @@ export async function getPositionList(): Promise<string[]> {
   ]
 }
 
+// ==================== 字典数据接口 ====================
+
+/**
+ * 员工字典数据响应类型
+ */
+export interface EmployeeDictData {
+  gender: DictData
+  status: DictData
+  probationStatus: DictData
+  position: DictData
+  level: DictData
+}
+
+/**
+ * 字典数据类型
+ */
+export interface DictData {
+  dictType: {
+    id: string
+    code: string
+    name: string
+  }
+  items: Array<{
+    id: string
+    label: string
+    value: string
+    colorType?: string
+    color?: string
+    icon?: string
+    sortOrder: number
+    status: string
+  }>
+}
+
+/**
+ * 获取员工相关字典数据
+ */
+export async function getEmployeeDictData(): Promise<EmployeeDictData> {
+  const response = await http.get<{
+    code: number
+    message: string
+    data: EmployeeDictData
+  }>('/employees/dict-data')
+
+  return response.data
+}
+
 // ==================== 导入导出接口 ====================
 // 注意：导入导出功能需要后端实现对应接口
 

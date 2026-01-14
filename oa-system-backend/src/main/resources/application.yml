@@ -20,6 +20,20 @@ spring:
           starttls:
             enable: true
 
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  devtools:
+    restart:
+      enabled: true  # 开启热部署
+      additional-paths: src/main/java  # 监控的目录
+      exclude: static/**,public/**  # 排除不需要监控的资源
+    livereload:
+      enabled: true  # 开启浏览器自动刷新
+
 mybatis-plus:
   mapper-locations: classpath:mapper/**/*.xml
   type-aliases-package: com.example.oa_system_backend.module.*.entity
@@ -35,8 +49,8 @@ mybatis-plus:
 
 server:
   port: 8080
-  servlet:
-    context-path: /api
+#  servlet:
+#    context-path: /api  # 已移除，改为在控制器级别统一使用 /api 前缀
 
 jwt:
   secret: YourSecretKeyForJWTTokenGenerationShouldBeLongEnough
@@ -47,3 +61,9 @@ logging:
   level:
     com.example.oa_system_backend: debug
     org.springframework.security: debug
+
+file:
+  upload:
+    path: c:/uploads  # Windows系统上传文件保存路径
+    url-prefix: /uploads  # 文件访问URL前缀
+

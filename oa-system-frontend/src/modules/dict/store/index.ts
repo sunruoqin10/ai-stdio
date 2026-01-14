@@ -157,7 +157,11 @@ export const useDictStore = defineStore('dict', () => {
   }
 
   async function updateDictItemSort(items: Array<{ id: string; sortOrder: number }>) {
-    await dictApi.updateDictItemSort(items)
+    const dictTypeId = currentDictType.value?.id
+    if (!dictTypeId) {
+      throw new Error('未选择字典类型')
+    }
+    await dictApi.updateDictItemSort(dictTypeId, items)
     await fetchDictItems({ dictTypeCode: currentDictType.value?.code })
   }
 
@@ -231,11 +235,11 @@ export const useDictStore = defineStore('dict', () => {
   }
 
   async function checkDictValueExists(
-    dictTypeCode: string,
+    dictTypeId: string,
     value: string,
     excludeId?: string
   ): Promise<boolean> {
-    const { data } = await dictApi.checkDictValueExists(dictTypeCode, value, excludeId)
+    const { data } = await dictApi.checkDictValueExists(dictTypeId, value, excludeId)
     return data
   }
 

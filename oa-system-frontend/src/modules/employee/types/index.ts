@@ -44,6 +44,7 @@ export interface Employee {
   name: string                    // 姓名
   englishName?: string            // 英文名
   gender: Gender                  // 性别
+  genderLabel?: string            // 性别显示名称(从字典获取)
   birthDate?: string              // 出生日期
   phone: string                   // 联系电话
   email: string                   // 邮箱
@@ -53,16 +54,20 @@ export interface Employee {
   departmentId: string            // 部门ID
   departmentName?: string         // 部门名称(关联查询)
   position: string                // 职位
+  positionLabel?: string          // 职位显示名称(从字典获取)
   level?: string                  // 职级
+  levelLabel?: string             // 职级显示名称(从字典获取)
   managerId?: string              // 直属上级ID
   managerName?: string            // 直属上级姓名(关联查询)
   joinDate: string                // 入职日期
   probationStatus?: ProbationStatus  // 试用期状态
+  probationStatusLabel?: string   // 试用期状态显示名称(从字典获取)
   probationEndDate?: string       // 试用期结束日期
   workYears?: number              // 工龄(自动计算)
 
   /** 状态 */
   status: EmployeeStatus          // 员工状态
+  statusLabel?: string            // 员工状态显示名称(从字典获取)
 
   /** 其他信息 */
   officeLocation?: string         // 办公位置

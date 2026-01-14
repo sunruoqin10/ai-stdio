@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.oa_system_backend.module.dict.mapper.DictItemMapper">
+
+    <update id="batchUpdateSort">
+        <foreach collection="items" item="item" separator=";">
+            UPDATE sys_dict_item
+            SET sort_order = #{item.sortOrder},
+                updated_at = NOW()
+            WHERE id = #{item.id}
+              AND dict_type_id = #{dictTypeId}
+              AND is_deleted = 0
+        </foreach>
+    </update>
+
+</mapper>

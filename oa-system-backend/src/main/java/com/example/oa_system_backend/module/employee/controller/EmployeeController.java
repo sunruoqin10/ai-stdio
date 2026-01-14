@@ -2,6 +2,8 @@ package com.example.oa_system_backend.module.employee.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.oa_system_backend.common.vo.ApiResponse;
+import com.example.oa_system_backend.module.dict.service.DictService;
+import com.example.oa_system_backend.module.dict.vo.DictDataVO;
 import com.example.oa_system_backend.module.employee.dto.*;
 import com.example.oa_system_backend.module.employee.entity.Employee;
 import com.example.oa_system_backend.module.employee.service.EmployeeService;
@@ -10,15 +12,19 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * 员工管理控制器
  */
 @RestController
-@RequestMapping("/employees")
+@RequestMapping("/api/employees")
 @RequiredArgsConstructor
 public class EmployeeController {
 
     private final EmployeeService employeeService;
+    private final DictService dictService;
 
     /**
      * 分页查询员工列表
@@ -130,5 +136,31 @@ public class EmployeeController {
             @RequestParam(required = false) String excludeId) {
         boolean exists = employeeService.checkPhoneExists(phone, excludeId);
         return ApiResponse.success(exists);
+    }
+
+    /**
+     * 获取员工相关字典数据
+     * GET /api/employees/dict-data
+     */
+    @GetMapping("/dict-data")
+    public ApiResponse<Map<String, DictDataVO>> getEmployeeDictData() {
+        Map<String, DictDataVO> dictData = new HashMap<>();
+
+        // 获取性别字典
+        dictData.put("gender", dictService.getDictData("employee_gender"));
+
+        // 获取员工状态字典
+        dictData.put("status", dictService.getDictData("employee_status"));
+
+        // 获取试用期状态字典
+        dictData.put("probationStatus", dictService.getDictData("employee_probation_status"));
+
+        // 获取职位字典
+        dictData.put("position", dictService.getDictData("employee_position"));
+
+        // 获取职级字典
+        dictData.put("level", dictService.getDictData("employee_level"));
+
+        return ApiResponse.success(dictData);
     }
 }

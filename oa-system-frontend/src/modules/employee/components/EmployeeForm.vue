@@ -23,8 +23,13 @@
         <el-col :span="12">
           <el-form-item label="性别" prop="gender">
             <el-radio-group v-model="formData.gender">
-              <el-radio :value="Gender.MALE">男</el-radio>
-              <el-radio :value="Gender.FEMALE">女</el-radio>
+              <el-radio
+                v-for="item in dictData?.gender.items"
+                :key="item.value"
+                :value="item.value"
+              >
+                {{ item.label }}
+              </el-radio>
             </el-radio-group>
           </el-form-item>
         </el-col>
@@ -71,7 +76,20 @@
         </el-col>
         <el-col :span="12">
           <el-form-item label="职位" prop="position">
-            <el-input v-model="formData.position" placeholder="请输入职位" />
+            <el-select
+              v-model="formData.position"
+              placeholder="请选择职位"
+              filterable
+              allow-create
+              style="width: 100%"
+            >
+              <el-option
+                v-for="item in dictData?.position.items"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
           </el-form-item>
         </el-col>
       </el-row>
@@ -149,8 +167,10 @@
       <el-form-item label="头像上传">
         <el-upload
           class="avatar-uploader"
+          :action="uploadUrl"
           :show-file-list="false"
           :on-success="handleAvatarSuccess"
+          :on-error="handleAvatarError"
           :before-upload="beforeAvatarUpload"
         >
           <img v-if="formData.avatar" :src="formData.avatar" class="avatar" />
@@ -165,13 +185,13 @@
       <el-descriptions title="员工信息确认" :column="2" border>
         <el-descriptions-item label="姓名">{{ formData.name }}</el-descriptions-item>
         <el-descriptions-item label="性别">
-          {{ formData.gender === Gender.MALE ? '男' : '女' }}
+          {{ getDictLabel('gender', formData.gender) }}
         </el-descriptions-item>
         <el-descriptions-item label="英文名">{{ formData.englishName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="联系电话">{{ formData.phone }}</el-descriptions-item>
         <el-descriptions-item label="邮箱">{{ formData.email }}</el-descriptions-item>
         <el-descriptions-item label="部门">{{ getDepartmentName(formData.departmentId) }}</el-descriptions-item>
-        <el-descriptions-item label="职位">{{ formData.position }}</el-descriptions-item>
+        <el-descriptions-item label="职位">{{ getDictLabel('position', formData.position) }}</el-descriptions-item>
         <el-descriptions-item label="入职日期">{{ formData.joinDate }}</el-descriptions-item>
         <el-descriptions-item label="出生日期">{{ formData.birthDate || '-' }}</el-descriptions-item>
         <el-descriptions-item label="办公位置">{{ formData.officeLocation || '-' }}</el-descriptions-item>
@@ -218,6 +238,11 @@ const currentStep = ref(0)
 const submitting = ref(false)
 const departments = ref<Array<{ id: string; name: string }>>([])
 const employees = ref<Employee[]>([])
+const uploadUrl = '/api/upload'
+
+// 字典数据
+const dictData = ref<employeeApi.EmployeeDictData | null>(null)
+const dictLoading = ref(false)
 
 const formData = reactive<EmployeeForm>({
   name: '',
@@ -276,6 +301,17 @@ const rules: FormRules = {
 }
 
 onMounted(async () => {
+  // 加载字典数据
+  try {
+    dictLoading.value = true
+    dictData.value = await employeeApi.getEmployeeDictData()
+  } catch (error) {
+    console.error('加载字典数据失败:', error)
+    ElMessage.warning('字典数据加载失败，部分选项可能不可用')
+  } finally {
+    dictLoading.value = false
+  }
+
   // 加载部门列表
   departments.value = await employeeApi.getDepartmentList()
 
@@ -359,8 +395,32 @@ function getProbationEndDate() {
   return calculateProbationEndDate(formData.joinDate)
 }
 
-const handleAvatarSuccess: UploadProps['onSuccess'] = (response) => {
-  formData.avatar = response.url
+function getDictLabel(dictType: keyof employeeApi.EmployeeDictData, value: string) {
+  if (!dictData.value || !value) return value || '-'
+  const items = dictData.value[dictType]?.items
+  if (!items) return value
+  const item = items.find(i => i.value === value)
+  return item?.label || value
+}
+
+const handleAvatarSuccess: UploadProps['onSuccess'] = (response, file) => {
+  console.log('上传成功响应:', response)
+  console.log('文件:', file)
+
+  if (response && response.url) {
+    // 拼接完整的URL
+    formData.avatar = response.url.startsWith('http') ? response.url : `/api${response.url}`
+    ElMessage.success('头像上传成功')
+    console.log('设置的头像URL:', formData.avatar)
+  } else {
+    ElMessage.error('上传响应格式错误')
+  }
+}
+
+const handleAvatarError: UploadProps['onError'] = (error, file) => {
+  console.error('上传失败:', error)
+  console.error('文件:', file)
+  ElMessage.error('上传失败,请重试')
 }
 
 const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {

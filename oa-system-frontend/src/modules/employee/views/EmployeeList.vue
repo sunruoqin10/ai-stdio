@@ -73,16 +73,20 @@
               </el-table-column>
               <el-table-column prop="name" label="姓名" width="100" />
               <el-table-column prop="department" label="部门" width="120" />
-              <el-table-column prop="position" label="职位" width="120" />
+              <el-table-column label="职位" width="120">
+                <template #default="{ row }">
+                  {{ row.positionLabel || row.position }}
+                </template>
+              </el-table-column>
               <el-table-column prop="phone" label="联系电话" width="130" />
               <el-table-column label="试用期" width="100">
                 <template #default="{ row }">
-                  <StatusTag :status="row.probationStatus" />
+                  <StatusTag :status="row.probationStatus" :label="row.probationStatusLabel" />
                 </template>
               </el-table-column>
               <el-table-column label="状态" width="80">
                 <template #default="{ row }">
-                  <StatusTag :status="row.status" />
+                  <StatusTag :status="row.status" :label="row.statusLabel" />
                 </template>
               </el-table-column>
               <el-table-column prop="entryDate" label="入职日期" width="120" />
@@ -126,11 +130,11 @@
                     <div class="card-info">
                       <div class="card-name">{{ item.name }}</div>
                       <div class="card-no">{{ item.employeeNo }}</div>
-                      <div class="card-position">{{ item.position }}</div>
+                      <div class="card-position">{{ item.positionLabel || item.position }}</div>
                       <div class="card-department">{{ item.department }}</div>
                       <div class="card-status">
-                        <StatusTag :status="item.status" />
-                        <StatusTag :status="item.probationStatus" />
+                        <StatusTag :status="item.status" :label="item.statusLabel" />
+                        <StatusTag :status="item.probationStatus" :label="item.probationStatusLabel" />
                       </div>
                     </div>
                   </div>

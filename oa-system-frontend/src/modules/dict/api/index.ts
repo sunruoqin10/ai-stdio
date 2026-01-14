@@ -3,11 +3,11 @@
  * @module dict/api
  */
 
-// 开发环境使用Mock API
-import * as mockApi from './mock'
-
 // 生产环境使用真实API
-// import request from '@/utils/request'
+import { http } from '@/utils/request'
+
+// 开发环境使用Mock API
+// import * as mockApi from './mock'
 
 import type {
   DictType,
@@ -20,132 +20,265 @@ import type {
   PageResponse
 } from '../types'
 
+// MyBatis-Plus IPage 接口
+interface IPage<T> {
+  records: T[]
+  total: number
+  size: number
+  current: number
+  pages: number
+}
+
+// 将 MyBatis-Plus IPage 转换为前端 PageResponse
+function convertIPageToPageResponse<T>(iPage: IPage<T>): PageResponse<T> {
+  return {
+    list: iPage.records,
+    total: iPage.total,
+    page: iPage.current,
+    pageSize: iPage.size
+  }
+}
+
 /**
  * 获取字典类型列表
  */
-export function getDictTypeList(params: DictFilter & {
+export async function getDictTypeList(params: DictFilter & {
   page: number
   pageSize: number
 }) {
-  // 开发环境使用mock
-  return mockApi.mockGetDictTypeList(params)
-
-  // 生产环境使用真实API
-  // return request.get<PageResponse<DictType>>('/api/dict/types', { params })
+  const result = await http.get<{
+    code: number
+    message: string
+    data: IPage<DictType>
+  }>('/dict/types', { params })
+  return {
+    ...result,
+    data: convertIPageToPageResponse(result.data)
+  }
 }
 
 /**
  * 获取字典类型详情
  */
 export function getDictTypeDetail(id: string) {
-  return mockApi.mockGetDictTypeDetail(id)
+  return http.get<{
+    code: number
+    message: string
+    data: DictType
+  }>(`/dict/types/${id}`)
 }
 
 /**
  * 创建字典类型
  */
 export function createDictType(data: DictTypeForm) {
-  return mockApi.mockCreateDictType(data)
+  return http.post<{
+    code: number
+    message: string
+    data: DictType
+  }>('/dict/types', data)
 }
 
 /**
  * 更新字典类型
  */
 export function updateDictType(id: string, data: Partial<DictTypeForm>) {
-  return mockApi.mockUpdateDictType(id, data)
+  return http.put<{
+    code: number
+    message: string
+    data: DictType
+  }>(`/dict/types/${id}`, data)
 }
 
 /**
  * 删除字典类型
  */
 export function deleteDictType(id: string) {
-  return mockApi.mockDeleteDictType(id)
+  return http.delete<{
+    code: number
+    message: string
+    data: null
+  }>(`/dict/types/${id}`)
 }
 
 /**
  * 获取字典项列表
  */
-export function getDictItemList(params: DictFilter & {
+export async function getDictItemList(params: DictFilter & {
   dictTypeCode?: string
   page: number
   pageSize: number
 }) {
-  return mockApi.mockGetDictItemList(params)
+  const result = await http.get<{
+    code: number
+    message: string
+    data: IPage<DictItem>
+  }>('/dict/items', { params })
+  return {
+    ...result,
+    data: convertIPageToPageResponse(result.data)
+  }
 }
 
 /**
  * 获取字典项详情
  */
 export function getDictItemDetail(id: string) {
-  return mockApi.mockGetDictItemDetail(id)
+  return http.get<{
+    code: number
+    message: string
+    data: DictItem
+  }>(`/dict/items/${id}`)
 }
 
 /**
  * 创建字典项
  */
 export function createDictItem(data: DictItemForm) {
-  return mockApi.mockCreateDictItem(data)
+  return http.post<{
+    code: number
+    message: string
+    data: DictItem
+  }>('/dict/items', data)
 }
 
 /**
  * 更新字典项
  */
 export function updateDictItem(id: string, data: Partial<DictItemForm>) {
-  return mockApi.mockUpdateDictItem(id, data)
+  return http.put<{
+    code: number
+    message: string
+    data: DictItem
+  }>(`/dict/items/${id}`, data)
 }
 
 /**
  * 删除字典项
  */
 export function deleteDictItem(id: string) {
-  return mockApi.mockDeleteDictItem(id)
+  return http.delete<{
+    code: number
+    message: string
+    data: null
+  }>(`/dict/items/${id}`)
 }
 
 /**
  * 批量更新字典项排序
  */
-export function updateDictItemSort(items: Array<{ id: string; sortOrder: number }>) {
-  return mockApi.mockUpdateDictItemSort(items)
+export function updateDictItemSort(dictTypeId: string, items: Array<{ id: string; sortOrder: number }>) {
+  return http.put<{
+    code: number
+    message: string
+    data: null
+  }>('/dict/items/sort', { dictTypeId, items })
 }
 
 /**
  * 批量删除字典项
  */
 export function batchDeleteDictItems(ids: string[]) {
-  return mockApi.mockBatchDeleteDictItems(ids)
+  return http.delete<{
+    code: number
+    message: string
+    data: null
+  }>('/dict/items/batch', { data: { ids } })
 }
 
 /**
  * 批量启用/禁用字典项
  */
 export function batchUpdateDictItemStatus(ids: string[], status: 'enabled' | 'disabled') {
-  return mockApi.mockBatchUpdateDictItemStatus(ids, status)
+  return http.put<{
+    code: number
+    message: string
+    data: null
+  }>('/dict/items/batch/status', { ids, status })
 }
 
 /**
  * 获取字典树
  */
 export function getDictTree() {
-  return mockApi.mockGetDictTree()
+  return http.get<{
+    code: number
+    message: string
+    data: DictTreeNode[]
+  }>('/dict/tree')
 }
 
 /**
  * 检查字典编码是否存在
  */
 export function checkDictCodeExists(code: string, excludeId?: string) {
-  return mockApi.mockCheckDictCodeExists(code, excludeId)
+  return http.get<{
+    code: number
+    message: string
+    data: boolean
+  }>('/dict/types/check-code', {
+    params: { code, excludeId }
+  })
 }
 
 /**
  * 检查字典项值是否存在
  */
-export function checkDictValueExists(dictTypeCode: string, value: string, excludeId?: string) {
-  return mockApi.mockCheckDictValueExists(dictTypeCode, value, excludeId)
+export function checkDictValueExists(dictTypeId: string, value: string, excludeId?: string) {
+  return http.get<{
+    code: number
+    message: string
+    data: boolean
+  }>('/dict/items/check-value', {
+    params: { dictTypeId, value, excludeId }
+  })
 }
 
 /**
  * 根据字典类型编码获取字典数据
  */
 export function getDictData(dictTypeCode: string) {
-  return mockApi.mockGetDictData(dictTypeCode)
+  return http.get<{
+    code: number
+    message: string
+    data: DictData
+  }>(`/dict/${dictTypeCode}`)
+}
+
+/**
+ * 清除字典缓存
+ */
+export function clearDictCache(dictTypeCode?: string) {
+  return http.delete<{
+    code: number
+    message: string
+    data: null
+  }>(dictTypeCode ? `/dict/cache/${dictTypeCode}` : '/dict/cache')
+}
+
+/**
+ * 导入字典数据
+ */
+export function importDict(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return http.post<{
+    code: number
+    message: string
+    data: any
+  }>('/dict/import', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
+/**
+ * 导出字典数据
+ */
+export function exportDict(dictTypeCodes?: string[]) {
+  return http.get<Blob>('/dict/export', {
+    params: { dictTypeCodes: dictTypeCodes?.join(',') },
+    responseType: 'blob'
+  })
 }

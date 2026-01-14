@@ -3,19 +3,37 @@ package com.example.oa_system_backend.common.utils;
 import com.example.oa_system_backend.module.auth.vo.CaptchaResponse;
 import com.wf.captcha.SpecCaptcha;
 import com.wf.captcha.base.Captcha;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class CaptchaUtils {
 
-    private final StringRedisTemplate redisTemplate;
+    // 验证码内存缓存
+    private final ConcurrentHashMap<String, CaptchaData> captchaCache = new ConcurrentHashMap<>();
 
-    public CaptchaUtils(StringRedisTemplate redisTemplate) {
-        this.redisTemplate = redisTemplate;
+    private static final long CAPTCHA_EXPIRE_MINUTES = 5;
+
+    // 验证码数据内部类
+    private static class CaptchaData {
+        private final String code;
+        private final LocalDateTime expireTime;
+
+        public CaptchaData(String code, LocalDateTime expireTime) {
+            this.code = code;
+            this.expireTime = expireTime;
+        }
+
+        public String getCode() {
+            return code;
+        }
+
+        public LocalDateTime getExpireTime() {
+            return expireTime;
+        }
     }
 
     public String generateCaptchaKey() {
@@ -31,8 +49,9 @@ public class CaptchaUtils {
         String captchaCode = captcha.text().toLowerCase();
         String captchaImage = captcha.toBase64();
 
-        // Store in Redis for 5 minutes
-        redisTemplate.opsForValue().set(captchaKey, captchaCode, 5, TimeUnit.MINUTES);
+        // Store in memory cache for 5 minutes
+        LocalDateTime expireTime = LocalDateTime.now().plusMinutes(CAPTCHA_EXPIRE_MINUTES);
+        captchaCache.put(captchaKey, new CaptchaData(captchaCode, expireTime));
 
         return new CaptchaResponse(captchaKey, captchaImage);
     }
@@ -42,15 +61,21 @@ public class CaptchaUtils {
             return false;
         }
 
-        String storedCode = redisTemplate.opsForValue().get(captchaKey);
-        if (storedCode == null) {
+        CaptchaData captchaData = captchaCache.get(captchaKey);
+        if (captchaData == null) {
             return false;
         }
 
-        boolean isValid = storedCode.equalsIgnoreCase(userInput);
+        // Check if expired
+        if (LocalDateTime.now().isAfter(captchaData.getExpireTime())) {
+            captchaCache.remove(captchaKey);
+            return false;
+        }
+
+        boolean isValid = captchaData.getCode().equalsIgnoreCase(userInput);
 
         // Delete captcha after validation (one-time use)
-        redisTemplate.delete(captchaKey);
+        captchaCache.remove(captchaKey);
 
         return isValid;
     }

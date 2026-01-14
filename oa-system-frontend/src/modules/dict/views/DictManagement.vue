@@ -415,8 +415,8 @@ function handleFormSuccess() {
 
           .stat-item {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 8px;
 
             .stat-label {
               color: var(--el-text-color-secondary);

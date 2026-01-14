@@ -32,6 +32,11 @@ public class EmployeeVO {
     private String gender;
 
     /**
+     * 性别显示名称
+     */
+    private String genderLabel;
+
+    /**
      * 出生日期
      */
     private LocalDate birthDate;
@@ -67,9 +72,19 @@ public class EmployeeVO {
     private String position;
 
     /**
+     * 职位显示名称
+     */
+    private String positionLabel;
+
+    /**
      * 职级
      */
     private String level;
+
+    /**
+     * 职级显示名称
+     */
+    private String levelLabel;
 
     /**
      * 直属上级ID
@@ -92,6 +107,11 @@ public class EmployeeVO {
     private String probationStatus;
 
     /**
+     * 试用期状态显示名称
+     */
+    private String probationStatusLabel;
+
+    /**
      * 试用期结束日期
      */
     private LocalDate probationEndDate;
@@ -105,6 +125,11 @@ public class EmployeeVO {
      * 员工状态
      */
     private String status;
+
+    /**
+     * 员工状态显示名称
+     */
+    private String statusLabel;
 
     /**
      * 办公位置

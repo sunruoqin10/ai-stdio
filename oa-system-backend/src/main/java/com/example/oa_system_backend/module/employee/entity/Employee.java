@@ -184,12 +184,6 @@ public class Employee {
     @TableField("deleted_by")
     private String deletedBy;
 
-    /**
-     * 乐观锁版本号
-     */
-    @Version
-    private Integer version;
-
     // ========== 关联对象(非数据库字段) ==========
 
     /**

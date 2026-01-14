@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.oa_system_backend.module.employee.mapper.EmployeeMapper">
+
+    <!-- 分页查询员工列表(带部门名称) -->
+    <select id="selectPageWithDetails" resultType="com.example.oa_system_backend.module.employee.vo.EmployeeVO">
+        SELECT e.*,
+               d.name AS department_name,
+               m.name AS manager_name
+        FROM sys_employee e
+        LEFT JOIN sys_department d ON e.department_id = d.id AND d.is_deleted = 0
+        LEFT JOIN sys_employee m ON e.manager_id = m.id AND m.is_deleted = 0
+        WHERE e.is_deleted = 0
+        <if test="keyword != null and keyword != ''">
+            AND (e.name LIKE CONCAT('%', #{keyword}, '%')
+                 OR e.id LIKE CONCAT('%', #{keyword}, '%')
+                 OR e.phone LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="status != null and status != ''">
+            AND e.status = #{status}
+        </if>
+        <if test="departmentIds != null and departmentIds != ''">
+            AND FIND_IN_SET(e.department_id, #{departmentIds})
+        </if>
+        <if test="position != null and position != ''">
+            AND e.position = #{position}
+        </if>
+        <if test="probationStatus != null and probationStatus != ''">
+            AND e.probation_status = #{probationStatus}
+        </if>
+        <if test="gender != null and gender != ''">
+            AND e.gender = #{gender}
+        </if>
+        <if test="joinDateStart != null and joinDateStart != ''">
+            AND e.join_date &gt;= #{joinDateStart}
+        </if>
+        <if test="joinDateEnd != null and joinDateEnd != ''">
+            AND e.join_date &lt;= #{joinDateEnd}
+        </if>
+        ORDER BY e.created_at DESC
+    </select>
+
+    <!-- 根据入职日期范围查询员工数量，用于生成员工编号 -->
+    <select id="countByJoinDate" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM sys_employee
+        WHERE id LIKE CONCAT(#{dateStr}, '%')
+          AND is_deleted = 0
+    </select>
+
+    <!-- 检查邮箱是否存在 -->
+    <select id="countByEmail" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM sys_employee
+        WHERE email = #{email}
+          AND is_deleted = 0
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 检查手机号是否存在 -->
+    <select id="countByPhone" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM sys_employee
+        WHERE phone = #{phone}
+          AND is_deleted = 0
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 检查部门是否存在 -->
+    <select id="countByDepartmentId" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM sys_department
+        WHERE id = #{departmentId}
+          AND is_deleted = 0
+    </select>
+
+    <!-- 检查上级是否存在 -->
+    <select id="countByManagerId" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM sys_employee
+        WHERE id = #{managerId}
+          AND is_deleted = 0
+          AND status = 'active'
+    </select>
+
+    <!-- 查询所有在职员工 -->
+    <select id="selectAllActive" resultType="com.example.oa_system_backend.module.employee.entity.Employee">
+        SELECT *
+        FROM sys_employee
+        WHERE status = 'active'
+          AND is_deleted = 0
+    </select>
+
+    <!-- 查询今天生日的在职员工 -->
+    <select id="selectTodayBirthday" resultType="com.example.oa_system_backend.module.employee.entity.Employee">
+        SELECT *
+        FROM sys_employee
+        WHERE MONTH(birth_date) = MONTH(CURDATE())
+          AND DAY(birth_date) = DAY(CURDATE())
+          AND status = 'active'
+          AND is_deleted = 0
+    </select>
+
+    <!-- 查询指定天数内试用期到期的员工 -->
+    <select id="selectProbationExpiring" resultType="com.example.oa_system_backend.module.employee.entity.Employee">
+        SELECT *
+        FROM sys_employee
+        WHERE probation_status = 'probation'
+          AND probation_end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL #{days} DAY)
+          AND status = 'active'
+          AND is_deleted = 0
+    </select>
+
+    <!-- 统计各部门员工数量 -->
+    <select id="countByDepartment" resultType="com.example.oa_system_backend.module.employee.entity.Employee">
+        SELECT e.department_id, d.name AS department_name, COUNT(*) AS count
+        FROM sys_employee e
+        LEFT JOIN sys_department d ON e.department_id = d.id AND d.is_deleted = 0
+        WHERE e.status = 'active'
+          AND e.is_deleted = 0
+        GROUP BY e.department_id, d.name
+    </select>
+
+</mapper>
