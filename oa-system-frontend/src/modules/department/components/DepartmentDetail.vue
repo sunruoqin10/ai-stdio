@@ -58,13 +58,13 @@
       <!-- 负责人信息 -->
       <div class="info-section">
         <h3 class="section-title">负责人信息</h3>
-        <div class="leader-info" v-if="department.leader">
-          <el-avatar :size="60" :src="department.leader.avatar">
-            {{ department.leader.name.charAt(0) }}
+        <div class="leader-info" v-if="department.leaderName">
+          <el-avatar :size="60">
+            {{ department.leaderName.charAt(0) }}
           </el-avatar>
           <div class="leader-details">
-            <div class="leader-name">{{ department.leader.name }}</div>
-            <div class="leader-id">工号: {{ department.leader.id }}</div>
+            <div class="leader-name">{{ department.leaderName }}</div>
+            <div class="leader-id" v-if="department.leaderId">工号: {{ department.leaderId }}</div>
           </div>
         </div>
         <div v-else class="empty-leader">

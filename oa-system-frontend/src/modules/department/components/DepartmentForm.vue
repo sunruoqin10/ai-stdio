@@ -112,6 +112,7 @@ import { ref, reactive, watch, computed } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import type { DepartmentForm, Department } from '../types'
 import { useDepartmentStore } from '../store'
+import * as employeeApi from '@/modules/employee/api'
 
 // ==================== Props ====================
 
@@ -186,16 +187,23 @@ async function searchEmployees(keyword: string) {
 
   employeeLoading.value = true
   try {
-    // TODO: 调用员工模块API搜索员工
-    // const result = await searchEmployeesApi(keyword)
-    // employeeList.value = result
+    // 调用员工模块API搜索员工
+    const result = await employeeApi.getEmployeeList({
+      keyword,
+      page: 1,
+      pageSize: 20
+    })
 
-    // 模拟数据
-    employeeList.value = [
-      { id: 'EMP001', name: '张三', departmentId: '技术部' },
-      { id: 'EMP002', name: '李四', departmentId: '市场部' },
-      { id: 'EMP003', name: '王五', departmentId: 'HR' }
-    ].filter(emp => emp.name.includes(keyword))
+    // 转换数据格式
+    employeeList.value = result.list.map(emp => ({
+      id: emp.id,
+      name: emp.name,
+      departmentId: emp.departmentId
+    }))
+  } catch (error: any) {
+    console.error('搜索员工失败:', error)
+    ElMessage.error(error.message || '搜索员工失败')
+    employeeList.value = []
   } finally {
     employeeLoading.value = false
   }
@@ -268,11 +276,11 @@ function initFormData() {
     })
 
     // 如果有负责人,加载到选择列表
-    if (props.department.leaderId && props.department.leader) {
+    if (props.department.leaderId && props.department.leaderName) {
       employeeList.value = [{
-        id: props.department.leader.id,
-        name: props.department.leader.name,
-        departmentId: props.department.leader.name
+        id: props.department.leaderId,
+        name: props.department.leaderName,
+        departmentId: props.department.id
       }]
     }
   } else {

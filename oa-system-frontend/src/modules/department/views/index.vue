@@ -33,6 +33,7 @@
               :data="displayList"
               row-key="id"
               :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
+              :row-class-name="getRowClassName"
               default-expand-all
               :height="tableHeight"
               class="department-table"
@@ -43,21 +44,25 @@
                     <el-icon v-if="row.icon" class="dept-icon">
                       <component :is="row.icon" />
                     </el-icon>
-                    <span>{{ row.name }}</span>
+                    <span class="dept-name-text">{{ row.name }}</span>
+                    <el-tag v-if="row.level === 1" size="small" type="warning" effect="plain" class="level-tag">
+                      一级
+                    </el-tag>
+                    <el-tag v-else-if="row.level === 2" size="small" type="primary" effect="plain" class="level-tag">
+                      二级
+                    </el-tag>
+                    <el-tag v-else-if="row.level >= 3" size="small" type="info" effect="plain" class="level-tag">
+                      L{{ row.level }}
+                    </el-tag>
                   </div>
                 </template>
               </el-table-column>
 
               <el-table-column prop="shortName" label="简称" width="120" />
 
-              <el-table-column prop="leader" label="负责人" width="120">
+              <el-table-column prop="leaderName" label="负责人" width="120">
                 <template #default="{ row }">
-                  <div v-if="row.leader" class="leader-info">
-                    <el-avatar :size="24" :src="row.leader.avatar">
-                      {{ row.leader.name.charAt(0) }}
-                    </el-avatar>
-                    <span>{{ row.leader.name }}</span>
-                  </div>
+                  <span v-if="row.leaderName" class="leader-name">{{ row.leaderName }}</span>
                   <span v-else class="text-placeholder">未设置</span>
                 </template>
               </el-table-column>
@@ -371,6 +376,13 @@ function calculateTableHeight() {
   tableHeight.value = windowHeight - headerHeight - tabsHeight - statsHeight - padding
 }
 
+/**
+ * 获取表格行的类名(用于层级样式)
+ */
+function getRowClassName({ row }: { row: Department }) {
+  return `department-level-${row.level}`
+}
+
 // ==================== 生命周期 ====================
 
 onMounted(async () => {
@@ -500,6 +512,19 @@ onMounted(async () => {
       font-size: 18px;
       color: var(--el-color-primary);
     }
+
+    .dept-name-text {
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .level-tag {
+      margin-left: 8px;
+      font-size: 12px;
+      padding: 2px 6px;
+      height: 20px;
+      line-height: 16px;
+    }
   }
 
   .leader-info {
@@ -515,6 +540,55 @@ onMounted(async () => {
   .text-placeholder {
     color: #c0c4cc;
     font-style: italic;
+  }
+
+  // 增强树形结构的层次感
+  :deep(.el-table__expand-icon) {
+    color: var(--el-color-primary);
+    font-size: 14px;
+
+    &.el-table__expand-icon--expanded {
+      transform: rotate(90deg);
+    }
+  }
+
+  // 为不同层级添加不同的视觉标识
+  :deep(.department-level-1) {
+    .dept-name-text {
+      color: #303133;
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    // 为一级部门添加背景色
+    td {
+      background-color: #fafafa !important;
+    }
+  }
+
+  :deep(.department-level-2) {
+    .dept-name-text {
+      color: #606266;
+      font-weight: 500;
+      font-size: 14px;
+    }
+  }
+
+  :deep(.department-level-3) {
+    .dept-name-text {
+      color: #909399;
+      font-weight: 400;
+      font-size: 13px;
+    }
+  }
+
+  :deep(.department-level-4),
+  :deep(.department-level-5) {
+    .dept-name-text {
+      color: #a8abb2;
+      font-weight: 400;
+      font-size: 13px;
+    }
   }
 }
 

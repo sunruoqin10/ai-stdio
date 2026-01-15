@@ -277,6 +277,17 @@ watch(
   { immediate: true }
 )
 
+// 监听 fixedDictType 变化,确保新增时 dictTypeCode 正确设置
+watch(
+  fixedDictType,
+  (newVal) => {
+    if (newVal && !props.dictItem) {
+      // 新增模式且固定字典类型变化时,更新 dictTypeCode
+      formData.value.dictTypeCode = newVal.code
+    }
+  }
+)
+
 // 提交表单
 async function handleSubmit() {
   if (!formRef.value) return

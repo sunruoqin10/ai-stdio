@@ -1,6 +1,6 @@
 /**
  * 部门管理模块 API 接口
- * 基于 department_Technical.md 规范实现
+ * 连接后端 REST API
  */
 
 import type {
@@ -9,167 +9,147 @@ import type {
   DepartmentForm,
   MoveDepartmentRequest,
   DepartmentStatistics,
-  PaginationResponse
+  PaginationResponse,
+  ApiResponse
 } from '../types'
-import {
-  mockDepartments,
-  mockEmployees
-} from '../mock/data'
-import {
-  buildTree,
-  flattenTree,
-  generateDepartmentId,
-  validateMove,
-  validateDelete,
-  calculateNodeLevel,
-  getAllChildDepartments,
-  batchUpdateEmployeeCount
-} from '../utils'
-
-// ==================== 工具函数 ====================
-
-// 模拟延迟
-const delay = (ms: number = 300) => new Promise(resolve => setTimeout(resolve, ms))
+import { http } from '@/utils/request'
 
 // ==================== 部门 CRUD 接口 ====================
 
 /**
- * 获取部门列表
+ * 获取部门列表（分页）
  */
 export async function getList(
-  params?: DepartmentFilter & { type?: 'tree' | 'flat' }
-): Promise<Department[] | PaginationResponse<Department>> {
-  await delay()
-
-  let filteredList = [...mockDepartments]
-
-  // 关键词搜索
-  if (params?.keyword) {
-    const keyword = params.keyword.toLowerCase()
-    filteredList = filteredList.filter(
-      dept =>
-        dept.name.toLowerCase().includes(keyword) ||
-        dept.id.toLowerCase().includes(keyword) ||
-        (dept.shortName && dept.shortName.toLowerCase().includes(keyword))
-    )
+  params: DepartmentFilter & {
+    page: number
+    pageSize: number
+  }
+): Promise<PaginationResponse<Department>> {
+  // 构建查询参数
+  const queryParams: Record<string, any> = {
+    page: params.page,
+    pageSize: params.pageSize,
   }
 
-  // 状态筛选
-  if (params?.status) {
-    filteredList = filteredList.filter(dept => dept.status === params.status)
-  }
+  if (params.keyword) queryParams.keyword = params.keyword
+  if (params.status) queryParams.status = params.status
+  if (params.leaderId) queryParams.leaderId = params.leaderId
+  if (params.level) queryParams.level = params.level
 
-  // 负责人筛选
-  if (params?.leaderId) {
-    filteredList = filteredList.filter(dept => dept.leaderId === params.leaderId)
-  }
+  const response = await http.get<{
+    code: number
+    message: string
+    data: {
+      records: Department[]
+      total: number
+      current: number
+      size: number
+    }
+  }>('/departments', { params: queryParams })
 
-  // 层级筛选
-  if (params?.level) {
-    filteredList = filteredList.filter(dept => dept.level === params.level)
-  }
-
-  // 更新人数统计
-  filteredList = batchUpdateEmployeeCount(filteredList, mockEmployees)
-
-  // 返回树形或扁平数据
-  if (params?.type === 'tree') {
-    const tree = buildTree(filteredList)
-    return tree as Department[]
-  }
-
-  return filteredList
-}
-
-/**
- * 获取部门详情
- */
-export async function getDetail(id: string): Promise<Department | null> {
-  await delay()
-  const dept = mockDepartments.find(d => d.id === id)
-
-  if (!dept) return null
-
-  // 获取子部门
-  const children = mockDepartments.filter(d => d.parentId === id)
-
-  // 获取部门成员
-  const employees = mockEmployees.filter(e => e.departmentId === id)
-
+  // 转换MyBatis Plus的分页格式为前端格式
   return {
-    ...dept,
-    employeeCount: calculateEmployeeCount(id),
-    children
+    list: response.data.records,
+    total: response.data.total,
+    page: response.data.current,
+    pageSize: response.data.size,
   }
 }
 
 /**
- * 计算部门人数
+ * 获取部门树
  */
-function calculateEmployeeCount(departmentId: string): number {
-  return mockEmployees.filter(
-    e => e.departmentId === departmentId && e.status === 'active'
-  ).length
+export async function getDepartmentTree(): Promise<Department[]> {
+  const response = await http.get<{
+    code: number
+    message: string
+    data: Department[]
+  }>('/departments/tree')
+
+  return response.data
+}
+
+/**
+ * 获取根部门列表
+ */
+export async function getRootDepartments(): Promise<Department[]> {
+  const response = await http.get<{
+    code: number
+    message: string
+    data: Department[]
+  }>('/departments/roots')
+
+  return response.data
 }
 
 /**
  * 获取子部门列表
  */
-export async function getChildren(id: string): Promise<Department[]> {
-  await delay()
-  return mockDepartments.filter(d => d.parentId === id)
+export async function getChildren(parentId: string): Promise<Department[]> {
+  const response = await http.get<{
+    code: number
+    message: string
+    data: Department[]
+  }>(`/departments/${parentId}/children`)
+
+  return response.data
+}
+
+/**
+ * 获取部门详情
+ */
+export async function getDetail(id: string): Promise<Department> {
+  const response = await http.get<{
+    code: number
+    message: string
+    data: Department
+  }>(`/departments/${id}`)
+
+  return response.data
 }
 
 /**
  * 获取部门成员
  */
 export async function getEmployees(id: string) {
-  await delay()
-  return mockEmployees.filter(e => e.departmentId === id)
+  const response = await http.get<{
+    code: number
+    message: string
+    data: Array<{
+      employeeId: string
+      employeeName: string
+      employeeAvatar?: string
+      position?: string
+      status: string
+      isLeader: boolean
+      joinDepartmentDate?: string
+    }>
+  }>(`/departments/${id}/members`)
+
+  // 转换后端格式为前端格式
+  return response.data.map(member => ({
+    id: member.employeeId,
+    name: member.employeeName,
+    avatar: member.employeeAvatar,
+    position: member.position,
+    status: member.status,
+    isLeader: member.isLeader,
+    joinDate: member.joinDepartmentDate,
+    departmentId: id
+  }))
 }
 
 /**
  * 创建部门
  */
 export async function create(data: DepartmentForm): Promise<{ id: string }> {
-  await delay()
+  const response = await http.post<{
+    code: number
+    message: string
+    data: Department
+  }>('/departments', data)
 
-  // 自动生成部门ID
-  const id = generateDepartmentId(mockDepartments.length)
-
-  // 自动计算层级
-  const level = data.parentId
-    ? mockDepartments.find(d => d.id === data.parentId)!.level + 1
-    : 1
-
-  // 查找负责人信息
-  const leader = mockEmployees.find(e => e.id === data.leaderId)
-
-  const newDepartment: Department = {
-    id,
-    name: data.name,
-    shortName: data.shortName,
-    parentId: data.parentId || null,
-    leaderId: data.leaderId,
-    leader: leader ? {
-      id: leader.id,
-      name: leader.name,
-      avatar: leader.avatar
-    } : undefined,
-    level,
-    sort: data.sort || 0,
-    establishedDate: data.establishedDate,
-    description: data.description,
-    icon: data.icon,
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    employeeCount: 0
-  }
-
-  mockDepartments.push(newDepartment)
-
-  return { id }
+  return { id: response.data.id }
 }
 
 /**
@@ -177,193 +157,183 @@ export async function create(data: DepartmentForm): Promise<{ id: string }> {
  */
 export async function update(
   id: string,
-  data: Partial<DepartmentForm>
-): Promise<Department | null> {
-  await delay()
-  const index = mockDepartments.findIndex(d => d.id === id)
-  if (index === -1) return null
+  data: Partial<DepartmentForm & { version?: number }>
+): Promise<Department> {
+  const response = await http.put<{
+    code: number
+    message: string
+    data: Department
+  }>(`/departments/${id}`, data)
 
-  // 查找负责人信息
-  const leader = data.leaderId
-    ? mockEmployees.find(e => e.id === data.leaderId)
-    : undefined
-
-  mockDepartments[index] = {
-    ...mockDepartments[index],
-    ...data,
-    leader: leader ? {
-      id: leader.id,
-      name: leader.name,
-      avatar: leader.avatar
-    } : mockDepartments[index].leader,
-    updatedAt: new Date().toISOString()
-  }
-
-  return mockDepartments[index]
+  return response.data
 }
 
 /**
  * 移动部门
  */
-export async function move(request: MoveDepartmentRequest): Promise<Department | null> {
-  await delay()
-
-  const { departmentId, newParentId } = request
-
-  // 验证移动合法性
-  const validation = validateMove(departmentId, newParentId, mockDepartments)
-  if (!validation.valid) {
-    throw new Error(validation.message)
-  }
-
-  const index = mockDepartments.findIndex(d => d.id === departmentId)
-  if (index === -1) return null
-
-  // 计算新层级
-  const newLevel = newParentId
-    ? mockDepartments.find(d => d.id === newParentId)!.level + 1
-    : 1
-
-  // 更新部门
-  mockDepartments[index] = {
-    ...mockDepartments[index],
-    parentId: newParentId,
-    level: newLevel,
-    updatedAt: new Date().toISOString()
-  }
-
-  // 级联更新子部门层级
-  await updateChildrenLevel(departmentId, newLevel)
-
-  return mockDepartments[index]
-}
-
-/**
- * 级联更新子部门层级
- */
-async function updateChildrenLevel(parentId: string, parentLevel: number) {
-  const children = mockDepartments.filter(d => d.parentId === parentId)
-
-  for (const child of children) {
-    child.level = parentLevel + 1
-    child.updatedAt = new Date().toISOString()
-    await updateChildrenLevel(child.id, child.level)
-  }
+export async function move(request: MoveDepartmentRequest & { version?: number }): Promise<void> {
+  await http.put<{
+    code: number
+    message: string
+    data: null
+  }>(`/departments/${request.departmentId}/move`, {
+    newParentId: request.newParentId,
+    version: request.version
+  })
 }
 
 /**
  * 删除部门
  */
-export async function remove(id: string): Promise<boolean> {
-  await delay()
+export async function remove(id: string): Promise<void> {
+  await http.delete<{
+    code: number
+    message: string
+    data: null
+  }>(`/departments/${id}`)
+}
 
-  // 验证删除合法性
-  const validation = validateDelete(id, mockDepartments, mockEmployees)
-  if (!validation.valid) {
-    throw new Error(validation.message)
+/**
+ * 批量删除部门
+ */
+export async function batchRemove(ids: string[]): Promise<{
+  success: number
+  failed: number
+  errors?: Array<{ id: string; message: string }>
+}> {
+  const response = await http.delete<{
+    code: number
+    message: string
+    data: {
+      total: number
+      success: number
+      failed: number
+      errors: Array<{ id: string; message: string }>
+    }
+  }>('/departments/batch', { data: ids })
+
+  return {
+    success: response.data.success,
+    failed: response.data.failed,
+    errors: response.data.errors
   }
-
-  const index = mockDepartments.findIndex(d => d.id === id)
-  if (index === -1) return false
-
-  mockDepartments.splice(index, 1)
-  return true
 }
 
 /**
  * 获取部门统计
  */
 export async function getStatistics(): Promise<DepartmentStatistics> {
-  await delay()
+  const response = await http.get<{
+    code: number
+    message: string
+    data: {
+      totalCount: number
+      level1Count: number
+      level2Count: number
+      level3Count: number
+      level4Count: number
+      maxLevel: number
+      withLeaderCount: number
+      totalEmployees: number
+      activeDepartmentCount: number
+      disabledDepartmentCount: number
+    }
+  }>('/departments/statistics')
 
-  const total = mockDepartments.length
-  const level1Count = mockDepartments.filter(d => d.level === 1).length
-  const maxLevel = Math.max(...mockDepartments.map(d => d.level))
-  const withLeaderCount = mockDepartments.filter(d => d.leaderId).length
-
-  // 统计总员工数(去重)
-  const totalEmployees = mockEmployees.filter(e => e.status === 'active').length
-
+  // 转换后端格式为前端格式
   return {
-    total,
-    level1Count,
-    maxLevel,
-    withLeaderCount,
-    totalEmployees
+    total: response.data.totalCount,
+    level1Count: response.data.level1Count,
+    maxLevel: response.data.maxLevel,
+    withLeaderCount: response.data.withLeaderCount,
+    totalEmployees: response.data.totalEmployees
   }
-}
-
-/**
- * 获取部门树(用于选择器)
- */
-export async function getDepartmentTree(): Promise<Department[]> {
-  await delay()
-  const tree = buildTree(mockDepartments)
-  return tree as Department[]
 }
 
 /**
  * 搜索部门
  */
 export async function searchDepartments(keyword: string): Promise<Department[]> {
-  await delay()
+  const response = await http.get<{
+    code: number
+    message: string
+    data: {
+      records: Department[]
+      total: number
+    }
+  }>('/departments', {
+    params: {
+      keyword,
+      page: 1,
+      pageSize: 20
+    }
+  })
 
-  if (!keyword) return []
-
-  return mockDepartments.filter(
-    dept =>
-      dept.name.toLowerCase().includes(keyword.toLowerCase()) ||
-      dept.id.toLowerCase().includes(keyword.toLowerCase()) ||
-      (dept.shortName && dept.shortName.toLowerCase().includes(keyword.toLowerCase()))
-  )
+  return response.data.records
 }
 
 /**
- * 批量删除部门
+ * 检查部门名称是否存在
  */
-export async function batchRemove(ids: string[]): Promise<{ success: number; failed: number }> {
-  await delay()
+export async function checkNameExists(
+  name: string,
+  parentId?: string | null,
+  excludeId?: string
+): Promise<boolean> {
+  const response = await http.get<{
+    code: number
+    message: string
+    data: boolean
+  }>('/departments/check-name', {
+    params: { name, parentId, excludeId }
+  })
 
-  let success = 0
-  let failed = 0
+  return response.data
+}
 
-  for (const id of ids) {
-    try {
-      const validation = validateDelete(id, mockDepartments, mockEmployees)
-      if (!validation.valid) {
-        failed++
-        continue
-      }
+/**
+ * 检查部门是否有子部门
+ */
+export async function hasChildren(id: string): Promise<boolean> {
+  const response = await http.get<{
+    code: number
+    message: string
+    data: boolean
+  }>(`/departments/${id}/has-children`)
 
-      const index = mockDepartments.findIndex(d => d.id === id)
-      if (index !== -1) {
-        mockDepartments.splice(index, 1)
-        success++
-      } else {
-        failed++
-      }
-    } catch {
-      failed++
-    }
-  }
+  return response.data
+}
 
-  return { success, failed }
+/**
+ * 检查部门是否有成员
+ */
+export async function hasMembers(id: string): Promise<boolean> {
+  const response = await http.get<{
+    code: number
+    message: string
+    data: boolean
+  }>(`/departments/${id}/has-members`)
+
+  return response.data
 }
 
 /**
  * 导出部门列表
  */
 export async function exportDepartments(filter?: DepartmentFilter): Promise<Blob> {
-  await delay(1000)
+  const queryParams: Record<string, any> = {}
 
-  // 模拟导出 Excel
-  // 实际项目中需要使用 xlsx 库生成 Excel 文件
-  const data = {
-    mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    data: new ArrayBuffer(0),
-  }
+  if (filter?.keyword) queryParams.keyword = filter.keyword
+  if (filter?.status) queryParams.status = filter.status
+  if (filter?.leaderId) queryParams.leaderId = filter.leaderId
+  if (filter?.level) queryParams.level = filter.level
 
-  return new Blob([data.data], { type: data.mime })
+  const response = await http.get('/departments/export', {
+    params: queryParams,
+    responseType: 'blob'
+  })
+
+  return response as any
 }
 
 // ==================== 数据字典接口 ====================
@@ -372,27 +342,9 @@ export async function exportDepartments(filter?: DepartmentFilter): Promise<Blob
  * 获取字典列表
  */
 export async function getDictList(dictCode: string) {
-  await delay()
-
-  const mockDictData: any = {
-    department_status: [
-      { label: '正常', value: 'active', color: '#67C23A' },
-      { label: '停用', value: 'disabled', color: '#909399' }
-    ],
-    department_type: [
-      { label: '总部', value: 'headquarters', sort: 1 },
-      { label: '分公司', value: 'branch', sort: 2 },
-      { label: '部门', value: 'department', sort: 3 },
-      { label: '小组', value: 'team', sort: 4 }
-    ],
-    department_level: [
-      { label: '一级部门', value: '1', sort: 1 },
-      { label: '二级部门', value: '2', sort: 2 },
-      { label: '三级部门', value: '3', sort: 3 },
-      { label: '四级部门', value: '4', sort: 4 },
-      { label: '五级部门', value: '5', sort: 5 }
-    ]
-  }
-
-  return mockDictData[dictCode] || []
+  // 使用数据字典模块的API
+  const { useDictStore } = await import('@/modules/dict/store')
+  const dictStore = useDictStore()
+  const dictData = await dictStore.fetchDictData(dictCode)
+  return dictData.items
 }

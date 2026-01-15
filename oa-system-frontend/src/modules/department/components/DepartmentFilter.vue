@@ -104,8 +104,13 @@ const leaders = computed(() => {
   // 从部门列表中提取所有负责人
   const leaderMap = new Map()
   departmentStore.list.forEach(dept => {
-    if (dept.leader && dept.leaderId) {
-      leaderMap.set(dept.leaderId, dept.leader)
+    if (dept.leaderId && dept.leaderName) {
+      if (!leaderMap.has(dept.leaderId)) {
+        leaderMap.set(dept.leaderId, {
+          id: dept.leaderId,
+          name: dept.leaderName
+        })
+      }
     }
   })
   return Array.from(leaderMap.values())

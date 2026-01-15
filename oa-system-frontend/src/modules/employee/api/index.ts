@@ -222,20 +222,34 @@ export async function getDepartmentList(): Promise<Array<{ id: string; name: str
 
 /**
  * 获取职位列表
+ * 从数据字典 (position_type) 获取职位数据
  */
 export async function getPositionList(): Promise<string[]> {
-  // TODO: 从后端配置获取或使用字典数据
-  return [
-    '软件工程师',
-    '高级软件工程师',
-    '技术经理',
-    '产品经理',
-    'UI设计师',
-    '测试工程师',
-    '人力资源专员',
-    '财务专员',
-    '行政专员',
-  ]
+  try {
+    // 导入数据字典 store
+    const { useDictStore } = await import('@/modules/dict/store')
+    const dictStore = useDictStore()
+
+    // 从数据字典获取职位类型数据
+    const dictData = await dictStore.fetchDictData('position_type')
+
+    // 提取职位标签列表
+    return dictData.items.map(item => item.label)
+  } catch (error) {
+    console.error('获取职位列表失败:', error)
+    // 降级处理: 返回默认职位列表
+    return [
+      '软件工程师',
+      '高级软件工程师',
+      '技术经理',
+      '产品经理',
+      'UI设计师',
+      '测试工程师',
+      '人力资源专员',
+      '财务专员',
+      '行政专员',
+    ]
+  }
 }
 
 // ==================== 字典数据接口 ====================

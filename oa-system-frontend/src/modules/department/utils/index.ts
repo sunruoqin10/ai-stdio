@@ -255,7 +255,7 @@ export function convertToGraphData(flatDepartments: Department[]) {
       name: dept.name,
       value: dept.employeeCount || 0,
       employeeCount: dept.employeeCount || 0,
-      leader: dept.leader?.name,
+      leader: dept.leaderName,
       children: []
     })
   })

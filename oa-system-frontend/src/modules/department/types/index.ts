@@ -31,8 +31,14 @@ export interface Department {
   /** 上级部门ID */
   parentId?: string | null
 
+  /** 上级部门名称(关联查询) */
+  parentName?: string
+
   /** 部门负责人ID */
   leaderId?: string
+
+  /** 部门负责人名称(关联查询) */
+  leaderName?: string
 
   /** 部门级数(从1开始) */
   level: number
@@ -64,12 +70,11 @@ export interface Department {
   /** 部门人数(虚拟字段,从员工表汇总) */
   employeeCount?: number
 
-  /** 部门负责人信息(关联查询) */
-  leader?: {
-    id: string
-    name: string
-    avatar?: string
-  }
+  /** 子部门数量(虚拟字段) */
+  childCount?: number
+
+  /** 乐观锁版本号 */
+  version?: number
 }
 
 /**

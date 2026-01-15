@@ -49,25 +49,27 @@ export const useDepartmentStore = defineStore('department', () => {
   /**
    * 加载部门列表
    */
-  async function loadList(type: 'tree' | 'flat' = 'flat') {
+  async function loadList(type: 'tree' | 'flat' = 'flat', page: number = 1, pageSize: number = 1000) {
     loading.value = true
     try {
-      const data = await api.getList({
-        ...filter.value,
-        type
-      })
+      if (type === 'tree') {
+        // 调用树形API
+        const data = await api.getDepartmentTree()
+        tree.value = data
+        list.value = flattenTree(data)
+        return data
+      } else {
+        // 调用分页API，获取所有数据
+        const data = await api.getList({
+          ...filter.value,
+          page,
+          pageSize
+        })
 
-      if (Array.isArray(data)) {
-        if (type === 'tree') {
-          tree.value = data
-          list.value = flattenTree(data)
-        } else {
-          list.value = data
-          tree.value = buildTree(data) as Department[]
-        }
+        list.value = data.list
+        tree.value = buildTree(data.list) as Department[]
+        return data
       }
-
-      return data
     } finally {
       loading.value = false
     }
