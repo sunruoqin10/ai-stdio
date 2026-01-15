@@ -229,17 +229,17 @@ export const useDictStore = defineStore('dict', () => {
   }
 
   // 唯一性检查
-  async function checkDictCodeExists(code: string, excludeId?: string): Promise<boolean> {
+  async function checkDictCodeExists(code: string, excludeId?: number): Promise<boolean> {
     const { data } = await dictApi.checkDictCodeExists(code, excludeId)
     return data
   }
 
   async function checkDictValueExists(
-    dictTypeId: string,
+    dictTypeId: number,
     value: string,
-    excludeId?: string
+    excludeId?: number
   ): Promise<boolean> {
-    const { data } = await dictApi.checkDictValueExists(dictTypeId, value, excludeId)
+    const { data } = await dictApi.checkDictValueExists(String(dictTypeId), value, excludeId ? String(excludeId) : undefined)
     return data
   }
 

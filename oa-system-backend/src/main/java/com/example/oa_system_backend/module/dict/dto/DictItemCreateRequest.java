@@ -10,10 +10,10 @@ import lombok.Data;
 public class DictItemCreateRequest {
 
     /**
-     * 所属字典类型ID
+     * 所属字典类型编码
      */
-    @NotBlank(message = "字典类型ID不能为空")
-    private String dictTypeId;
+    @NotBlank(message = "字典类型编码不能为空")
+    private String dictTypeCode;
 
     /**
      * 项标签

@@ -11,14 +11,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { DictColorType } from '../types'
 import { getDictColor } from '../utils'
+
+type ColorType = 'primary' | 'success' | 'warning' | 'danger' | 'info'
 
 interface Props {
   /** 标签文本 */
   label: string
   /** 颜色类型 */
-  colorType?: DictColorType
+  colorType?: ColorType
   /** 标签尺寸 */
   size?: 'large' | 'default' | 'small'
   /** 主题风格 */
@@ -32,8 +33,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 // 计算Element Plus的type
-const tagType = computed<'success' | 'warning' | 'info' | 'primary' | 'danger'>(() => {
-  return props.colorType as any
+const tagType = computed<ColorType>(() => {
+  return props.colorType || 'info'
 })
 
 // 自定义样式

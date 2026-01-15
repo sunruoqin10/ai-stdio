@@ -14,18 +14,25 @@
       label-position="right"
       class="dict-item-form"
     >
-      <el-form-item label="所属字典类型" prop="dictTypeId">
+      <el-form-item label="所属字典类型" prop="dictTypeCode">
+        <el-input
+          v-if="fixedDictType"
+          :value="`${fixedDictType.name} (${fixedDictType.code})`"
+          disabled
+          style="width: 100%"
+        />
         <el-select
-          v-model="formData.dictTypeId"
+          v-else
+          v-model="formData.dictTypeCode"
           placeholder="请选择字典类型"
-          :disabled="isEdit || !!fixedDictType"
+          :disabled="isEdit"
           style="width: 100%"
         >
           <el-option
             v-for="dictType in dictTypes"
-            :key="dictType.id"
+            :key="dictType.code"
             :label="`${dictType.name} (${dictType.code})`"
-            :value="dictType.id"
+            :value="dictType.code"
           />
         </el-select>
       </el-form-item>
@@ -125,7 +132,7 @@ import { QuestionFilled } from '@element-plus/icons-vue'
 import DictColorTag from './DictColorTag.vue'
 import type { DictItem, DictItemForm, DictType } from '../types'
 import { useDictStore } from '../store'
-import { generateSortOrder } from '../utils'
+import { generateSortOrder, stringifyExtProps } from '../utils'
 
 interface Props {
   modelValue: boolean
@@ -164,9 +171,20 @@ const fixedDictType = computed(() => props.dictType)
 // 获取字典类型列表
 const dictTypes = computed(() => dictStore.dictTypes)
 
+// 监听对话框打开，确保字典类型列表已加载
+watch(visible, async (newVal) => {
+  if (newVal && !fixedDictType.value && dictTypes.value.length === 0) {
+    await dictStore.fetchDictTypes({ page: 1, pageSize: 100 })
+    // 加载完成后,如果当前是新增模式且dictTypeCode为空,设置第一个字典类型
+    if (!props.dictItem && !formData.value.dictTypeCode && dictTypes.value.length > 0) {
+      formData.value.dictTypeCode = dictTypes.value[0].code
+    }
+  }
+})
+
 // 表单数据
 const formData = ref<DictItemForm>({
-  dictTypeId: '',
+  dictTypeCode: '',
   label: '',
   value: '',
   colorType: 'info',
@@ -180,7 +198,7 @@ const originalValue = ref('')
 
 // 表单验证规则
 const rules: FormRules = {
-  dictTypeId: [
+  dictTypeCode: [
     { required: true, message: '请选择字典类型', trigger: 'change' }
   ],
   label: [
@@ -220,7 +238,7 @@ watch(
     if (val) {
       // 编辑模式
       formData.value = {
-        dictTypeId: val.dictTypeId,
+        dictTypeCode: val.dictTypeCode,
         label: val.label,
         value: val.value,
         colorType: val.colorType || 'info',
@@ -234,12 +252,16 @@ watch(
         : ''
     } else {
       // 新增模式
-      const dictTypeId = props.dictType?.id || ''
+      let dictTypeCode = fixedDictType.value?.code || ''
+      // 如果没有固定字典类型,尝试从列表中获取第一个
+      if (!dictTypeCode && dictTypes.value.length > 0) {
+        dictTypeCode = dictTypes.value[0].code
+      }
       const existingItems = dictStore.currentDictItems
       const sortOrder = generateSortOrder(existingItems)
 
       formData.value = {
-        dictTypeId,
+        dictTypeCode,
         label: '',
         value: '',
         colorType: 'info',
@@ -269,10 +291,18 @@ async function handleSubmit() {
       return
     }
 
-    // 获取字典类型编码
-    const dictType = dictTypes.value.find(
-      dt => dt.id === formData.value.dictTypeId
-    )
+    // 获取字典类型
+    let dictType: DictType | undefined
+    if (fixedDictType.value) {
+      // 如果有固定字典类型，直接使用
+      dictType = fixedDictType.value
+    } else {
+      // 否则从列表中查找
+      dictType = dictTypes.value.find(
+        dt => dt.code === formData.value.dictTypeCode
+      )
+    }
+
     if (!dictType) {
       ElMessage.error('字典类型不存在')
       return
@@ -293,11 +323,17 @@ async function handleSubmit() {
 
     submitting.value = true
 
+    // 准备提交数据，将 extProps 对象转换为 JSON 字符串
+    const submitData = {
+      ...formData.value,
+      extProps: stringifyExtProps(formData.value.extProps)
+    }
+
     if (isEdit.value && props.dictItem) {
-      await dictStore.updateDictItem(props.dictItem.id, formData.value)
+      await dictStore.updateDictItem(props.dictItem.id, submitData)
       ElMessage.success('更新成功')
     } else {
-      await dictStore.createDictItem(formData.value)
+      await dictStore.createDictItem(submitData)
       ElMessage.success('创建成功')
     }
 
@@ -314,6 +350,22 @@ async function handleSubmit() {
 function handleClose() {
   visible.value = false
   formRef.value?.resetFields()
+
+  // 重置表单数据,确保 dictTypeCode 有默认值
+  let dictTypeCode = fixedDictType.value?.code || ''
+  if (!dictTypeCode && dictTypes.value.length > 0) {
+    dictTypeCode = dictTypes.value[0].code
+  }
+  formData.value = {
+    dictTypeCode,
+    label: '',
+    value: '',
+    colorType: 'info',
+    sortOrder: 10,
+    status: 'enabled',
+    extProps: {}
+  }
+
   extPropsJson.value = ''
   extPropsError.value = ''
 }

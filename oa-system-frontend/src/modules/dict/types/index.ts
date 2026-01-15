@@ -35,7 +35,7 @@ export enum DictColorType {
  */
 export interface DictType {
   /** 字典类型ID - 唯一标识 */
-  id: string
+  id: number
 
   /** 字典编码 - 唯一,格式: module_entity_property */
   code: string
@@ -73,10 +73,10 @@ export interface DictType {
  */
 export interface DictItem {
   /** 字典项ID - 唯一标识 */
-  id: string
+  id: number
 
   /** 所属字典类型ID */
-  dictTypeId: string
+  dictTypeId: number
 
   /** 字典类型编码(冗余字段,方便查询) */
   dictTypeCode: string
@@ -136,8 +136,8 @@ export interface DictTypeForm {
  * 字典项表单数据
  */
 export interface DictItemForm {
-  /** 所属字典类型ID */
-  dictTypeId: string
+  /** 所属字典类型编码 */
+  dictTypeCode: string
 
   /** 项标签 */
   label: string

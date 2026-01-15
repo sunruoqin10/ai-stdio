@@ -32,7 +32,7 @@ public class DictLabelUtil {
         try {
             // 性别标签
             if (vo.getGender() != null) {
-                vo.setGenderLabel(getDictLabel("employee_gender", vo.getGender()));
+                vo.setGenderLabel(getDictLabel("gender", vo.getGender()));
             }
 
             // 职位标签
@@ -47,7 +47,7 @@ public class DictLabelUtil {
 
             // 试用期状态标签
             if (vo.getProbationStatus() != null) {
-                vo.setProbationStatusLabel(getDictLabel("employee_probation_status", vo.getProbationStatus()));
+                vo.setProbationStatusLabel(getDictLabel("probation_status", vo.getProbationStatus()));
             }
 
             // 员工状态标签
@@ -70,7 +70,7 @@ public class DictLabelUtil {
         try {
             // 性别标签
             if (vo.getGender() != null) {
-                vo.setGenderLabel(getDictLabel("employee_gender", vo.getGender()));
+                vo.setGenderLabel(getDictLabel("gender", vo.getGender()));
             }
 
             // 职位标签
@@ -85,7 +85,7 @@ public class DictLabelUtil {
 
             // 试用期状态标签
             if (vo.getProbationStatus() != null) {
-                vo.setProbationStatusLabel(getDictLabel("employee_probation_status", vo.getProbationStatus()));
+                vo.setProbationStatusLabel(getDictLabel("probation_status", vo.getProbationStatus()));
             }
 
             // 员工状态标签

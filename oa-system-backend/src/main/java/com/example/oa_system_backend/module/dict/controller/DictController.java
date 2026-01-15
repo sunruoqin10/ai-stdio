@@ -40,7 +40,7 @@ public class DictController {
      * GET /api/dict/types/{id}
      */
     @GetMapping("/types/{id}")
-    public ApiResponse<DictTypeVO> getDictTypeById(@PathVariable String id) {
+    public ApiResponse<DictTypeVO> getDictTypeById(@PathVariable Long id) {
         DictTypeVO dictType = dictService.getDictTypeById(id);
         return ApiResponse.success(dictType);
     }
@@ -62,7 +62,7 @@ public class DictController {
      */
     @PutMapping("/types/{id}")
     public ApiResponse<DictType> updateDictType(
-            @PathVariable String id,
+            @PathVariable Long id,
             @Valid @RequestBody DictTypeUpdateRequest request) {
         DictType dictType = dictService.updateDictType(id, request);
         return ApiResponse.success("更新成功", dictType);
@@ -73,7 +73,7 @@ public class DictController {
      * DELETE /api/dict/types/{id}
      */
     @DeleteMapping("/types/{id}")
-    public ApiResponse<Void> deleteDictType(@PathVariable String id) {
+    public ApiResponse<Void> deleteDictType(@PathVariable Long id) {
         dictService.deleteDictType(id);
         return ApiResponse.success("删除成功", null);
     }
@@ -85,7 +85,7 @@ public class DictController {
     @GetMapping("/types/check-code")
     public ApiResponse<Boolean> checkDictCodeExists(
             @RequestParam String code,
-            @RequestParam(required = false) String excludeId) {
+            @RequestParam(required = false) Long excludeId) {
         boolean exists = dictService.checkDictCodeExists(code, excludeId);
         return ApiResponse.success(exists);
     }
@@ -107,7 +107,7 @@ public class DictController {
      * GET /api/dict/items/{id}
      */
     @GetMapping("/items/{id}")
-    public ApiResponse<DictItemVO> getDictItemById(@PathVariable String id) {
+    public ApiResponse<DictItemVO> getDictItemById(@PathVariable Long id) {
         DictItemVO dictItem = dictService.getDictItemById(id);
         return ApiResponse.success(dictItem);
     }
@@ -129,7 +129,7 @@ public class DictController {
      */
     @PutMapping("/items/{id}")
     public ApiResponse<DictItem> updateDictItem(
-            @PathVariable String id,
+            @PathVariable Long id,
             @Valid @RequestBody DictItemUpdateRequest request) {
         DictItem dictItem = dictService.updateDictItem(id, request);
         return ApiResponse.success("更新成功", dictItem);
@@ -140,7 +140,7 @@ public class DictController {
      * DELETE /api/dict/items/{id}
      */
     @DeleteMapping("/items/{id}")
-    public ApiResponse<Void> deleteDictItem(@PathVariable String id) {
+    public ApiResponse<Void> deleteDictItem(@PathVariable Long id) {
         dictService.deleteDictItem(id);
         return ApiResponse.success("删除成功", null);
     }
@@ -184,9 +184,9 @@ public class DictController {
      */
     @GetMapping("/items/check-value")
     public ApiResponse<Boolean> checkDictValueExists(
-            @RequestParam String dictTypeId,
+            @RequestParam Long dictTypeId,
             @RequestParam String value,
-            @RequestParam(required = false) String excludeId) {
+            @RequestParam(required = false) Long excludeId) {
         boolean exists = dictService.checkDictValueExists(dictTypeId, value, excludeId);
         return ApiResponse.success(exists);
     }

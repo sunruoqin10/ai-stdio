@@ -13,7 +13,7 @@ public class DictTypeVO {
     /**
      * 字典类型ID
      */
-    private String id;
+    private Long id;
 
     /**
      * 字典编码

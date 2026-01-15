@@ -52,7 +52,7 @@ public interface DictTypeMapper extends BaseMapper<DictType> {
             "</if>" +
             "</script>")
     Integer countByCode(@Param("code") String code,
-                       @Param("excludeId") String excludeId);
+                       @Param("excludeId") Long excludeId);
 
     /**
      * 根据编码查询字典类型
@@ -72,5 +72,5 @@ public interface DictTypeMapper extends BaseMapper<DictType> {
             "  AND is_deleted = 0" +
             ") " +
             "WHERE id = #{dictTypeId}")
-    void updateItemCount(@Param("dictTypeId") String dictTypeId);
+    void updateItemCount(@Param("dictTypeId") Long dictTypeId);
 }

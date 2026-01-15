@@ -23,7 +23,7 @@ public interface DictService {
     /**
      * 根据ID获取字典类型详情
      */
-    DictTypeVO getDictTypeById(String id);
+    DictTypeVO getDictTypeById(Long id);
 
     /**
      * 根据编码获取字典类型
@@ -38,17 +38,17 @@ public interface DictService {
     /**
      * 更新字典类型
      */
-    DictType updateDictType(String id, DictTypeUpdateRequest request);
+    DictType updateDictType(Long id, DictTypeUpdateRequest request);
 
     /**
      * 删除字典类型(级联删除字典项)
      */
-    void deleteDictType(String id);
+    void deleteDictType(Long id);
 
     /**
      * 检查字典编码是否存在
      */
-    boolean checkDictCodeExists(String code, String excludeId);
+    boolean checkDictCodeExists(String code, Long excludeId);
 
     // ========== 字典项操作 ==========
 
@@ -60,7 +60,7 @@ public interface DictService {
     /**
      * 根据ID获取字典项详情
      */
-    DictItemVO getDictItemById(String id);
+    DictItemVO getDictItemById(Long id);
 
     /**
      * 创建字典项
@@ -70,22 +70,22 @@ public interface DictService {
     /**
      * 更新字典项
      */
-    DictItem updateDictItem(String id, DictItemUpdateRequest request);
+    DictItem updateDictItem(Long id, DictItemUpdateRequest request);
 
     /**
      * 删除字典项
      */
-    void deleteDictItem(String id);
+    void deleteDictItem(Long id);
 
     /**
      * 批量删除字典项
      */
-    void batchDeleteDictItems(List<String> ids);
+    void batchDeleteDictItems(List<Long> ids);
 
     /**
      * 批量更新字典项状态
      */
-    void batchUpdateDictItemStatus(List<String> ids, String status);
+    void batchUpdateDictItemStatus(List<Long> ids, String status);
 
     /**
      * 批量更新字典项排序
@@ -95,7 +95,7 @@ public interface DictService {
     /**
      * 检查字典项值是否存在
      */
-    boolean checkDictValueExists(String dictTypeId, String value, String excludeId);
+    boolean checkDictValueExists(Long dictTypeId, String value, Long excludeId);
 
     // ========== 字典树和数据 ==========
 

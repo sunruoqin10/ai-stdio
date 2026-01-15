@@ -16,21 +16,27 @@ public class DictItem {
     /**
      * 主键: 字典项ID
      */
-    @TableId(type = IdType.INPUT)
-    private String id;
+    @TableId(type = IdType.AUTO)
+    private Long id;
 
     /**
      * 所属字典类型ID
      * 外键: sys_dict_type.id
      */
     @TableField("dict_type_id")
-    private String dictTypeId;
+    private Long dictTypeId;
 
     /**
      * 字典类型编码(冗余字段,方便查询)
      */
     @TableField("dict_type_code")
     private String dictTypeCode;
+
+    /**
+     * 类型编码(冗余字段,与dict_type_code相同)
+     */
+    @TableField("type_code")
+    private String typeCode;
 
     /**
      * 项标签(显示文本)

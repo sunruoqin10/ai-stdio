@@ -33,6 +33,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/login", "/api/auth/captcha", "/api/auth/send-code", "/api/auth/reset-password").permitAll()
                         .requestMatchers("/api/upload/**").permitAll()
                         .requestMatchers("/uploads/**", "/api/uploads/**").permitAll()
+                        .requestMatchers("/api/dict/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

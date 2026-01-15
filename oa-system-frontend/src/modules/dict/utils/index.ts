@@ -3,7 +3,9 @@
  * @module dict/utils
  */
 
-import type { DictItem, DictColorType } from '../types'
+import type { DictItem } from '../types'
+
+type DictColorType = 'primary' | 'success' | 'warning' | 'danger' | 'info'
 
 /**
  * 字典颜色类型对应的Element Plus颜色
@@ -102,7 +104,7 @@ export function sortDictItems(items: DictItem[]): DictItem[] {
  */
 export function dictItemsToOptions(
   items: DictItem[]
-): Array<{ label: string; value: string; colorType?: DictColorType }> {
+): Array<{ label: string; value: string; colorType?: 'primary' | 'success' | 'warning' | 'danger' | 'info' }> {
   return items.map(item => ({
     label: item.label,
     value: item.value,
@@ -173,4 +175,38 @@ export function generateSortOrder(existingItems: DictItem[]): number {
 
   const maxSortOrder = Math.max(...existingItems.map(item => item.sortOrder))
   return maxSortOrder + 10
+}
+
+/**
+ * 将 extProps JSON 字符串转换为对象
+ * @param extPropsString extProps JSON 字符串
+ * @returns extProps 对象
+ */
+export function parseExtProps(extPropsString: string | null | undefined): Record<string, any> {
+  if (!extPropsString) {
+    return {}
+  }
+  try {
+    return JSON.parse(extPropsString)
+  } catch (error) {
+    console.error('Failed to parse extProps:', error)
+    return {}
+  }
+}
+
+/**
+ * 将 extProps 对象转换为 JSON 字符串
+ * @param extProps extProps 对象
+ * @returns extProps JSON 字符串
+ */
+export function stringifyExtProps(extProps: Record<string, any> | null | undefined): string | null {
+  if (!extProps || Object.keys(extProps).length === 0) {
+    return null
+  }
+  try {
+    return JSON.stringify(extProps)
+  } catch (error) {
+    console.error('Failed to stringify extProps:', error)
+    return null
+  }
 }

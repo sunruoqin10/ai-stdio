@@ -13,12 +13,12 @@ public class DictItemVO {
     /**
      * 字典项ID
      */
-    private String id;
+    private Long id;
 
     /**
      * 所属字典类型ID
      */
-    private String dictTypeId;
+    private Long dictTypeId;
 
     /**
      * 字典类型编码

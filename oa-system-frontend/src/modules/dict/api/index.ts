@@ -19,6 +19,7 @@ import type {
   DictData,
   PageResponse
 } from '../types'
+import { parseExtProps } from '../utils'
 
 // MyBatis-Plus IPage 接口
 interface IPage<T> {
@@ -39,6 +40,22 @@ function convertIPageToPageResponse<T>(iPage: IPage<T>): PageResponse<T> {
   }
 }
 
+// 转换字典类型数据，将 extProps 字符串转换为对象
+function convertDictType(dictType: any): DictType {
+  return {
+    ...dictType,
+    extProps: parseExtProps(dictType.extProps)
+  }
+}
+
+// 转换字典项数据，将 extProps 字符串转换为对象
+function convertDictItem(dictItem: any): DictItem {
+  return {
+    ...dictItem,
+    extProps: parseExtProps(dictItem.extProps)
+  }
+}
+
 /**
  * 获取字典类型列表
  */
@@ -53,19 +70,26 @@ export async function getDictTypeList(params: DictFilter & {
   }>('/dict/types', { params })
   return {
     ...result,
-    data: convertIPageToPageResponse(result.data)
+    data: {
+      ...convertIPageToPageResponse(result.data),
+      list: result.data.records.map(convertDictType)
+    }
   }
 }
 
 /**
  * 获取字典类型详情
  */
-export function getDictTypeDetail(id: string) {
-  return http.get<{
+export async function getDictTypeDetail(id: string) {
+  const result = await http.get<{
     code: number
     message: string
     data: DictType
   }>(`/dict/types/${id}`)
+  return {
+    ...result,
+    data: convertDictType(result.data)
+  }
 }
 
 /**
@@ -116,19 +140,26 @@ export async function getDictItemList(params: DictFilter & {
   }>('/dict/items', { params })
   return {
     ...result,
-    data: convertIPageToPageResponse(result.data)
+    data: {
+      ...convertIPageToPageResponse(result.data),
+      list: result.data.records.map(convertDictItem)
+    }
   }
 }
 
 /**
  * 获取字典项详情
  */
-export function getDictItemDetail(id: string) {
-  return http.get<{
+export async function getDictItemDetail(id: string) {
+  const result = await http.get<{
     code: number
     message: string
     data: DictItem
   }>(`/dict/items/${id}`)
+  return {
+    ...result,
+    data: convertDictItem(result.data)
+  }
 }
 
 /**

@@ -16,8 +16,8 @@ public class DictType {
     /**
      * 主键: 字典类型ID
      */
-    @TableId(type = IdType.INPUT)
-    private String id;
+    @TableId(type = IdType.AUTO)
+    private Long id;
 
     /**
      * 字典编码(唯一)

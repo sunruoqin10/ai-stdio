@@ -1,7 +1,7 @@
 <template>
   <div class="dict-item-management-page">
     <PageHeader :title="pageTitle">
-      <template #extra>
+      <template #actions>
         <el-button @click="handleBack">
           <el-icon><ArrowLeft /></el-icon>
           返回

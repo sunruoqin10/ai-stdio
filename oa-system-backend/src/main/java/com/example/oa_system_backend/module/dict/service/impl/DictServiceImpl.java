@@ -57,7 +57,7 @@ public class DictServiceImpl implements DictService {
     }
 
     @Override
-    public DictTypeVO getDictTypeById(String id) {
+    public DictTypeVO getDictTypeById(Long id) {
         DictType dictType = dictTypeMapper.selectById(id);
         if (dictType == null) {
             throw new BusinessException("字典类型不存在");
@@ -88,20 +88,16 @@ public class DictServiceImpl implements DictService {
             throw new BusinessException("字典编码已存在: " + request.getCode());
         }
 
-        // 2. 生成字典类型ID
-        String dictTypeId = generateDictTypeId();
-
-        // 3. 构建DictType实体
+        // 2. 构建DictType实体
         DictType dictType = new DictType();
         BeanUtils.copyProperties(request, dictType);
-        dictType.setId(dictTypeId);
         dictType.setItemCount(0);
         dictType.setStatus(request.getStatus() != null ? request.getStatus() : "enabled");
         dictType.setSortOrder(request.getSortOrder() != null ? request.getSortOrder() : 0);
         dictType.setCreatedAt(LocalDateTime.now());
         dictType.setUpdatedAt(LocalDateTime.now());
 
-        // 4. 保存到数据库
+        // 3. 保存到数据库 (ID会自动生成)
         dictTypeMapper.insert(dictType);
 
         return dictType;
@@ -109,7 +105,7 @@ public class DictServiceImpl implements DictService {
 
     @Override
     @Transactional
-    public DictType updateDictType(String id, DictTypeUpdateRequest request) {
+    public DictType updateDictType(Long id, DictTypeUpdateRequest request) {
         // 1. 检查字典类型是否存在
         DictType dictType = dictTypeMapper.selectById(id);
         if (dictType == null) {
@@ -151,7 +147,7 @@ public class DictServiceImpl implements DictService {
 
     @Override
     @Transactional
-    public void deleteDictType(String id) {
+    public void deleteDictType(Long id) {
         // 1. 检查字典类型是否存在
         DictType dictType = dictTypeMapper.selectById(id);
         if (dictType == null) {
@@ -177,7 +173,7 @@ public class DictServiceImpl implements DictService {
     }
 
     @Override
-    public boolean checkDictCodeExists(String code, String excludeId) {
+    public boolean checkDictCodeExists(String code, Long excludeId) {
         return dictTypeMapper.countByCode(code, excludeId) > 0;
     }
 
@@ -203,7 +199,7 @@ public class DictServiceImpl implements DictService {
     }
 
     @Override
-    public DictItemVO getDictItemById(String id) {
+    public DictItemVO getDictItemById(Long id) {
         DictItem dictItem = dictItemMapper.selectById(id);
         if (dictItem == null) {
             throw new BusinessException("字典项不存在");
@@ -217,43 +213,45 @@ public class DictServiceImpl implements DictService {
     @Override
     @Transactional
     public DictItem createDictItem(DictItemCreateRequest request) {
-        // 1. 验证字典类型存在性
-        if (dictItemMapper.countByDictTypeId(request.getDictTypeId()) == 0) {
-            throw new BusinessException("指定的字典类型不存在");
-        }
-
-        // 2. 验证字典项值唯一性(在同一字典类型下)
-        if (dictItemMapper.countByValue(request.getDictTypeId(),
-                                       request.getValue(), null) > 0) {
-            throw new BusinessException("字典项值已存在: " + request.getValue());
-        }
-
-        // 3. 查询字典类型以获取编码
-        DictType dictType = dictTypeMapper.selectById(request.getDictTypeId());
+        // 1. 验证字典类型存在性(通过code查询)
+        DictType dictType = dictTypeMapper.selectByCode(request.getDictTypeCode());
         if (dictType == null) {
             throw new BusinessException("指定的字典类型不存在");
         }
 
-        // 4. 生成字典项ID
-        String dictItemId = generateDictItemId();
+        // 2. 验证字典项值唯一性(在同一字典类型下)
+        if (dictItemMapper.countByValue(dictType.getId(),
+                                       request.getValue(), null) > 0) {
+            throw new BusinessException("字典项值已存在: " + request.getValue());
+        }
 
-        // 5. 构建DictItem实体
+        // 3. 构建DictItem实体
         DictItem dictItem = new DictItem();
-        BeanUtils.copyProperties(request, dictItem);
-        dictItem.setId(dictItemId);
+        // 设置字典类型相关字段
+        dictItem.setDictTypeId(dictType.getId());
         dictItem.setDictTypeCode(dictType.getCode());
+        dictItem.setTypeCode(dictType.getCode()); // 设置typeCode字段
+        // 复制其他属性(排除 dictTypeCode,避免覆盖)
+        dictItem.setLabel(request.getLabel());
+        dictItem.setValue(request.getValue());
+        dictItem.setColorType(request.getColorType());
+        dictItem.setColor(request.getColor());
+        dictItem.setIcon(request.getIcon());
+        dictItem.setExtProps(request.getExtProps());
+        dictItem.setRemark(request.getRemark());
+        // 设置默认值
         dictItem.setStatus(request.getStatus() != null ? request.getStatus() : "enabled");
         dictItem.setSortOrder(request.getSortOrder() != null ? request.getSortOrder() : 0);
         dictItem.setCreatedAt(LocalDateTime.now());
         dictItem.setUpdatedAt(LocalDateTime.now());
 
-        // 6. 保存到数据库
+        // 4. 保存到数据库 (ID会自动生成)
         dictItemMapper.insert(dictItem);
 
-        // 7. 更新字典类型的item_count
-        updateDictTypeItemCount(request.getDictTypeId());
+        // 5. 更新字典类型的item_count
+        updateDictTypeItemCount(dictType.getId());
 
-        // 8. 清除缓存
+        // 6. 清除缓存
         clearDictCache(dictType.getCode());
 
         return dictItem;
@@ -261,7 +259,7 @@ public class DictServiceImpl implements DictService {
 
     @Override
     @Transactional
-    public DictItem updateDictItem(String id, DictItemUpdateRequest request) {
+    public DictItem updateDictItem(Long id, DictItemUpdateRequest request) {
         // 1. 检查字典项是否存在
         DictItem dictItem = dictItemMapper.selectById(id);
         if (dictItem == null) {
@@ -271,7 +269,7 @@ public class DictServiceImpl implements DictService {
         // 2. 如果要更新value,验证唯一性
         if (request.getValue() != null && !request.getValue().equals(dictItem.getValue())) {
             if (dictItemMapper.countByValue(dictItem.getDictTypeId(),
-                                           request.getValue(), id) > 0) {
+                                           request.getValue(), String.valueOf(id)) > 0) {
                 throw new BusinessException("字典项值已存在: " + request.getValue());
             }
         }
@@ -317,14 +315,14 @@ public class DictServiceImpl implements DictService {
 
     @Override
     @Transactional
-    public void deleteDictItem(String id) {
+    public void deleteDictItem(Long id) {
         // 1. 检查字典项是否存在
         DictItem dictItem = dictItemMapper.selectById(id);
         if (dictItem == null) {
             throw new BusinessException("字典项不存在");
         }
 
-        String dictTypeId = dictItem.getDictTypeId();
+        Long dictTypeId = dictItem.getDictTypeId();
         String dictTypeCode = dictItem.getDictTypeCode();
 
         // 2. 软删除字典项
@@ -339,15 +337,15 @@ public class DictServiceImpl implements DictService {
 
     @Override
     @Transactional
-    public void batchDeleteDictItems(List<String> ids) {
+    public void batchDeleteDictItems(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             throw new BusinessException("ID列表不能为空");
         }
 
         String dictTypeCode = null;
-        String dictTypeId = null;
+        Long dictTypeId = null;
 
-        for (String id : ids) {
+        for (Long id : ids) {
             DictItem dictItem = dictItemMapper.selectById(id);
             if (dictItem != null) {
                 dictTypeCode = dictItem.getDictTypeCode();
@@ -369,14 +367,14 @@ public class DictServiceImpl implements DictService {
 
     @Override
     @Transactional
-    public void batchUpdateDictItemStatus(List<String> ids, String status) {
+    public void batchUpdateDictItemStatus(List<Long> ids, String status) {
         if (ids == null || ids.isEmpty()) {
             throw new BusinessException("ID列表不能为空");
         }
 
         String dictTypeCode = null;
 
-        for (String id : ids) {
+        for (Long id : ids) {
             DictItem dictItem = dictItemMapper.selectById(id);
             if (dictItem != null) {
                 dictItem.setStatus(status);
@@ -398,7 +396,8 @@ public class DictServiceImpl implements DictService {
     @Transactional
     public void batchUpdateDictItemSort(DictItemSortUpdateRequest request) {
         // 1. 验证字典类型存在性
-        if (dictItemMapper.countByDictTypeId(request.getDictTypeId()) == 0) {
+        DictType dictType = dictTypeMapper.selectById(Long.parseLong(request.getDictTypeId()));
+        if (dictType == null) {
             throw new BusinessException("指定的字典类型不存在");
         }
 
@@ -413,18 +412,16 @@ public class DictServiceImpl implements DictService {
             .collect(Collectors.toList());
 
         // 3. 批量更新排序
-        dictItemMapper.batchUpdateSort(request.getDictTypeId(), sortItems);
+        dictItemMapper.batchUpdateSort(Long.parseLong(request.getDictTypeId()) , sortItems);
 
         // 4. 清除缓存
-        DictType dictType = dictTypeMapper.selectById(request.getDictTypeId());
-        if (dictType != null) {
-            clearDictCache(dictType.getCode());
-        }
+        clearDictCache(dictType.getCode());
     }
 
     @Override
-    public boolean checkDictValueExists(String dictTypeId, String value, String excludeId) {
-        return dictItemMapper.countByValue(dictTypeId, value, excludeId) > 0;
+    public boolean checkDictValueExists(Long dictTypeId, String value, Long excludeId) {
+        return dictItemMapper.countByValue(dictTypeId, value,
+            excludeId != null ? String.valueOf(excludeId) : null) > 0;
     }
 
     // ========== 字典树和数据 ==========
@@ -506,23 +503,9 @@ public class DictServiceImpl implements DictService {
     // ========== 私有方法 ==========
 
     /**
-     * 生成字典类型ID
-     */
-    private String generateDictTypeId() {
-        return "DICT_" + System.currentTimeMillis();
-    }
-
-    /**
-     * 生成字典项ID
-     */
-    private String generateDictItemId() {
-        return "ITEM_" + System.currentTimeMillis();
-    }
-
-    /**
      * 更新字典类型的item_count
      */
-    private void updateDictTypeItemCount(String dictTypeId) {
+    private void updateDictTypeItemCount(Long dictTypeId) {
         dictTypeMapper.updateItemCount(dictTypeId);
     }
 }

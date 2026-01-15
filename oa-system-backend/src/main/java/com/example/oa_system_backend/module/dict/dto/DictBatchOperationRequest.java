@@ -16,7 +16,7 @@ public class DictBatchOperationRequest {
      */
     @NotEmpty(message = "ID列表不能为空")
     @Size(min = 1, message = "至少需要一个ID")
-    private List<@NotBlank(message = "ID不能为空") String> ids;
+    private List<@NotNull(message = "ID不能为空") Long> ids;
 
     /**
      * 状态(用于批量启用/禁用)

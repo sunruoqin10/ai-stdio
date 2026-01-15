@@ -147,13 +147,13 @@ public class EmployeeController {
         Map<String, DictDataVO> dictData = new HashMap<>();
 
         // 获取性别字典
-        dictData.put("gender", dictService.getDictData("employee_gender"));
+        dictData.put("gender", dictService.getDictData("gender"));
 
         // 获取员工状态字典
         dictData.put("status", dictService.getDictData("employee_status"));
 
         // 获取试用期状态字典
-        dictData.put("probationStatus", dictService.getDictData("employee_probation_status"));
+        dictData.put("probationStatus", dictService.getDictData("probation_status"));
 
         // 获取职位字典
         dictData.put("position", dictService.getDictData("employee_position"));

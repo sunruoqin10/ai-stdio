@@ -62,7 +62,7 @@ public interface DictItemMapper extends BaseMapper<DictItem> {
             "WHERE dict_type_id = #{dictTypeId} " +
             "AND is_deleted = 0 " +
             "ORDER BY sort, id")
-    List<DictItem> selectByDictTypeId(@Param("dictTypeId") String dictTypeId);
+    List<DictItem> selectByDictTypeId(@Param("dictTypeId") Long dictTypeId);
 
     /**
      * 检查字典项值是否存在(在同一字典类型下)
@@ -76,7 +76,7 @@ public interface DictItemMapper extends BaseMapper<DictItem> {
             "AND id != #{excludeId} " +
             "</if>" +
             "</script>")
-    Integer countByValue(@Param("dictTypeId") String dictTypeId,
+    Integer countByValue(@Param("dictTypeId") Long dictTypeId,
                         @Param("value") String value,
                         @Param("excludeId") String excludeId);
 
@@ -86,12 +86,12 @@ public interface DictItemMapper extends BaseMapper<DictItem> {
     @Select("SELECT COUNT(*) FROM sys_dict_type " +
             "WHERE id = #{dictTypeId} " +
             "AND is_deleted = 0")
-    Integer countByDictTypeId(@Param("dictTypeId") String dictTypeId);
+    Integer countByDictTypeId(@Param("dictTypeId") Long dictTypeId);
 
     /**
      * 批量更新排序
      */
-    void batchUpdateSort(@Param("dictTypeId") String dictTypeId,
+    void batchUpdateSort(@Param("dictTypeId") Long dictTypeId,
                         @Param("items") List<SortItem> items);
 
     /**

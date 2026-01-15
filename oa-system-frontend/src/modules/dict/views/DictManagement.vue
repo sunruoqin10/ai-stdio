@@ -1,7 +1,7 @@
 <template>
   <div class="dict-management-page">
     <PageHeader title="数据字典管理">
-      <template #extra>
+      <template #actions>
         <el-button type="primary" @click="handleAddDictType">
           <el-icon><Plus /></el-icon>
           新增字典类型

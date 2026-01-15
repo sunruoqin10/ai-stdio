@@ -91,7 +91,7 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import type { DictType, DictTypeForm } from '../types'
 import { useDictStore } from '../store'
-import { isValidDictCode } from '../utils'
+import { isValidDictCode, stringifyExtProps } from '../utils'
 
 interface Props {
   modelValue: boolean
@@ -246,11 +246,17 @@ async function handleSubmit() {
 
     submitting.value = true
 
+    // 准备提交数据，将 extProps 对象转换为 JSON 字符串
+    const submitData = {
+      ...formData.value,
+      extProps: stringifyExtProps(formData.value.extProps)
+    }
+
     if (isEdit.value && props.dictType) {
-      await dictStore.updateDictType(props.dictType.id, formData.value)
+      await dictStore.updateDictType(props.dictType.id, submitData)
       ElMessage.success('更新成功')
     } else {
-      await dictStore.createDictType(formData.value)
+      await dictStore.createDictType(submitData)
       ElMessage.success('创建成功')
     }
 
