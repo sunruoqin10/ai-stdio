@@ -5,6 +5,7 @@
     <!-- 分页查询员工列表(带部门名称) -->
     <select id="selectPageWithDetails" resultType="com.example.oa_system_backend.module.employee.vo.EmployeeVO">
         SELECT e.*,
+               e.id AS employee_no,
                d.name AS department_name,
                m.name AS manager_name
         FROM sys_employee e

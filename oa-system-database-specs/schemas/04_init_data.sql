@@ -97,6 +97,8 @@ INSERT INTO sys_dict_type (code, name, category, status) VALUES
 ('gender', '性别', 'system', 'enabled'),
 ('employee_status', '员工状态', 'business', 'enabled'),
 ('probation_status', '试用期状态', 'business', 'enabled'),
+('position_type', '职位类型', 'business', 'enabled'),
+('employee_level', '员工职级', 'business', 'enabled'),
 ('department_status', '部门状态', 'business', 'enabled'),
 ('asset_category', '资产类别', 'business', 'enabled'),
 ('asset_status', '资产状态', 'business', 'enabled'),
@@ -121,6 +123,37 @@ INSERT INTO sys_dict_item (type_code, label, value, color, sort, status) VALUES
 ('probation_status', '试用期内', 'probation', '#409EFF', 1, 'enabled'),
 ('probation_status', '已转正', 'regular', '#67C23A', 2, 'enabled'),
 ('probation_status', '已离职', 'resigned', '#909399', 3, 'enabled');
+
+-- 职位类型字典
+INSERT INTO sys_dict_item (type_code, label, value, sort, status) VALUES
+('position_type', '技术经理', '技术经理', 1, 'enabled'),
+('position_type', '产品经理', '产品经理', 2, 'enabled'),
+('position_type', '前端工程师', '前端工程师', 3, 'enabled'),
+('position_type', '后端工程师', '后端工程师', 4, 'enabled'),
+('position_type', '全栈工程师', '全栈工程师', 5, 'enabled'),
+('position_type', 'UI设计师', 'UI设计师', 6, 'enabled'),
+('position_type', 'UX设计师', 'UX设计师', 7, 'enabled'),
+('position_type', '测试工程师', '测试工程师', 8, 'enabled'),
+('position_type', '运维工程师', '运维工程师', 9, 'enabled'),
+('position_type', 'HR专员', 'HR专员', 10, 'enabled'),
+('position_type', 'HR经理', 'HR经理', 11, 'enabled'),
+('position_type', '财务专员', '财务专员', 12, 'enabled'),
+('position_type', '财务经理', '财务经理', 13, 'enabled'),
+('position_type', '市场专员', '市场专员', 14, 'enabled'),
+('position_type', '市场经理', '市场经理', 15, 'enabled');
+
+-- 员工职级字典
+INSERT INTO sys_dict_item (type_code, label, value, sort, status) VALUES
+('employee_level', 'P1', 'P1', 1, 'enabled'),
+('employee_level', 'P2', 'P2', 2, 'enabled'),
+('employee_level', 'P3', 'P3', 3, 'enabled'),
+('employee_level', 'P4', 'P4', 4, 'enabled'),
+('employee_level', 'P5', 'P5', 5, 'enabled'),
+('employee_level', 'P6', 'P6', 6, 'enabled'),
+('employee_level', 'P7', 'P7', 7, 'enabled'),
+('employee_level', 'P8', 'P8', 8, 'enabled'),
+('employee_level', 'P9', 'P9', 9, 'enabled'),
+('employee_level', 'P10', 'P10', 10, 'enabled');
 
 -- 部门状态字典
 INSERT INTO sys_dict_item (type_code, label, value, color, sort, status) VALUES

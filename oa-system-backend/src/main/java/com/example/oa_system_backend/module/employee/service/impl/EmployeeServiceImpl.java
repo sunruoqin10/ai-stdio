@@ -68,6 +68,9 @@ public class EmployeeServiceImpl implements EmployeeService {
         EmployeeDetailVO vo = new EmployeeDetailVO();
         BeanUtils.copyProperties(employee, vo);
 
+        // 设置员工编号（别名）
+        vo.setEmployeeNo(employee.getId());
+
         // 获取部门名称和上级姓名
         if (employee.getDepartmentId() != null) {
             QueryWrapper<Employee> wrapper = new QueryWrapper<>();

@@ -40,7 +40,10 @@
       "mcp__database-server__list_tables",
       "Bash(mvn clean compile:*)",
       "mcp__database-server__read_query",
-      "mcp__database-server__write_query"
+      "mcp__database-server__write_query",
+      "Bash(git restore:*)",
+      "Bash(mvn mybatis-plus:help:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

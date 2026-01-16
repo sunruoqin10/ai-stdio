@@ -72,7 +72,7 @@
                 </template>
               </el-table-column>
               <el-table-column prop="name" label="姓名" width="100" />
-              <el-table-column prop="department" label="部门" width="120" />
+              <el-table-column prop="departmentName" label="部门" width="120" />
               <el-table-column label="职位" width="120">
                 <template #default="{ row }">
                   {{ row.positionLabel || row.position }}
@@ -131,7 +131,7 @@
                       <div class="card-name">{{ item.name }}</div>
                       <div class="card-no">{{ item.employeeNo }}</div>
                       <div class="card-position">{{ item.positionLabel || item.position }}</div>
-                      <div class="card-department">{{ item.department }}</div>
+                      <div class="card-department">{{ item.departmentName }}</div>
                       <div class="card-status">
                         <StatusTag :status="item.status" :label="item.statusLabel" />
                         <StatusTag :status="item.probationStatus" :label="item.probationStatusLabel" />

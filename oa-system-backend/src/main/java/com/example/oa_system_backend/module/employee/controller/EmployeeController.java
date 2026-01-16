@@ -156,7 +156,7 @@ public class EmployeeController {
         dictData.put("probationStatus", dictService.getDictData("probation_status"));
 
         // 获取职位字典
-        dictData.put("position", dictService.getDictData("employee_position"));
+        dictData.put("position", dictService.getDictData("position_type"));
 
         // 获取职级字典
         dictData.put("level", dictService.getDictData("employee_level"));

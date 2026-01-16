@@ -17,6 +17,11 @@ public class EmployeeDetailVO {
     private String id;
 
     /**
+     * 员工编号（别名，用于前端显示）
+     */
+    private String employeeNo;
+
+    /**
      * 姓名
      */
     private String name;

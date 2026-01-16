@@ -40,6 +40,9 @@ export interface Employee {
   /** 员工编号 - 唯一标识,格式: EMP+YYYYMMDD+序号 */
   id: string
 
+  /** 员工编号（别名，用于显示） */
+  employeeNo?: string
+
   /** 基本信息 */
   name: string                    // 姓名
   englishName?: string            // 英文名
