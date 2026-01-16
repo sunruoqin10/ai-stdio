@@ -151,7 +151,7 @@ const formData = reactive<DepartmentForm>({
   name: '',
   shortName: '',
   parentId: null,
-  leaderId: '',
+  leaderId: undefined,
   sort: 0,
   establishedDate: '',
   description: ''
@@ -229,7 +229,14 @@ async function handleSubmit() {
 
   try {
     await formRef.value.validate()
-  } catch {
+  } catch (validationError) {
+    console.log('表单验证失败:', validationError)
+    return
+  }
+
+  // 额外检查:确保必填字段有值
+  if (!formData.leaderId) {
+    ElMessage.warning('请选择部门负责人')
     return
   }
 
@@ -246,6 +253,7 @@ async function handleSubmit() {
     emit('success')
     handleClose()
   } catch (error: any) {
+    console.error('操作失败:', error)
     ElMessage.error(error.message || '操作失败')
   } finally {
     submitting.value = false
@@ -288,7 +296,7 @@ function initFormData() {
       name: '',
       shortName: '',
       parentId: null,
-      leaderId: '',
+      leaderId: undefined,
       sort: 0,
       establishedDate: '',
       description: ''

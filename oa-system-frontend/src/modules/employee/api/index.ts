@@ -216,10 +216,10 @@ export async function checkPhoneExists(phone: string, excludeId?: string): Promi
 // 当前暂时使用Mock数据或静态数据
 
 /**
- * 获取部门列表
- * 从 department 模块获取部门树形结构，并转换为平铺列表
+ * 获取部门列表(树形结构)
+ * 从 department 模块获取部门树形结构
  */
-export async function getDepartmentList(): Promise<Array<{ id: string; name: string }>> {
+export async function getDepartmentList(): Promise<Array<{ id: string; name: string; children?: any[] }>> {
   try {
     // 导入 department 模块的 API
     const departmentApi = await import('@/modules/department/api')
@@ -227,27 +227,7 @@ export async function getDepartmentList(): Promise<Array<{ id: string; name: str
     // 获取部门树
     const tree = await departmentApi.getDepartmentTree()
 
-    // 将树形结构转换为平铺列表
-    const flattenDepartments = (departments: any[]): Array<{ id: string; name: string }> => {
-      const result: Array<{ id: string; name: string }> = []
-
-      departments.forEach(dept => {
-        // 添加当前部门
-        result.push({
-          id: dept.id,
-          name: dept.name
-        })
-
-        // 递归处理子部门
-        if (dept.children && dept.children.length > 0) {
-          result.push(...flattenDepartments(dept.children))
-        }
-      })
-
-      return result
-    }
-
-    return flattenDepartments(tree)
+    return tree
   } catch (error) {
     console.error('获取部门列表失败:', error)
     return []

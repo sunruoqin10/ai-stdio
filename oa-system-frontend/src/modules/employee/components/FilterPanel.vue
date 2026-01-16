@@ -22,14 +22,18 @@
       </el-form-item>
 
       <el-form-item label="部门">
-        <el-select v-model="form.departmentIds" placeholder="请选择" clearable multiple>
-          <el-option
-            v-for="dept in departments"
-            :key="dept.id"
-            :label="dept.name"
-            :value="dept.id"
-          />
-        </el-select>
+        <el-tree-select
+          v-model="form.departmentIds"
+          :data="departmentTree"
+          :props="{ label: 'name', value: 'id', children: 'children' }"
+          placeholder="请选择部门"
+          multiple
+          clearable
+          check-strictly
+          filterable
+          collapse-tags
+          collapse-tags-tooltip
+        />
       </el-form-item>
 
       <el-form-item label="试用期">
@@ -107,7 +111,7 @@ const form = ref<EmployeeFilter>({
   entryDateRange: undefined,
 })
 
-const departments = ref<Array<{ id: string; name: string }>>([])
+const departmentTree = ref<Array<{ id: string; name: string; children?: any[] }>>([])
 const positions = ref<string[]>([])
 
 // 字典选项数据
@@ -117,7 +121,7 @@ const probationStatusOptions = ref<Array<{ label: string; value: string }>>([])
 
 onMounted(async () => {
   // 加载部门和职位数据
-  departments.value = await employeeApi.getDepartmentList()
+  departmentTree.value = await employeeApi.getDepartmentList()
   positions.value = await employeeApi.getPositionList()
 
   // 加载字典数据
@@ -171,6 +175,11 @@ function handleReset() {
     .el-form-item {
       margin-bottom: $spacing-lg;
     }
+  }
+
+  :deep(.el-select),
+  :deep(.el-tree-select) {
+    width: 100%;
   }
 }
 </style>
