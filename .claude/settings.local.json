@@ -43,7 +43,9 @@
       "mcp__database-server__write_query",
       "Bash(git restore:*)",
       "Bash(mvn mybatis-plus:help:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "mcp__zai-mcp-server__extract_text_from_screenshot",
+      "Bash(javap:*)"
     ]
   }
 }

@@ -41,6 +41,39 @@
         ORDER BY e.created_at DESC
     </select>
 
+    <!-- 分页查询员工总数(用于分页) -->
+    <select id="selectPageCount" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM sys_employee e
+        WHERE e.is_deleted = 0
+        <if test="keyword != null and keyword != ''">
+            AND (e.name LIKE CONCAT('%', #{keyword}, '%')
+                 OR e.id LIKE CONCAT('%', #{keyword}, '%')
+                 OR e.phone LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="status != null and status != ''">
+            AND e.status = #{status}
+        </if>
+        <if test="departmentIds != null and departmentIds != ''">
+            AND FIND_IN_SET(e.department_id, #{departmentIds})
+        </if>
+        <if test="position != null and position != ''">
+            AND e.position = #{position}
+        </if>
+        <if test="probationStatus != null and probationStatus != ''">
+            AND e.probation_status = #{probationStatus}
+        </if>
+        <if test="gender != null and gender != ''">
+            AND e.gender = #{gender}
+        </if>
+        <if test="joinDateStart != null and joinDateStart != ''">
+            AND e.join_date &gt;= #{joinDateStart}
+        </if>
+        <if test="joinDateEnd != null and joinDateEnd != ''">
+            AND e.join_date &lt;= #{joinDateEnd}
+        </if>
+    </select>
+
     <!-- 根据入职日期范围查询员工数量，用于生成员工编号 -->
     <select id="countByJoinDate" resultType="java.lang.Integer">
         SELECT COUNT(*)

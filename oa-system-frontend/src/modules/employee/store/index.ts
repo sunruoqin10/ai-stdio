@@ -55,11 +55,40 @@ export const useEmployeeStore = defineStore('employee', () => {
   async function fetchEmployeeList() {
     loading.value = true
     try {
-      const { list, total: totalCount } = await employeeApi.getEmployeeList({
+      const result = await employeeApi.getEmployeeList({
         ...filter.value,
         ...pagination.value,
       })
-      employeeList.value = list
+
+      console.log('Store接收到的数据:', result)
+      console.log('列表长度:', result.list.length)
+      console.log('总数:', result.total)
+
+      const { list, total: totalCount } = result
+
+      // 获取职位字典数据，用于映射显示名称
+      try {
+        const { useDictStore } = await import('@/modules/dict/store')
+        const dictStore = useDictStore()
+        const positionDict = await dictStore.fetchDictData('position_type')
+
+        // 映射职位代码到显示名称
+        const positionMap = new Map(
+          positionDict.items.map(item => [item.value, item.label])
+        )
+
+        // 为每个员工添加职位显示标签
+        employeeList.value = list.map(emp => ({
+          ...emp,
+          positionLabel: positionMap.get(emp.position) || emp.position,
+        }))
+      } catch (dictError) {
+        // 如果字典加载失败，使用原始数据
+        console.warn('加载职位字典失败，使用原始数据:', dictError)
+        employeeList.value = list
+      }
+
+      console.log('设置后的total值:', totalCount)
       total.value = totalCount
     } catch (error) {
       console.error('获取员工列表失败:', error)

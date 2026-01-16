@@ -55,6 +55,10 @@ export async function getEmployeeList(params: EmployeeFilter & {
     }
   }>('/employees', { params: queryParams })
 
+  console.log('API响应完整数据:', response)
+  console.log('response.data:', response.data)
+  console.log('response.data.total:', response.data?.total)
+
   // 转换MyBatis Plus的分页格式为前端格式
   return {
     list: response.data.records,
