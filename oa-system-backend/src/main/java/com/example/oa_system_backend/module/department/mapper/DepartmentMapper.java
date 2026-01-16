@@ -196,4 +196,10 @@ public interface DepartmentMapper extends BaseMapper<Department> {
             "AND e.is_deleted = 0 " +
             "ORDER BY is_leader DESC, e.join_date ASC")
     List<com.example.oa_system_backend.module.department.vo.DepartmentMemberVO> selectDepartmentMembers(@Param("departmentId") String departmentId);
+
+    /**
+     * 查询部门总数（用于生成部门ID）
+     */
+    @Select("SELECT COUNT(*) FROM sys_department WHERE is_deleted = 0")
+    Long countTotal();
 }

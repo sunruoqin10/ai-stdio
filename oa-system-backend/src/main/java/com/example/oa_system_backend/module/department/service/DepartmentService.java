@@ -155,4 +155,12 @@ public interface DepartmentService {
      * @throws RuntimeException 如果不能删除
      */
     void validateDelete(String id);
+
+    /**
+     * 生成部门ID
+     * 格式: DEPT + 4位序号
+     *
+     * @return 部门ID
+     */
+    String generateDepartmentId();
 }

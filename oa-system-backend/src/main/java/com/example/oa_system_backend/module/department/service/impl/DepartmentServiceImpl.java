@@ -98,11 +98,15 @@ public class DepartmentServiceImpl implements DepartmentService {
             }
         }
 
-        // 3. 构建部门实体
+        // 3. 生成部门ID
+        String departmentId = generateDepartmentId();
+
+        // 4. 构建部门实体
         Department department = new Department();
         BeanUtils.copyProperties(request, department);
+        department.setId(departmentId);
 
-        // 4. 计算部门层级
+        // 5. 计算部门层级
         if (request.getParentId() == null) {
             department.setLevel(1);
         } else {
@@ -110,17 +114,17 @@ public class DepartmentServiceImpl implements DepartmentService {
             department.setLevel(parent.getLevel() + 1);
         }
 
-        // 5. 设置默认值
+        // 6. 设置默认值
         department.setStatus("active");
         department.setEmployeeCount(0);
         department.setChildCount(0);
         department.setCreatedAt(LocalDateTime.now());
         department.setUpdatedAt(LocalDateTime.now());
 
-        // 6. 保存到数据库
+        // 7. 保存到数据库
         departmentMapper.insert(department);
 
-        // 7. 更新父部门的子部门数量
+        // 8. 更新父部门的子部门数量
         if (department.getParentId() != null) {
             updateChildCount(department.getParentId());
         }
@@ -388,5 +392,17 @@ public class DepartmentServiceImpl implements DepartmentService {
                     dept.setChildren(children);
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public String generateDepartmentId() {
+        // 查询部门总数
+        Long count = departmentMapper.countTotal();
+
+        // 生成4位序号
+        String sequence = String.format("%04d", count != null ? count + 1 : 1);
+
+        // 返回部门ID: DEPT + 序号
+        return "DEPT" + sequence;
     }
 }
