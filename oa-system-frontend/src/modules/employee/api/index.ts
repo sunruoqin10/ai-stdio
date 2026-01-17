@@ -38,10 +38,8 @@ export async function getEmployeeList(params: EmployeeFilter & {
   }
   if (params.position) queryParams.position = params.position
   if (params.gender) queryParams.gender = params.gender
-  if (params.joinDateRange && params.joinDateRange.length === 2) {
-    queryParams.joinDateStart = params.joinDateRange[0]
-    queryParams.joinDateEnd = params.joinDateRange[1]
-  }
+  if (params.joinDateStart) queryParams.joinDateStart = params.joinDateStart
+  if (params.joinDateEnd) queryParams.joinDateEnd = params.joinDateEnd
 
   const response = await http.get<{
     code: number

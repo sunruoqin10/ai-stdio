@@ -58,14 +58,23 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item label="入职时间">
+      <el-form-item label="入职开始日期">
         <el-date-picker
-          v-model="form.entryDateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
+          v-model="form.joinDateStart"
+          type="date"
+          placeholder="选择开始日期"
           value-format="YYYY-MM-DD"
+          style="width: 100%"
+        />
+      </el-form-item>
+
+      <el-form-item label="入职结束日期">
+        <el-date-picker
+          v-model="form.joinDateEnd"
+          type="date"
+          placeholder="选择结束日期"
+          value-format="YYYY-MM-DD"
+          style="width: 100%"
         />
       </el-form-item>
 
@@ -96,7 +105,8 @@ const form = ref<EmployeeFilter>({
   departmentIds: [],
   position: '',
   gender: '',
-  entryDateRange: undefined,
+  joinDateStart: undefined,
+  joinDateEnd: undefined,
 })
 
 const departmentTree = ref<Array<{ id: string; name: string; children?: any[] }>>([])
@@ -136,7 +146,8 @@ function handleReset() {
     departmentIds: [],
     position: '',
     gender: '',
-    entryDateRange: undefined,
+    joinDateStart: undefined,
+    joinDateEnd: undefined,
   }
   emit('reset')
 }

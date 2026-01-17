@@ -101,8 +101,11 @@ export interface EmployeeFilter {
   /** 性别筛选 */
   gender?: Gender
 
-  /** 入职时间范围 */
-  joinDateRange?: [string, string]
+  /** 入职开始日期 */
+  joinDateStart?: string
+
+  /** 入职结束日期 */
+  joinDateEnd?: string
 }
 
 /**
