@@ -4,7 +4,27 @@
 
     <!-- 分页查询员工列表(带部门名称) -->
     <select id="selectPageWithDetails" resultType="com.example.oa_system_backend.module.employee.vo.EmployeeVO">
-        SELECT e.*,
+        SELECT e.id,
+               e.name,
+               e.english_name,
+               e.gender,
+               e.birth_date,
+               e.phone,
+               e.email,
+               e.avatar,
+               e.department_id,
+               e.position,
+               e.level,
+               e.manager_id,
+               e.join_date,
+               e.probation_end_date,
+               e.work_years,
+               e.status,
+               e.office_location,
+               e.emergency_contact,
+               e.emergency_phone,
+               e.created_at,
+               e.updated_at,
                e.id AS employee_no,
                d.name AS department_name,
                m.name AS manager_name

@@ -37,7 +37,6 @@ export async function getEmployeeList(params: EmployeeFilter & {
     queryParams.departmentIds = params.departmentIds.join(',')
   }
   if (params.position) queryParams.position = params.position
-  if (params.probationStatus) queryParams.probationStatus = params.probationStatus
   if (params.gender) queryParams.gender = params.gender
   if (params.joinDateRange && params.joinDateRange.length === 2) {
     queryParams.joinDateStart = params.joinDateRange[0]
