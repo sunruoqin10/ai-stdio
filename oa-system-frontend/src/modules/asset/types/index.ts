@@ -39,6 +39,7 @@ export interface Asset {
   updatedAt: string // 更新时间
   createdBy?: string // 创建人ID
   updatedBy?: string // 更新人ID
+  version?: number // 乐观锁版本号
 }
 
 /**

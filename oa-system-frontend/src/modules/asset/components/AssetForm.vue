@@ -246,7 +246,13 @@ async function handleSubmit() {
     loading.value = true
     try {
       if (isEdit.value && props.asset) {
-        await assetStore.update(props.asset.id, form)
+        // 更新时需要包含 id 和 version
+        const updateData = {
+          ...form,
+          id: props.asset.id,
+          version: props.asset.version
+        }
+        await assetStore.update(props.asset.id, updateData)
         ElMessage.success('更新成功')
       } else {
         await assetStore.create(form)

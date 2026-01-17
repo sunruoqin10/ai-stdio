@@ -2,6 +2,7 @@ package com.example.oa_system_backend.config;
 
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
@@ -13,11 +14,14 @@ public class MyBatisPlusConfig {
 
     /**
      * MyBatis Plus 拦截器配置
-     * 添加分页插件，使其能够自动处理分页查询的 COUNT 语句
+     * 添加分页插件和乐观锁插件
      */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+
+        // 添加乐观锁插件
+        interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
 
         // 添加分页拦截器
         PaginationInnerInterceptor paginationInterceptor = new PaginationInnerInterceptor(DbType.MYSQL);
