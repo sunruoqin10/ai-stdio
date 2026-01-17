@@ -89,7 +89,7 @@
                   <StatusTag :status="row.status" :label="row.statusLabel" />
                 </template>
               </el-table-column>
-              <el-table-column prop="entryDate" label="入职日期" width="120" />
+              <el-table-column prop="joinDate" label="入职日期" width="120" />
               <el-table-column label="操作" width="150" fixed="right" align="center">
                 <template #default="{ row }">
                   <div class="action-buttons">
@@ -226,7 +226,7 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
 import FilterPanel from '../components/FilterPanel.vue'
 import EmployeeForm from '../components/EmployeeForm.vue'
-import type { Employee, EmployeeFilter } from '../types'
+import type { Employee, EmployeeFilter, EmployeeForm as EmployeeFormType } from '../types'
 
 const router = useRouter()
 const store = useEmployeeStore()
@@ -285,16 +285,21 @@ async function handleCommand(command: string, employee: Employee) {
   }
 }
 
-async function handleSubmit(data: Partial<Employee>) {
-  const success = currentEmployee.value
-    ? await store.updateEmployee(currentEmployee.value.id, data)
-    : await store.createEmployee(data)
+async function handleSubmit(data: EmployeeFormType) {
+  try {
+    const success = currentEmployee.value
+      ? await store.updateEmployee(currentEmployee.value.id, data)
+      : await store.createEmployee(data)
 
-  if (success) {
-    ElMessage.success(currentEmployee.value ? '更新成功' : '创建成功')
-    dialogVisible.value = false
-  } else {
-    ElMessage.error(currentEmployee.value ? '更新失败' : '创建失败')
+    if (success) {
+      ElMessage.success(currentEmployee.value ? '更新成功' : '创建成功')
+      dialogVisible.value = false
+    } else {
+      ElMessage.error(currentEmployee.value ? '更新失败' : '创建失败')
+    }
+  } catch (error) {
+    console.error('提交失败:', error)
+    ElMessage.error('操作失败，请重试')
   }
 }
 

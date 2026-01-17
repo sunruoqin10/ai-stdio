@@ -64,6 +64,6 @@ logging:
 
 file:
   upload:
-    path: c:/uploads  # Windows系统上传文件保存路径
+    path: c:/Users/sunru/Downloads/oa-system/uploads  # oa-system目录下的uploads文件夹
     url-prefix: /uploads  # 文件访问URL前缀
 

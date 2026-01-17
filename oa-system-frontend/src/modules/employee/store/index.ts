@@ -66,27 +66,9 @@ export const useEmployeeStore = defineStore('employee', () => {
 
       const { list, total: totalCount } = result
 
-      // 获取职位字典数据，用于映射显示名称
-      try {
-        const { useDictStore } = await import('@/modules/dict/store')
-        const dictStore = useDictStore()
-        const positionDict = await dictStore.fetchDictData('position_type')
-
-        // 映射职位代码到显示名称
-        const positionMap = new Map(
-          positionDict.items.map(item => [item.value, item.label])
-        )
-
-        // 为每个员工添加职位显示标签
-        employeeList.value = list.map(emp => ({
-          ...emp,
-          positionLabel: positionMap.get(emp.position) || emp.position,
-        }))
-      } catch (dictError) {
-        // 如果字典加载失败，使用原始数据
-        console.warn('加载职位字典失败，使用原始数据:', dictError)
-        employeeList.value = list
-      }
+      // 后端已经返回了 positionLabel，直接使用
+      // 如果需要前端补充职位字典，可以在这里添加
+      employeeList.value = list
 
       console.log('设置后的total值:', totalCount)
       total.value = totalCount
@@ -141,15 +123,8 @@ export const useEmployeeStore = defineStore('employee', () => {
     try {
       const updatedEmployee = await employeeApi.updateEmployee(id, data)
       if (updatedEmployee) {
-        // 更新列表中的数据
-        const index = employeeList.value.findIndex(emp => emp.id === id)
-        if (index !== -1) {
-          employeeList.value[index] = updatedEmployee
-        }
-        // 更新当前员工
-        if (currentEmployee.value?.id === id) {
-          currentEmployee.value = updatedEmployee
-        }
+        // 重新获取列表以确保数据完整
+        await fetchEmployeeList()
       }
       return updatedEmployee
     } catch (error) {

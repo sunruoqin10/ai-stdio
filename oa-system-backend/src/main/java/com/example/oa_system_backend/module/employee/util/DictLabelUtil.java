@@ -37,7 +37,7 @@ public class DictLabelUtil {
 
             // 职位标签
             if (vo.getPosition() != null) {
-                vo.setPositionLabel(getDictLabel("employee_position", vo.getPosition()));
+                vo.setPositionLabel(getDictLabel("position_type", vo.getPosition()));
             }
 
             // 职级标签
@@ -75,7 +75,7 @@ public class DictLabelUtil {
 
             // 职位标签
             if (vo.getPosition() != null) {
-                vo.setPositionLabel(getDictLabel("employee_position", vo.getPosition()));
+                vo.setPositionLabel(getDictLabel("position_type", vo.getPosition()));
             }
 
             // 职级标签

@@ -364,9 +364,18 @@ function handlePrev() {
 }
 
 async function handleSubmit() {
+  // 表单验证
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) {
+    ElMessage.warning('请检查表单填写是否正确')
+    return
+  }
+
   try {
     submitting.value = true
     emit('submit', formData)
+    // emit 是同步的，需要等待父组件处理完成后再重置状态
+    // 但由于父组件的 handleSubmit 是异步的，我们需要通过其他方式处理
   } catch {
     submitting.value = false
   }
