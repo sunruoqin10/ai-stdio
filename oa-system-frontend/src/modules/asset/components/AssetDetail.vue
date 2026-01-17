@@ -42,8 +42,8 @@
         <el-image
           v-for="(img, index) in asset.images"
           :key="index"
-          :src="img"
-          :preview-src-list="asset.images"
+          :src="getImageUrl(img)"
+          :preview-src-list="asset.images.map(url => getImageUrl(url))"
           :initial-index="index"
           fit="cover"
           class="asset-image"
@@ -164,7 +164,8 @@ import {
   getStatusName,
   getStatusType,
   checkReturnReminder,
-  checkOverdue
+  checkOverdue,
+  getImageUrl
 } from '../utils'
 
 interface Props {

@@ -10,7 +10,7 @@
       <div class="asset-info">
         <el-image
           v-if="currentAsset.images && currentAsset.images.length > 0"
-          :src="currentAsset.images[0]"
+          :src="getImageUrl(currentAsset.images[0])"
           fit="cover"
           class="asset-thumb"
         />
@@ -102,7 +102,8 @@ import {
   formatDate,
   getCategoryName,
   checkReturnReminder,
-  checkOverdue
+  checkOverdue,
+  getImageUrl
 } from '../utils'
 import type { Asset, ReturnForm } from '../types'
 

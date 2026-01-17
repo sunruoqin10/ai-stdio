@@ -192,3 +192,40 @@ export function groupAssetsByStatus(assets: Asset[]): Record<string, Asset[]> {
     return acc
   }, {} as Record<string, Asset[]>)
 }
+
+/**
+ * 获取图片的完整URL
+ * @param url 图片URL (可能是相对路径)
+ * @returns 完整的图片URL
+ */
+export function getImageUrl(url?: string): string {
+  if (!url) {
+    return ''
+  }
+
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+
+  if (url.startsWith('/api/uploads/')) {
+    return url
+  }
+
+  if (url.startsWith('/uploads/')) {
+    return `/api${url}`
+  }
+
+  return `/api/uploads/${url}`
+}
+
+/**
+ * 获取图片URL数组
+ * @param urls 图片URL数组
+ * @returns 完整的图片URL数组
+ */
+export function getImageUrls(urls?: string[]): string[] {
+  if (!urls || !Array.isArray(urls)) {
+    return []
+  }
+  return urls.map(url => getImageUrl(url))
+}

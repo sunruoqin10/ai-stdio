@@ -15,9 +15,9 @@
           <!-- 图片区域 -->
           <div class="card-image">
             <el-image
-              :src="getImageUrl(asset)"
+              :src="getAssetImageUrl(asset)"
               fit="cover"
-              :preview-src-list="asset.images"
+              :preview-src-list="asset.images?.map(url => getImageUrl(url)) || []"
               :initial-index="0"
               class="gallery-image"
             >
@@ -181,7 +181,8 @@ import {
   getStatusName,
   getStatusType,
   checkReturnReminder,
-  checkOverdue
+  checkOverdue,
+  getImageUrl
 } from '../utils'
 import type { Asset } from '../types'
 import AssetDetail from './AssetDetail.vue'
@@ -199,8 +200,8 @@ const currentAsset = ref<Asset | null>(null)
 
 const assets = assetStore.assets
 
-function getImageUrl(asset: Asset): string {
-  return asset.images?.[0] || ''
+function getAssetImageUrl(asset: Asset): string {
+  return asset.images?.[0] ? getImageUrl(asset.images[0]) : ''
 }
 
 function getCategoryTagType(category: string): string {

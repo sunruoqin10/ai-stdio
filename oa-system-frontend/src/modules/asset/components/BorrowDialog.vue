@@ -10,7 +10,7 @@
       <div class="asset-info">
         <el-image
           v-if="currentAsset.images && currentAsset.images.length > 0"
-          :src="currentAsset.images[0]"
+          :src="getImageUrl(currentAsset.images[0])"
           fit="cover"
           class="asset-thumb"
         />
@@ -103,7 +103,7 @@ import { ElMessage } from 'element-plus'
 import { Picture } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useAssetStore } from '../store'
-import { getCategoryName } from '../utils'
+import { getCategoryName, getImageUrl } from '../utils'
 import type { Asset, BorrowForm } from '../types'
 import { getEmployeeList } from '@/modules/employee/api'
 import { EmployeeStatus } from '@/modules/employee/types'

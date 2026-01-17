@@ -46,11 +46,10 @@
         <el-upload
           v-model:file-list="fileList"
           :action="uploadAction"
-          :http-request="handleUpload"
+          :http-request="handlePreviewUpload"
           list-type="picture-card"
           :on-preview="handlePicturePreview"
           :on-remove="handleRemove"
-          :on-success="handleUploadSuccess"
           :before-upload="beforeUpload"
           :limit="10"
           accept="image/*"
@@ -86,6 +85,7 @@ import { Plus } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules, UploadUserFile, UploadRequestOptions } from 'element-plus'
 import { useAssetStore } from '../store'
 import { uploadFile } from '../api'
+import { getImageUrl } from '../utils'
 import type { Asset, AssetForm } from '../types'
 
 interface Props {
@@ -153,40 +153,42 @@ const beforeUpload = (file: File) => {
   return true
 }
 
-// 自定义上传
-const handleUpload = async (options: UploadRequestOptions) => {
-  try {
-    const url = await uploadFile(options.file as File)
-    // 上传成功后，将URL添加到form.images
-    if (!form.images) {
-      form.images = []
-    }
-    form.images.push(url)
-    ElMessage.success('上传成功')
-    options.onSuccess?.(url)
-  } catch (error: any) {
-    ElMessage.error(error.message || '上传失败')
-    options.onError?.(error as any)
-  }
-}
-
-// 上传成功回调
-const handleUploadSuccess = () => {
-  // 已经在 handleUpload 中处理
+// 预览上传 - 仅生成预览URL，不实际上传
+const handlePreviewUpload = async (options: UploadRequestOptions) => {
+  const file = options.file as File
+  const url = URL.createObjectURL(file)
+  options.onSuccess?.(url)
 }
 
 // 移除图片
 const handleRemove = (file: UploadUserFile) => {
   const index = fileList.value.findIndex(f => f.uid === file.uid)
-  if (index > -1 && form.images) {
-    form.images.splice(index, 1)
+  if (index > -1) {
+    fileList.value.splice(index, 1)
   }
 }
 
 // 预览图片
 const handlePicturePreview = (file: UploadUserFile) => {
-  previewUrl.value = file.url || ''
+  previewUrl.value = file.url ? getImageUrl(file.url) : ''
   previewVisible.value = true
+}
+
+// 上传所有图片文件
+const uploadAllImages = async () => {
+  const uploadedUrls: string[] = []
+  const filesToUpload = fileList.value.filter(file => file.raw)
+  
+  for (const file of filesToUpload) {
+    try {
+      const url = await uploadFile(file.raw as File)
+      uploadedUrls.push(url)
+    } catch (error: any) {
+      throw new Error(`图片 ${file.name} 上传失败: ${error.message}`)
+    }
+  }
+  
+  return uploadedUrls
 }
 
 watch(
@@ -208,6 +210,8 @@ watch(
       }
 
       Object.assign(form, {
+        id: props.asset.id,
+        version: props.asset.version,
         name: props.asset.name,
         category: props.asset.category,
         brandModel: props.asset.brandModel,
@@ -222,7 +226,7 @@ watch(
       if (images && images.length > 0) {
         fileList.value = images.map((url, index) => ({
           name: `image-${index}`,
-          url: url,
+          url: getImageUrl(url),
           uid: Date.now() + index
         }))
       } else {
@@ -232,6 +236,8 @@ watch(
       // 新增时清空图片列表
       fileList.value = []
       form.images = []
+      delete form.id
+      delete form.version
     }
   },
   { immediate: true }
@@ -245,14 +251,30 @@ async function handleSubmit() {
 
     loading.value = true
     try {
-      if (isEdit.value && props.asset) {
-        // 更新时需要包含 id 和 version
-        const updateData = {
-          ...form,
-          id: props.asset.id,
-          version: props.asset.version
-        }
-        await assetStore.update(props.asset.id, updateData)
+      // 上传所有新图片
+      const newImageUrls = await uploadAllImages()
+      
+      // 合并已存在的图片URL和新上传的图片URL
+      const existingUrls = fileList.value
+        .filter(file => !file.raw && file.url)
+        .map(file => {
+          // 如果是新上传的本地URL (blob: 开头)，不包含在existingUrls中
+          if (file.url?.startsWith('blob:')) {
+            return null
+          }
+          // 将完整URL转换回存储的格式
+          const url = file.url || ''
+          if (url.startsWith('/api/uploads/')) {
+            return url.substring(4)
+          }
+          return url.startsWith('/uploads/') ? url : null
+        })
+        .filter((url): url is string => url !== null)
+      
+      form.images = [...existingUrls, ...newImageUrls]
+
+      if (isEdit.value) {
+        await assetStore.update(form.id!, form)
         ElMessage.success('更新成功')
       } else {
         await assetStore.create(form)

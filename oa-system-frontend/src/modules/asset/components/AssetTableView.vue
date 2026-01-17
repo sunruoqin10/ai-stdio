@@ -14,8 +14,8 @@
           <div class="asset-info">
             <el-image
               v-if="row.images?.length"
-              :src="row.images[0]"
-              :preview-src-list="row.images"
+              :src="getImageUrl(row.images[0])"
+              :preview-src-list="row.images.map(url => getImageUrl(url))"
               fit="cover"
               class="asset-thumb"
             />
@@ -157,7 +157,8 @@ import {
   getCategoryName,
   getStatusName,
   getStatusType,
-  checkOverdue
+  checkOverdue,
+  getImageUrl
 } from '../utils'
 import type { Asset } from '../types'
 import AssetDetail from './AssetDetail.vue'

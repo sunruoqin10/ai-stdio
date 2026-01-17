@@ -52,9 +52,9 @@
 
                   <div v-if="asset.images && asset.images.length > 0" class="asset-thumb">
                     <el-image
-                      :src="asset.images[0]"
+                      :src="getImageUrl(asset.images[0])"
                       fit="cover"
-                      :preview-src-list="asset.images"
+                      :preview-src-list="asset.images.map(url => getImageUrl(url))"
                     />
                   </div>
 
@@ -135,7 +135,7 @@ import { VueDraggable } from 'vue-draggable-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MoreFilled, Location, User, Calendar, Warning, Clock } from '@element-plus/icons-vue'
 import { useAssetStore } from '../store'
-import { formatDate, formatAmount, getCategoryName, getStatusName, getStatusType, checkReturnReminder, checkOverdue, isValidStatusTransition } from '../utils'
+import { formatDate, formatAmount, getCategoryName, getStatusName, getStatusType, checkReturnReminder, checkOverdue, isValidStatusTransition, getImageUrl } from '../utils'
 import type { Asset, AssetStatus } from '../types'
 import AssetDetail from './AssetDetail.vue'
 import AssetForm from './AssetForm.vue'

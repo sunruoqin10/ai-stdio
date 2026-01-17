@@ -70,6 +70,7 @@ export interface PaginationResponse<T> {
  * 资产表单
  */
 export interface AssetForm {
+  id?: string
   name?: string
   category?: AssetCategory
   brandModel?: string
@@ -78,6 +79,7 @@ export interface AssetForm {
   location?: string
   images?: string[]
   notes?: string
+  version?: number
 }
 
 /**
