@@ -1,6 +1,7 @@
 package com.example.oa_system_backend.module.asset.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.oa_system_backend.common.exception.BusinessException;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
@@ -292,12 +294,18 @@ public class AssetServiceImpl implements AssetService {
             throw new BusinessException("借用期限不能超过90天");
         }
 
-        // 更新资产状态
-        asset.setStatus(AssetStatusEnum.BORROWED.getCode());
-        asset.setUserId(request.getBorrowerId());
-        asset.setBorrowDate(request.getBorrowDate());
-        asset.setExpectedReturnDate(request.getExpectedReturnDate());
-        assetMapper.updateById(asset);
+        // 更新资产状态（使用LambdaUpdateWrapper避免乐观锁问题）
+        LambdaUpdateWrapper<Asset> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(Asset::getId, id)
+                .set(Asset::getStatus, AssetStatusEnum.BORROWED.getCode())
+                .set(Asset::getUserId, request.getBorrowerId())
+                .set(Asset::getBorrowDate, request.getBorrowDate())
+                .set(Asset::getExpectedReturnDate, request.getExpectedReturnDate());
+
+        int rows = assetMapper.update(null, updateWrapper);
+        if (rows == 0) {
+            throw new BusinessException("更新资产状态失败");
+        }
 
         // 创建借用记录
         AssetBorrowRecord record = new AssetBorrowRecord();
@@ -309,6 +317,8 @@ public class AssetServiceImpl implements AssetService {
         record.setExpectedReturnDate(request.getExpectedReturnDate());
         record.setStatus(BorrowStatusEnum.ACTIVE.getCode());
         record.setNotes(request.getNotes());
+        record.setCreatedAt(LocalDateTime.now()); // 手动设置创建时间
+        record.setUpdatedAt(LocalDateTime.now()); // 手动设置更新时间
         assetBorrowRecordMapper.insert(record);
 
         log.info("资产借出成功, assetId: {}, borrowerId: {}", id, request.getBorrowerId());
@@ -348,11 +358,17 @@ public class AssetServiceImpl implements AssetService {
         }
         assetBorrowRecordMapper.updateById(record);
 
-        // 更新资产状态
-        asset.setStatus(AssetStatusEnum.STOCK.getCode());
-        asset.setUserId(null);
-        asset.setActualReturnDate(request.getActualReturnDate());
-        assetMapper.updateById(asset);
+        // 更新资产状态（使用LambdaUpdateWrapper避免乐观锁问题）
+        LambdaUpdateWrapper<Asset> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(Asset::getId, id)
+                .set(Asset::getStatus, AssetStatusEnum.STOCK.getCode())
+                .set(Asset::getUserId, null)
+                .set(Asset::getActualReturnDate, request.getActualReturnDate());
+
+        int rows = assetMapper.update(null, updateWrapper);
+        if (rows == 0) {
+            throw new BusinessException("更新资产状态失败");
+        }
 
         log.info("资产归还成功, assetId: {}", id);
     }

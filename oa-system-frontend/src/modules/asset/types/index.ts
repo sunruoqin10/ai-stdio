@@ -103,6 +103,7 @@ export interface BorrowRecord {
  */
 export interface BorrowForm {
   borrowerId: string
+  borrowDate: string // 借出日期
   expectedReturnDate: string
   notes?: string
 }
@@ -111,7 +112,7 @@ export interface BorrowForm {
  * 归还表单
  */
 export interface ReturnForm {
-  condition: 'good' | 'damaged' | 'lost'
+  actualReturnDate: string // 实际归还日期
   notes?: string
 }
 

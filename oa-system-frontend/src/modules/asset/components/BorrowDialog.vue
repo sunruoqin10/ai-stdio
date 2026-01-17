@@ -5,11 +5,11 @@
     width="500px"
     @close="handleClose"
   >
-    <div v-if="asset" class="borrow-dialog">
+    <div v-if="currentAsset" class="borrow-dialog">
       <div class="asset-info">
         <el-image
-          v-if="asset.images && asset.images.length > 0"
-          :src="asset.images[0]"
+          v-if="currentAsset.images && currentAsset.images.length > 0"
+          :src="currentAsset.images[0]"
           fit="cover"
           class="asset-thumb"
         />
@@ -17,10 +17,10 @@
           <el-icon :size="32"><Picture /></el-icon>
         </div>
         <div class="asset-detail">
-          <div class="asset-name">{{ asset.name }}</div>
+          <div class="asset-name">{{ currentAsset.name }}</div>
           <div class="asset-meta">
-            <span>资产编号: {{ asset.id }}</span>
-            <span>{{ getCategoryName(asset.category) }}</span>
+            <span>资产编号: {{ currentAsset.id }}</span>
+            <span>{{ getCategoryName(currentAsset.category) }}</span>
           </div>
         </div>
       </div>
@@ -33,6 +33,7 @@
             v-model="form.borrowerId"
             placeholder="请选择借用人"
             filterable
+            :loading="loadingUsers"
             style="width: 100%"
           >
             <el-option
@@ -47,7 +48,21 @@
                 <span class="user-id">({{ user.id }})</span>
               </div>
             </el-option>
+            <el-option v-if="!loadingUsers && userList.length === 0" disabled value="">
+              暂无可用的员工
+            </el-option>
           </el-select>
+        </el-form-item>
+
+        <el-form-item label="借出日期" prop="borrowDate">
+          <el-date-picker
+            v-model="form.borrowDate"
+            type="date"
+            placeholder="选择借出日期"
+            style="width: 100%"
+            :disabled-date="disabledBorrowDate"
+            value-format="YYYY-MM-DD"
+          />
         </el-form-item>
 
         <el-form-item label="预计归还" prop="expectedReturnDate">
@@ -82,13 +97,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Picture } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useAssetStore } from '../store'
 import { getCategoryName } from '../utils'
 import type { Asset, BorrowForm } from '../types'
+import { getEmployeeList } from '@/modules/employee/api'
+import { EmployeeStatus } from '@/modules/employee/types'
 
 interface User {
   id: string
@@ -114,24 +131,49 @@ const assetStore = useAssetStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 const visible = ref(false)
+const loadingUsers = ref(false)
 
-// 模拟用户列表
-const userList = ref<User[]>([
-  { id: 'EMP000001', name: '张三', avatar: 'https://i.pravatar.cc/150?img=1' },
-  { id: 'EMP000002', name: '李四', avatar: 'https://i.pravatar.cc/150?img=2' },
-  { id: 'EMP000003', name: '王五', avatar: 'https://i.pravatar.cc/150?img=3' },
-  { id: 'EMP000004', name: '赵六', avatar: 'https://i.pravatar.cc/150?img=4' },
-  { id: 'EMP000005', name: '孙七', avatar: 'https://i.pravatar.cc/150?img=5' }
-])
+// 本地存储的资产引用（避免props.asset在异步操作中变为undefined）
+const currentAsset = ref<Asset | null>(null)
+
+// 从后端获取真实的用户列表
+const userList = ref<User[]>([])
+
+// 加载员工列表
+async function loadUserList() {
+  loadingUsers.value = true
+  try {
+    const result = await getEmployeeList({
+      page: 1,
+      pageSize: 100, // 获取前100个员工
+      status: EmployeeStatus.ACTIVE // 只获取在职员工
+    })
+
+    userList.value = result.list.map(emp => ({
+      id: emp.id,
+      name: emp.name,
+      avatar: emp.avatar || 'https://i.pravatar.cc/150?img=1' // 使用默认头像
+    }))
+  } catch (error: any) {
+    console.error('加载员工列表失败:', error)
+    ElMessage.error('加载员工列表失败')
+    // 使用空列表
+    userList.value = []
+  } finally {
+    loadingUsers.value = false
+  }
+}
 
 const form = reactive<BorrowForm>({
   borrowerId: '',
+  borrowDate: new Date().toISOString().split('T')[0] || '', // 默认为今天
   expectedReturnDate: '',
   notes: ''
 })
 
 const rules: FormRules = {
   borrowerId: [{ required: true, message: '请选择借用人', trigger: 'change' }],
+  borrowDate: [{ required: true, message: '请选择借出日期', trigger: 'change' }],
   expectedReturnDate: [{ required: true, message: '请选择预计归还日期', trigger: 'change' }]
 }
 
@@ -139,7 +181,11 @@ watch(
   () => props.modelValue,
   (val) => {
     visible.value = val
-    if (!val) {
+    if (val) {
+      // 对话框打开时，保存资产引用
+      currentAsset.value = props.asset || null
+    } else {
+      currentAsset.value = null
       resetForm()
     }
   }
@@ -149,8 +195,23 @@ watch(visible, (val) => {
   emit('update:modelValue', val)
 })
 
-// 禁用今天之前的日期
+// 组件挂载时加载员工列表
+onMounted(() => {
+  loadUserList()
+})
+
+// 禁用今天之后的日期作为借出日期
+function disabledBorrowDate(time: Date) {
+  return time.getTime() > Date.now()
+}
+
+// 禁用今天之前的日期作为归还日期
 function disabledDate(time: Date) {
+  // 如果已选择借出日期，则归还日期不能早于借出日期
+  if (form.borrowDate) {
+    const borrowDateTime = new Date(form.borrowDate).getTime()
+    return time.getTime() < borrowDateTime
+  }
   return time.getTime() < Date.now() - 24 * 60 * 60 * 1000
 }
 
@@ -159,11 +220,14 @@ async function handleSubmit() {
 
   await formRef.value.validate(async (valid) => {
     if (!valid) return
-    if (!props.asset) return
+    if (!currentAsset.value) {
+      ElMessage.error('资产信息不存在')
+      return
+    }
 
     loading.value = true
     try {
-      await assetStore.borrow(props.asset.id, form)
+      await assetStore.borrow(currentAsset.value.id, form)
       ElMessage.success('借出成功')
       emit('success')
       handleClose()
@@ -178,6 +242,7 @@ async function handleSubmit() {
 function resetForm() {
   formRef.value?.resetFields()
   form.borrowerId = ''
+  form.borrowDate = new Date().toISOString().split('T')[0] || '' // 重置为今天
   form.expectedReturnDate = ''
   form.notes = ''
 }

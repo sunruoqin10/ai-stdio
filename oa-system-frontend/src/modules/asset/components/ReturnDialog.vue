@@ -5,11 +5,11 @@
     width="500px"
     @close="handleClose"
   >
-    <div v-if="asset" class="return-dialog">
+    <div v-if="currentAsset" class="return-dialog">
       <div class="asset-info">
         <el-image
-          v-if="asset.images && asset.images.length > 0"
-          :src="asset.images[0]"
+          v-if="currentAsset.images && currentAsset.images.length > 0"
+          :src="currentAsset.images[0]"
           fit="cover"
           class="asset-thumb"
         />
@@ -17,10 +17,10 @@
           <el-icon :size="32"><Picture /></el-icon>
         </div>
         <div class="asset-detail">
-          <div class="asset-name">{{ asset.name }}</div>
+          <div class="asset-name">{{ currentAsset.name }}</div>
           <div class="asset-meta">
-            <span>资产编号: {{ asset.id }}</span>
-            <span>{{ getCategoryName(asset.category) }}</span>
+            <span>资产编号: {{ currentAsset.id }}</span>
+            <span>{{ getCategoryName(currentAsset.category) }}</span>
           </div>
         </div>
       </div>
@@ -33,21 +33,21 @@
         <el-descriptions :column="2" border>
           <el-descriptions-item label="借用人">
             <div class="user-display">
-              <el-avatar :src="asset.userAvatar" :size="24" />
-              <span>{{ asset.userName }}</span>
+              <el-avatar :src="currentAsset.userAvatar" :size="24" />
+              <span>{{ currentAsset.userName }}</span>
             </div>
           </el-descriptions-item>
           <el-descriptions-item label="借出日期">
-            {{ formatDate(asset.borrowDate!) }}
+            {{ formatDate(currentAsset.borrowDate!) }}
           </el-descriptions-item>
           <el-descriptions-item label="预计归还">
-            {{ formatDate(asset.expectedReturnDate!) }}
+            {{ formatDate(currentAsset.expectedReturnDate!) }}
           </el-descriptions-item>
           <el-descriptions-item label="借用状态">
-            <el-tag v-if="checkOverdue(asset)" type="danger" size="small">
+            <el-tag v-if="checkOverdue(currentAsset)" type="danger" size="small">
               已逾期
             </el-tag>
-            <el-tag v-else-if="checkReturnReminder(asset)" type="warning" size="small">
+            <el-tag v-else-if="checkReturnReminder(currentAsset)" type="warning" size="small">
               即将到期
             </el-tag>
             <el-tag v-else type="success" size="small">
@@ -60,27 +60,15 @@
       <el-divider />
 
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="资产状态" prop="condition">
-          <el-radio-group v-model="form.condition">
-            <el-radio value="good">
-              <div class="radio-option">
-                <el-icon color="#67c23a"><SuccessFilled /></el-icon>
-                <span>完好无损</span>
-              </div>
-            </el-radio>
-            <el-radio value="damaged">
-              <div class="radio-option">
-                <el-icon color="#e6a23c"><WarningFilled /></el-icon>
-                <span>有损坏</span>
-              </div>
-            </el-radio>
-            <el-radio value="lost">
-              <div class="radio-option">
-                <el-icon color="#f56c6c"><CircleCloseFilled /></el-icon>
-                <span>已丢失</span>
-              </div>
-            </el-radio>
-          </el-radio-group>
+        <el-form-item label="归还日期" prop="actualReturnDate">
+          <el-date-picker
+            v-model="form.actualReturnDate"
+            type="date"
+            placeholder="选择归还日期"
+            style="width: 100%"
+            :disabled-date="disabledReturnDate"
+            value-format="YYYY-MM-DD"
+          />
         </el-form-item>
 
         <el-form-item label="归还备注" prop="notes">
@@ -106,12 +94,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import {
-  Picture,
-  SuccessFilled,
-  WarningFilled,
-  CircleCloseFilled
-} from '@element-plus/icons-vue'
+import { Picture } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useAssetStore } from '../store'
 import {
@@ -141,20 +124,28 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 const visible = ref(false)
 
+// 本地存储的资产引用（避免props.asset在异步操作中变为undefined）
+const currentAsset = ref<Asset | null>(null)
+
 const form = reactive<ReturnForm>({
-  condition: 'good',
+  actualReturnDate: new Date().toISOString().split('T')[0] || '', // 默认为今天
   notes: ''
 })
 
 const rules: FormRules = {
-  condition: [{ required: true, message: '请选择资产状态', trigger: 'change' }]
+  actualReturnDate: [{ required: true, message: '请选择归还日期', trigger: 'change' }]
 }
 
 watch(
   () => props.modelValue,
   (val) => {
     visible.value = val
-    if (!val) {
+    if (val) {
+      // 对话框打开时，保存资产引用
+      currentAsset.value = props.asset || null
+    } else {
+      // 对话框关闭时清空
+      currentAsset.value = null
       resetForm()
     }
   }
@@ -164,16 +155,24 @@ watch(visible, (val) => {
   emit('update:modelValue', val)
 })
 
+// 禁用今天之后的日期作为归还日期
+function disabledReturnDate(time: Date) {
+  return time.getTime() > Date.now()
+}
+
 async function handleSubmit() {
   if (!formRef.value) return
 
   await formRef.value.validate(async (valid) => {
     if (!valid) return
-    if (!props.asset) return
+    if (!currentAsset.value) {
+      ElMessage.error('资产信息不存在')
+      return
+    }
 
     loading.value = true
     try {
-      await assetStore.returnAsset(props.asset.id, form)
+      await assetStore.returnAsset(currentAsset.value.id, form)
       ElMessage.success('归还成功')
       emit('success')
       handleClose()
@@ -187,7 +186,7 @@ async function handleSubmit() {
 
 function resetForm() {
   formRef.value?.resetFields()
-  form.condition = 'good'
+  form.actualReturnDate = new Date().toISOString().split('T')[0] || '' // 重置为今天
   form.notes = ''
 }
 
@@ -266,47 +265,6 @@ function handleClose() {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.radio-option {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  .el-icon {
-    font-size: 18px;
-  }
-
-  span {
-    color: #606266;
-  }
-}
-
-:deep(.el-radio-group) {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-}
-
-:deep(.el-radio) {
-  display: flex;
-  align-items: center;
-  height: auto;
-  padding: 8px 12px;
-  margin: 0;
-  border: 1px solid #dcdfe6;
-  border-radius: 6px;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #f5f7fa;
-  }
-
-  &.is-checked {
-    border-color: #409eff;
-    background: #ecf5ff;
-  }
 }
 
 :deep(.el-divider) {

@@ -9,7 +9,9 @@ import type {
   Asset,
   AssetFilter,
   AssetForm,
+  BorrowForm,
   BorrowRecord,
+  ReturnForm,
   AssetStatistics
 } from '../types'
 import * as assetApi from '../api'
@@ -151,7 +153,7 @@ export const useAssetStore = defineStore('asset', () => {
   /**
    * 借出资产
    */
-  async function borrow(id: string, data: { borrowerId: string; expectedReturnDate: string; notes?: string }) {
+  async function borrow(id: string, data: BorrowForm) {
     loading.value = true
     try {
       const result = await assetApi.borrowAsset(id, data)
@@ -168,7 +170,7 @@ export const useAssetStore = defineStore('asset', () => {
   /**
    * 归还资产
    */
-  async function returnAsset(id: string, data: { condition: 'good' | 'damaged' | 'lost'; notes?: string }) {
+  async function returnAsset(id: string, data: ReturnForm) {
     loading.value = true
     try {
       const result = await assetApi.returnAsset(id, data)
