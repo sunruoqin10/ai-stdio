@@ -143,7 +143,10 @@
 
       <el-row :gutter="16">
         <el-col :span="12">
-          <el-form-item label="直属上级">
+          <el-form-item>
+            <template #label>
+              <span class="required-label"><span style="color: #f56c6c">*</span> 直属上级</span>
+            </template>
             <el-select
               v-model="formData.managerId"
               placeholder="请选择直属上级"
@@ -211,7 +214,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, nextTick } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick, watch } from 'vue'
 import type { FormInstance, FormRules, UploadProps } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -298,6 +301,14 @@ const rules: FormRules = {
   ],
 }
 
+// 监听入职日期变化，自动计算试用期结束日期
+watch(() => formData.joinDate, (newJoinDate) => {
+  if (newJoinDate) {
+    // 自动计算试用期结束日期（入职日期 + 3个月）
+    formData.probationEndDate = calculateProbationEndDate(newJoinDate)
+  }
+})
+
 onMounted(async () => {
   // 加载字典数据
   try {
@@ -334,11 +345,16 @@ onMounted(async () => {
       emergencyPhone: props.employee.emergencyPhone,
       managerId: props.employee.managerId,
       avatar: props.employee.avatar,
-      probationEndDate: props.employee.probationEndDate,
+      // 不使用数据库中的 probationEndDate，会根据 joinDate 自动计算
     })
+    // 根据入职日期重新计算试用期结束日期
+    if (formData.joinDate) {
+      formData.probationEndDate = calculateProbationEndDate(formData.joinDate)
+    }
   } else {
     // 新增模式,设置默认入职日期为今天
     formData.joinDate = new Date().toISOString().split('T')[0]
+    // 试用期结束日期会通过 watch 自动计算
   }
 })
 

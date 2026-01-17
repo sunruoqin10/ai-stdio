@@ -5,26 +5,59 @@
     <div class="page-content">
       <el-row :gutter="16">
         <!-- 左侧筛选面板 -->
-        <el-col :xs="24" :sm="24" :md="6" :lg="5">
-          <FilterPanel @search="handleSearch" @reset="handleReset" />
+        <el-col
+          :xs="24"
+          :sm="24"
+          :md="leftFilterVisible ? 6 : 0"
+          :lg="leftFilterVisible ? 5 : 0"
+          class="filter-col"
+        >
+          <transition name="slide-fade">
+            <FilterPanel
+              v-if="leftFilterVisible"
+              @search="handleSearch"
+              @reset="handleReset"
+            />
+          </transition>
         </el-col>
 
         <!-- 中间数据表格 -->
-        <el-col :xs="24" :sm="24" :md="12" :lg="14">
+        <el-col
+          :xs="24"
+          :sm="24"
+          :md="middleColSpan"
+          :lg="middleColSpan"
+          class="table-col"
+        >
           <el-card shadow="never">
             <!-- 顶部操作区 -->
             <template #header>
               <div class="table-header">
                 <div class="header-left">
+                  <el-button
+                    @click="leftFilterVisible = !leftFilterVisible"
+                    circle
+                    size="small"
+                    title="切换筛选面板"
+                  >
+                    <el-icon>
+                      <DArrowLeft v-if="leftFilterVisible" />
+                      <DArrowRight v-else />
+                    </el-icon>
+                  </el-button>
                   <el-input
                     v-model="keyword"
                     placeholder="搜索姓名/工号/手机号"
                     clearable
                     style="width: 250px"
-                    @keyup.enter="handleSearch"
+                    @keyup.enter="handleQuickSearch"
+                    @clear="handleQuickSearch"
                   >
                     <template #prefix>
                       <el-icon><Search /></el-icon>
+                    </template>
+                    <template #append>
+                      <el-button :icon="Search" @click="handleQuickSearch" />
                     </template>
                   </el-input>
                 </div>
@@ -46,6 +79,17 @@
                     </el-button>
                   </el-button-group>
                   <el-button :icon="Download">导出列表</el-button>
+                  <el-button
+                    @click="rightStatsVisible = !rightStatsVisible"
+                    circle
+                    size="small"
+                    title="切换统计面板"
+                  >
+                    <el-icon>
+                      <DArrowRight v-if="rightStatsVisible" />
+                      <DArrowLeft v-else />
+                    </el-icon>
+                  </el-button>
                 </div>
               </div>
             </template>
@@ -158,36 +202,48 @@
         </el-col>
 
         <!-- 右侧统计面板 -->
-        <el-col :xs="24" :sm="24" :md="6" :lg="5">
-          <el-card shadow="never" class="statistics-card">
-            <template #header>
-              <span>快捷统计</span>
-            </template>
-            <div class="stat-item">
-              <div class="stat-label">总员工数</div>
-              <div class="stat-value">{{ store.total }}</div>
-            </div>
-            <el-divider />
-            <div class="stat-item">
-              <div class="stat-label">在职人数</div>
-              <div class="stat-value stat-success">
-                {{ store.employeeList.filter(e => e.status === 'active').length }}
-                <el-icon><TrendCharts /></el-icon>
+        <el-col
+          :xs="24"
+          :sm="24"
+          :md="rightStatsVisible ? 6 : 0"
+          :lg="rightStatsVisible ? 5 : 0"
+          class="stats-col"
+        >
+          <transition name="slide-fade">
+            <el-card
+              v-if="rightStatsVisible"
+              shadow="never"
+              class="statistics-card"
+            >
+              <template #header>
+                <span>快捷统计</span>
+              </template>
+              <div class="stat-item">
+                <div class="stat-label">总员工数</div>
+                <div class="stat-value">{{ store.total }}</div>
               </div>
-            </div>
-            <el-divider />
-            <div class="stat-item">
-              <div class="stat-label">试用期人数</div>
-              <div class="stat-value stat-warning">
-                {{ store.employeeList.filter(e => e.probationStatus === 'probation').length }}
+              <el-divider />
+              <div class="stat-item">
+                <div class="stat-label">在职人数</div>
+                <div class="stat-value stat-success">
+                  {{ store.employeeList.filter(e => e.status === 'active').length }}
+                  <el-icon><TrendCharts /></el-icon>
+                </div>
               </div>
-            </div>
-            <el-divider />
-            <div class="stat-item">
-              <div class="stat-label">本月新入职</div>
-              <div class="stat-value">1</div>
-            </div>
-          </el-card>
+              <el-divider />
+              <div class="stat-item">
+                <div class="stat-label">试用期人数</div>
+                <div class="stat-value stat-warning">
+                  {{ store.employeeList.filter(e => e.probationStatus === 'probation').length }}
+                </div>
+              </div>
+              <el-divider />
+              <div class="stat-item">
+                <div class="stat-label">本月新入职</div>
+                <div class="stat-value">1</div>
+              </div>
+            </el-card>
+          </transition>
         </el-col>
       </el-row>
     </div>
@@ -219,7 +275,9 @@ import {
   List,
   Grid,
   ArrowDown,
-  TrendCharts
+  TrendCharts,
+  DArrowLeft,
+  DArrowRight
 } from '@element-plus/icons-vue'
 import { useEmployeeStore } from '../store'
 import PageHeader from '@/components/common/PageHeader.vue'
@@ -236,7 +294,20 @@ const keyword = ref('')
 const dialogVisible = ref(false)
 const currentEmployee = ref<Employee | undefined>(undefined)
 
+// 左右面板可见性状态
+const leftFilterVisible = ref(true)
+const rightStatsVisible = ref(true)
+
 const dialogTitle = computed(() => (currentEmployee.value ? '编辑员工' : '新增员工'))
+
+// 计算中间列的跨度
+const middleColSpan = computed(() => {
+  let span = 14 // 默认跨度
+  if (!leftFilterVisible.value) span += 5
+  if (!rightStatsVisible.value) span += 5
+  // 最大跨度为 24
+  return Math.min(span, 24)
+})
 
 onMounted(() => {
   store.fetchEmployeeList()
@@ -308,6 +379,15 @@ function handleDialogClose() {
   currentEmployee.value = undefined
 }
 
+// 快速搜索（从顶部搜索框触发）
+function handleQuickSearch() {
+  // 重置到第一页
+  store.changePage(1)
+  // 更新筛选条件并获取列表
+  store.updateFilter({ keyword: keyword.value })
+  store.fetchEmployeeList()
+}
+
 function handleSearch(filter?: EmployeeFilter) {
   if (filter) {
     store.updateFilter(filter)
@@ -342,6 +422,50 @@ function handleSizeChange(size: number) {
   .page-content {
     .table-header {
       @include flex-between;
+    }
+  }
+
+  // 面板切换按钮样式
+  .header-left,
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  // 过渡动画
+  .slide-fade-enter-active {
+    transition: all 0.3s ease-out;
+  }
+
+  .slide-fade-leave-active {
+    transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1);
+  }
+
+  .slide-fade-enter-from,
+  .slide-fade-leave-to {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+
+  // 面板列样式优化
+  .filter-col,
+  .stats-col,
+  .table-col {
+    transition: all 0.3s ease;
+  }
+
+  // 确保表格卡片能够充分利用空间
+  .table-col {
+    :deep(.el-card) {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+
+      .el-card__body {
+        flex: 1;
+        overflow: auto;
+      }
     }
   }
 
