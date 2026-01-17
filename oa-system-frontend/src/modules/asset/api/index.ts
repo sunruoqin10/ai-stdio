@@ -60,8 +60,14 @@ export async function getAssets(
     }
   })
 
+  // 处理列表数据，将 images 从 JSON 字符串转换为数组
+  const list = response.data.records.map(asset => ({
+    ...asset,
+    images: asset.images ? (typeof asset.images === 'string' ? JSON.parse(asset.images) : asset.images) : []
+  }))
+
   return {
-    list: response.data.records,
+    list: list,
     total: response.data.total,
     page: response.data.current,
     pageSize: response.data.size
@@ -188,4 +194,24 @@ export async function getBorrowTrend(months: number = 12): Promise<BorrowTrend> 
   }
 
   return { months: monthData, counts }
+}
+
+/**
+ * 上传文件
+ */
+export async function uploadFile(file: File): Promise<string> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await http.post<{
+    code: number
+    message: string
+    url: string
+  }>('/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+
+  return response.url
 }

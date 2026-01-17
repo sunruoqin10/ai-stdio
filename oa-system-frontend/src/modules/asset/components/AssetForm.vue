@@ -1,8 +1,9 @@
 <template>
   <el-dialog
-    v-model="visible"
+    :model-value="props.modelValue"
     :title="isEdit ? '编辑资产' : '新增资产'"
     width="600px"
+    @update:model-value="handleDialogVisibleChange"
     @close="handleClose"
   >
     <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
@@ -41,6 +42,24 @@
         <el-input v-model="form.location" placeholder="请输入存放位置" />
       </el-form-item>
 
+      <el-form-item label="资产图片" prop="images">
+        <el-upload
+          v-model:file-list="fileList"
+          :action="uploadAction"
+          :http-request="handleUpload"
+          list-type="picture-card"
+          :on-preview="handlePicturePreview"
+          :on-remove="handleRemove"
+          :on-success="handleUploadSuccess"
+          :before-upload="beforeUpload"
+          :limit="10"
+          accept="image/*"
+        >
+          <el-icon><Plus /></el-icon>
+        </el-upload>
+        <div class="upload-tip">最多上传10张图片，支持jpg、png格式</div>
+      </el-form-item>
+
       <el-form-item label="备注" prop="notes">
         <el-input v-model="form.notes" type="textarea" :rows="3" placeholder="请输入备注" />
       </el-form-item>
@@ -53,13 +72,20 @@
       </el-button>
     </template>
   </el-dialog>
+
+  <!-- 图片预览对话框 -->
+  <el-dialog v-model="previewVisible" title="图片预览" width="800px">
+    <img :src="previewUrl" style="width: 100%" />
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
+import type { FormInstance, FormRules, UploadUserFile, UploadRequestOptions } from 'element-plus'
 import { useAssetStore } from '../store'
+import { uploadFile } from '../api'
 import type { Asset, AssetForm } from '../types'
 
 interface Props {
@@ -79,7 +105,17 @@ const emit = defineEmits<{
 const assetStore = useAssetStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
-const visible = ref(false)
+
+// 图片上传相关
+const fileList = ref<UploadUserFile[]>([])
+const uploadAction = '/api/upload'
+const previewVisible = ref(false)
+const previewUrl = ref('')
+
+// 处理对话框显示状态变化
+const handleDialogVisibleChange = (val: boolean) => {
+  emit('update:modelValue', val)
+}
 
 const isEdit = computed(() => !!props.asset)
 
@@ -90,6 +126,7 @@ const form = reactive<AssetForm>({
   purchaseDate: '',
   purchasePrice: 0,
   location: '',
+  images: [],
   notes: ''
 })
 
@@ -100,11 +137,76 @@ const rules: FormRules = {
   purchasePrice: [{ required: true, message: '请输入购置金额', trigger: 'blur' }]
 }
 
+// 上传前校验
+const beforeUpload = (file: File) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 2MB!')
+    return false
+  }
+  return true
+}
+
+// 自定义上传
+const handleUpload = async (options: UploadRequestOptions) => {
+  try {
+    const url = await uploadFile(options.file as File)
+    // 上传成功后，将URL添加到form.images
+    if (!form.images) {
+      form.images = []
+    }
+    form.images.push(url)
+    ElMessage.success('上传成功')
+    options.onSuccess?.(url)
+  } catch (error: any) {
+    ElMessage.error(error.message || '上传失败')
+    options.onError?.(error as any)
+  }
+}
+
+// 上传成功回调
+const handleUploadSuccess = () => {
+  // 已经在 handleUpload 中处理
+}
+
+// 移除图片
+const handleRemove = (file: UploadUserFile) => {
+  const index = fileList.value.findIndex(f => f.uid === file.uid)
+  if (index > -1 && form.images) {
+    form.images.splice(index, 1)
+  }
+}
+
+// 预览图片
+const handlePicturePreview = (file: UploadUserFile) => {
+  previewUrl.value = file.url || ''
+  previewVisible.value = true
+}
+
 watch(
   () => props.modelValue,
   (val) => {
-    visible.value = val
     if (val && props.asset) {
+      // 处理 images 字段 - 可能是 JSON 字符串或数组
+      let images: string[] = []
+      if (props.asset.images) {
+        if (typeof props.asset.images === 'string') {
+          try {
+            images = JSON.parse(props.asset.images)
+          } catch {
+            images = []
+          }
+        } else if (Array.isArray(props.asset.images)) {
+          images = props.asset.images
+        }
+      }
+
       Object.assign(form, {
         name: props.asset.name,
         category: props.asset.category,
@@ -112,16 +214,28 @@ watch(
         purchaseDate: props.asset.purchaseDate.split('T')[0],
         purchasePrice: props.asset.purchasePrice,
         location: props.asset.location,
+        images: images,
         notes: props.asset.notes
       })
+
+      // 设置文件列表
+      if (images && images.length > 0) {
+        fileList.value = images.map((url, index) => ({
+          name: `image-${index}`,
+          url: url,
+          uid: Date.now() + index
+        }))
+      } else {
+        fileList.value = []
+      }
+    } else if (val) {
+      // 新增时清空图片列表
+      fileList.value = []
+      form.images = []
     }
   },
   { immediate: true }
 )
-
-watch(visible, (val) => {
-  emit('update:modelValue', val)
-})
 
 async function handleSubmit() {
   if (!formRef.value) return
@@ -150,6 +264,16 @@ async function handleSubmit() {
 
 function handleClose() {
   formRef.value?.resetFields()
+  fileList.value = []
+  form.images = []
   emit('update:modelValue', false)
 }
 </script>
+
+<style scoped>
+.upload-tip {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+</style>

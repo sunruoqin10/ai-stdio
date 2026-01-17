@@ -1,8 +1,9 @@
 <template>
   <el-dialog
-    v-model="visible"
+    :model-value="props.modelValue"
     title="资产归还"
     width="500px"
+    @update:model-value="handleDialogVisibleChange"
     @close="handleClose"
   >
     <div v-if="currentAsset" class="return-dialog">
@@ -122,10 +123,14 @@ const emit = defineEmits<{
 const assetStore = useAssetStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
-const visible = ref(false)
 
 // 本地存储的资产引用（避免props.asset在异步操作中变为undefined）
 const currentAsset = ref<Asset | null>(null)
+
+// 处理对话框显示状态变化
+const handleDialogVisibleChange = (val: boolean) => {
+  emit('update:modelValue', val)
+}
 
 const form = reactive<ReturnForm>({
   actualReturnDate: new Date().toISOString().split('T')[0] || '', // 默认为今天
@@ -139,7 +144,6 @@ const rules: FormRules = {
 watch(
   () => props.modelValue,
   (val) => {
-    visible.value = val
     if (val) {
       // 对话框打开时，保存资产引用
       currentAsset.value = props.asset || null
@@ -150,10 +154,6 @@ watch(
     }
   }
 )
-
-watch(visible, (val) => {
-  emit('update:modelValue', val)
-})
 
 // 禁用今天之后的日期作为归还日期
 function disabledReturnDate(time: Date) {
