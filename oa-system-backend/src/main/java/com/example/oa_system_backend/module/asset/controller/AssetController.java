@@ -89,11 +89,11 @@ public class AssetController {
      * POST /api/assets/{id}/borrow
      */
     @PostMapping("/{id}/borrow")
-    public ApiResponse<Void> borrowAsset(
+    public ApiResponse<AssetResponse> borrowAsset(
             @PathVariable String id,
             @Valid @RequestBody AssetBorrowRequest request) {
-        assetService.borrowAsset(id, request);
-        return ApiResponse.success("借出成功", null);
+        AssetResponse response = assetService.borrowAsset(id, request);
+        return ApiResponse.success("借出成功", response);
     }
 
     /**
@@ -101,11 +101,11 @@ public class AssetController {
      * POST /api/assets/{id}/return
      */
     @PostMapping("/{id}/return")
-    public ApiResponse<Void> returnAsset(
+    public ApiResponse<AssetResponse> returnAsset(
             @PathVariable String id,
             @Valid @RequestBody AssetReturnRequest request) {
-        assetService.returnAsset(id, request);
-        return ApiResponse.success("归还成功", null);
+        AssetResponse response = assetService.returnAsset(id, request);
+        return ApiResponse.success("归还成功", response);
     }
 
     /**

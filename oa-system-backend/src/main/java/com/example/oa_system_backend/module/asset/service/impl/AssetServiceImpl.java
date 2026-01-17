@@ -251,7 +251,7 @@ public class AssetServiceImpl implements AssetService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void borrowAsset(String id, AssetBorrowRequest request) {
+    public AssetResponse borrowAsset(String id, AssetBorrowRequest request) {
         // 查询资产
         Asset asset = assetMapper.selectById(id);
         if (asset == null) {
@@ -322,11 +322,13 @@ public class AssetServiceImpl implements AssetService {
         assetBorrowRecordMapper.insert(record);
 
         log.info("资产借出成功, assetId: {}, borrowerId: {}", id, request.getBorrowerId());
+
+        return getAssetById(id);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void returnAsset(String id, AssetReturnRequest request) {
+    public AssetResponse returnAsset(String id, AssetReturnRequest request) {
         // 查询资产
         Asset asset = assetMapper.selectById(id);
         if (asset == null) {
@@ -371,6 +373,8 @@ public class AssetServiceImpl implements AssetService {
         }
 
         log.info("资产归还成功, assetId: {}", id);
+
+        return getAssetById(id);
     }
 
     @Override

@@ -105,8 +105,9 @@ export async function deleteAsset(id: string): Promise<void> {
 export async function borrowAsset(
   id: string,
   data: BorrowForm
-): Promise<void> {
-  await http.post<ApiResponse<void>>(`/assets/${id}/borrow`, data)
+): Promise<Asset> {
+  const response = await http.post<ApiResponse<Asset>>(`/assets/${id}/borrow`, data)
+  return response.data
 }
 
 /**
@@ -115,8 +116,9 @@ export async function borrowAsset(
 export async function returnAsset(
   id: string,
   data: ReturnForm
-): Promise<void> {
-  await http.post<ApiResponse<void>>(`/assets/${id}/return`, data)
+): Promise<Asset> {
+  const response = await http.post<ApiResponse<Asset>>(`/assets/${id}/return`, data)
+  return response.data
 }
 
 /**

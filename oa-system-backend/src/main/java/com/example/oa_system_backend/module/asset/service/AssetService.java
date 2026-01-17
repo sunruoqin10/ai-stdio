@@ -45,12 +45,12 @@ public interface AssetService {
     /**
      * 借用资产
      */
-    void borrowAsset(String id, AssetBorrowRequest request);
+    AssetResponse borrowAsset(String id, AssetBorrowRequest request);
 
     /**
      * 归还资产
      */
-    void returnAsset(String id, AssetReturnRequest request);
+    AssetResponse returnAsset(String id, AssetReturnRequest request);
 
     /**
      * 获取资产借用历史

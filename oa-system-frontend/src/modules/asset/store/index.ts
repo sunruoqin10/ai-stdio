@@ -159,7 +159,7 @@ export const useAssetStore = defineStore('asset', () => {
       const result = await assetApi.borrowAsset(id, data)
       const index = assets.value.findIndex(a => a.id === id)
       if (index !== -1) {
-        assets.value[index] = result.asset
+        assets.value[index] = result
       }
       return result
     } finally {
@@ -176,7 +176,7 @@ export const useAssetStore = defineStore('asset', () => {
       const result = await assetApi.returnAsset(id, data)
       const index = assets.value.findIndex(a => a.id === id)
       if (index !== -1) {
-        assets.value[index] = result.asset
+        assets.value[index] = result
       }
       return result
     } finally {
