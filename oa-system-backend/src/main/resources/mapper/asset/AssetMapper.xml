@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.oa_system_backend.module.asset.mapper.AssetMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="AssetVOMap" type="com.example.oa_system_backend.module.asset.vo.AssetVO">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="category" column="category"/>
+        <result property="categoryName" column="categoryName"/>
+        <result property="brandModel" column="brand_model"/>
+        <result property="purchaseDate" column="purchase_date"/>
+        <result property="purchasePrice" column="purchase_price"/>
+        <result property="currentValue" column="current_value"/>
+        <result property="status" column="status"/>
+        <result property="statusName" column="statusName"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="location" column="location"/>
+        <result property="borrowDate" column="borrow_date"/>
+        <result property="expectedReturnDate" column="expected_return_date"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="isOverdue" column="is_overdue"/>
+    </resultMap>
+
+    <!-- 分页查询资产视图对象 -->
+    <select id="selectPageWithDetails" resultMap="AssetVOMap">
+        SELECT
+            a.id,
+            a.name,
+            a.category,
+            CASE a.category
+                WHEN 'electronic' THEN '电子设备'
+                WHEN 'furniture' THEN '家具'
+                WHEN 'book' THEN '图书'
+                WHEN 'other' THEN '其他'
+            END AS categoryName,
+            a.brand_model,
+            a.purchase_date,
+            a.purchase_price,
+            a.current_value,
+            a.status,
+            CASE a.status
+                WHEN 'stock' THEN '在库'
+                WHEN 'in_use' THEN '使用中'
+                WHEN 'borrowed' THEN '借出'
+                WHEN 'maintenance' THEN '维护中'
+                WHEN 'scrapped' THEN '报废'
+            END AS statusName,
+            a.user_id,
+            e.name AS user_name,
+            a.location,
+            a.borrow_date,
+            a.expected_return_date,
+            a.created_at,
+            CASE
+                WHEN a.status = 'borrowed' AND a.expected_return_date &lt; CURDATE() THEN 1
+                ELSE 0
+            END AS is_overdue
+        FROM biz_asset a
+        LEFT JOIN sys_employee e ON a.user_id = e.id
+        WHERE a.is_deleted = 0
+        <if test="keyword != null and keyword != ''">
+            AND (
+                a.name LIKE CONCAT('%', #{keyword}, '%')
+                OR a.id LIKE CONCAT('%', #{keyword}, '%')
+                OR a.brand_model LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        ORDER BY a.created_at DESC
+    </select>
+
+</mapper>

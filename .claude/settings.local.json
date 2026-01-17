@@ -45,7 +45,10 @@
       "Bash(mvn mybatis-plus:help:*)",
       "Bash(git checkout:*)",
       "mcp__zai-mcp-server__extract_text_from_screenshot",
-      "Bash(javap:*)"
+      "Bash(javap:*)",
+      "Bash(powershell -Command:*)",
+      "mcp__database-server__describe_table",
+      "Bash(/mcp:*)"
     ]
   }
 }
