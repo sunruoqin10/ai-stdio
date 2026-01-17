@@ -46,7 +46,6 @@ public class EmployeeServiceImpl implements EmployeeService {
                 request.getStatus(),
                 request.getDepartmentIds(),
                 request.getPosition(),
-                request.getProbationStatus(),
                 request.getGender(),
                 request.getJoinDateStart(),
                 request.getJoinDateEnd()
@@ -144,7 +143,6 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setWorkYears(workYears);
         employee.setProbationEndDate(probationEndDate);
         employee.setStatus("active");
-        employee.setProbationStatus("probation");
         employee.setCreatedAt(LocalDateTime.now());
         employee.setUpdatedAt(LocalDateTime.now());
 
@@ -269,15 +267,10 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setStatus(request.getStatus());
         employee.setUpdatedAt(LocalDateTime.now());
 
-        // 3. 如果是离职状态，同时更新试用期状态
-        if ("resigned".equals(request.getStatus())) {
-            employee.setProbationStatus("resigned");
-        }
-
-        // 4. 保存更新
+        // 3. 保存更新
         employeeMapper.updateById(employee);
 
-        // 5. 记录操作日志
+        // 4. 记录操作日志
         String details = "更新员工状态为: " + request.getStatus();
         if (request.getReason() != null) {
             details += ", 原因: " + request.getReason();
@@ -330,9 +323,10 @@ public class EmployeeServiceImpl implements EmployeeService {
         suspendedWrapper.eq("is_deleted", 0);
         statistics.setSuspended(employeeMapper.selectCount(suspendedWrapper).intValue());
 
-        // 统计试用期人数
+        // 统计试用期人数（动态计算：试用期结束日期在今天之后，且状态为在职）
+        LocalDate today = LocalDate.now();
         QueryWrapper<Employee> probationWrapper = new QueryWrapper<>();
-        probationWrapper.eq("probation_status", "probation");
+        probationWrapper.ge("probation_end_date", today);
         probationWrapper.eq("status", "active");
         probationWrapper.eq("is_deleted", 0);
         statistics.setProbation(employeeMapper.selectCount(probationWrapper).intValue());

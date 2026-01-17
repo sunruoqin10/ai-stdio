@@ -91,13 +91,6 @@ public class Employee {
     private LocalDate joinDate;
 
     /**
-     * 试用期状态
-     * probation-试用期内, regular-已转正, resigned-已离职
-     */
-    @TableField("probation_status")
-    private String probationStatus;
-
-    /**
      * 试用期结束日期
      */
     @TableField("probation_end_date")

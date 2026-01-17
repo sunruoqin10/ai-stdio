@@ -98,9 +98,6 @@ export interface EmployeeFilter {
   /** 职位筛选 */
   position?: string
 
-  /** 试用期状态 */
-  probationStatus?: ProbationStatus
-
   /** 性别筛选 */
   gender?: Gender
 

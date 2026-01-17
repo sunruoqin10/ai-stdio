@@ -26,9 +26,6 @@
         <if test="position != null and position != ''">
             AND e.position = #{position}
         </if>
-        <if test="probationStatus != null and probationStatus != ''">
-            AND e.probation_status = #{probationStatus}
-        </if>
         <if test="gender != null and gender != ''">
             AND e.gender = #{gender}
         </if>
@@ -59,9 +56,6 @@
         </if>
         <if test="position != null and position != ''">
             AND e.position = #{position}
-        </if>
-        <if test="probationStatus != null and probationStatus != ''">
-            AND e.probation_status = #{probationStatus}
         </if>
         <if test="gender != null and gender != ''">
             AND e.gender = #{gender}
@@ -139,12 +133,11 @@
           AND is_deleted = 0
     </select>
 
-    <!-- 查询指定天数内试用期到期的员工 -->
+    <!-- 查询指定天数内试用期到期的员工（动态计算） -->
     <select id="selectProbationExpiring" resultType="com.example.oa_system_backend.module.employee.entity.Employee">
         SELECT *
         FROM sys_employee
-        WHERE probation_status = 'probation'
-          AND probation_end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL #{days} DAY)
+        WHERE probation_end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL #{days} DAY)
           AND status = 'active'
           AND is_deleted = 0
     </select>

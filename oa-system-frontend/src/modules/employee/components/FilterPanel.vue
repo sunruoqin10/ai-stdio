@@ -36,17 +36,6 @@
         />
       </el-form-item>
 
-      <el-form-item label="试用期">
-        <el-select v-model="form.probationStatus" placeholder="请选择" clearable>
-          <el-option
-            v-for="item in probationStatusOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-
       <el-form-item label="职位">
         <el-select v-model="form.position" placeholder="请选择" clearable>
           <el-option
@@ -105,7 +94,6 @@ const form = ref<EmployeeFilter>({
   keyword: '',
   status: '',
   departmentIds: [],
-  probationStatus: '',
   position: '',
   gender: '',
   entryDateRange: undefined,
@@ -117,7 +105,6 @@ const positions = ref<string[]>([])
 // 字典选项数据
 const genderOptions = ref<Array<{ label: string; value: string }>>([])
 const employeeStatusOptions = ref<Array<{ label: string; value: string }>>([])
-const probationStatusOptions = ref<Array<{ label: string; value: string }>>([])
 
 onMounted(async () => {
   // 加载部门和职位数据
@@ -133,10 +120,6 @@ onMounted(async () => {
     // 员工状态字典 (code: employee_status)
     const employeeStatusDict = await dictStore.fetchDictData('employee_status')
     employeeStatusOptions.value = employeeStatusDict.items
-
-    // 试用期状态字典 (code: probation_status)
-    const probationStatusDict = await dictStore.fetchDictData('probation_status')
-    probationStatusOptions.value = probationStatusDict.items
   } catch (error) {
     console.error('加载字典数据失败:', error)
   }
@@ -151,7 +134,6 @@ function handleReset() {
     keyword: '',
     status: '',
     departmentIds: [],
-    probationStatus: '',
     position: '',
     gender: '',
     entryDateRange: undefined,

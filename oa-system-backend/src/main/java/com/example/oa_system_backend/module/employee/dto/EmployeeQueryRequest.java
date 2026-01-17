@@ -29,11 +29,6 @@ public class EmployeeQueryRequest {
     private String position;
 
     /**
-     * 试用期状态
-     */
-    private String probationStatus;
-
-    /**
      * 性别
      */
     private String gender;

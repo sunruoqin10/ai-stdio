@@ -25,7 +25,6 @@ public interface EmployeeMapper extends BaseMapper<Employee> {
             @Param("status") String status,
             @Param("departmentIds") String departmentIds,
             @Param("position") String position,
-            @Param("probationStatus") String probationStatus,
             @Param("gender") String gender,
             @Param("joinDateStart") String joinDateStart,
             @Param("joinDateEnd") String joinDateEnd

@@ -131,9 +131,17 @@ let statusChart: ECharts | null = null
 // 统计数据
 const statistics = computed(() => store.statistics)
 
-// 试用期员工列表
+// 试用期员工列表（动态计算：试用期结束日期在今天或之后）
 const probationEmployees = computed(() => {
-  return store.employeeList.filter(emp => emp.probationStatus === 'probation')
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  return store.employeeList.filter(emp => {
+    if (!emp.probationEndDate || emp.status !== 'active') return false
+    const probationEndDate = new Date(emp.probationEndDate)
+    probationEndDate.setHours(0, 0, 0, 0)
+    return probationEndDate >= today
+  })
 })
 
 // 获取试用期剩余天数
