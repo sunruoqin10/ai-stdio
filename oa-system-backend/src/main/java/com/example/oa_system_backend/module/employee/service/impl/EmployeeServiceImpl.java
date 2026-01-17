@@ -107,10 +107,22 @@ public class EmployeeServiceImpl implements EmployeeService {
             throw new BusinessException("指定的部门不存在");
         }
 
-        // 4. 验证上级存在性(如果指定)
-        if (request.getManagerId() != null &&
-                employeeMapper.countByManagerId(request.getManagerId()) == 0) {
-            throw new BusinessException("指定的直属上级不存在或已离职");
+        // 4. 验证直属上级（如果不是第一个员工，则必须指定直属上级）
+        long employeeCount = employeeMapper.selectCount(null);
+        if (employeeCount > 0) {
+            // 不是第一个员工，必须指定直属上级
+            if (request.getManagerId() == null || request.getManagerId().trim().isEmpty()) {
+                throw new BusinessException("请指定直属上级");
+            }
+            // 验证指定的直属上级是否存在
+            if (employeeMapper.countByManagerId(request.getManagerId()) == 0) {
+                throw new BusinessException("指定的直属上级不存在或已离职");
+            }
+        } else if (request.getManagerId() != null && !request.getManagerId().trim().isEmpty()) {
+            // 是第一个员工，但如果指定了上级，也要验证其存在性
+            if (employeeMapper.countByManagerId(request.getManagerId()) == 0) {
+                throw new BusinessException("指定的直属上级不存在或已离职");
+            }
         }
 
         // 5. 生成员工编号

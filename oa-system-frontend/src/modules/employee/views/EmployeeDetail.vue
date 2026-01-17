@@ -42,7 +42,7 @@
             <div class="info-no">{{ employee?.employeeNo }}</div>
             <div class="info-name">{{ employee?.name }}</div>
             <div class="info-position">
-              <el-tag>{{ employee?.position }}</el-tag>
+              <el-tag>{{ employee?.positionLabel || employee?.position }}</el-tag>
             </div>
             <div class="info-department">
               <el-link type="primary" @click="handleGoToDepartment">

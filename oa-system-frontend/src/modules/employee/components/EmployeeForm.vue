@@ -60,18 +60,16 @@
       <el-row :gutter="16">
         <el-col :span="12">
           <el-form-item label="部门" prop="departmentId">
-            <el-select
+            <el-tree-select
               v-model="formData.departmentId"
+              :data="departments"
+              :props="{ label: 'name', value: 'id', children: 'children' }"
               placeholder="请选择部门"
+              clearable
+              filterable
+              check-strictly
               style="width: 100%"
-            >
-              <el-option
-                v-for="dept in departments"
-                :key="dept.id"
-                :label="dept.name"
-                :value="dept.id"
-              />
-            </el-select>
+            />
           </el-form-item>
         </el-col>
         <el-col :span="12">
@@ -213,7 +211,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import type { FormInstance, FormRules, UploadProps } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -236,7 +234,7 @@ const emit = defineEmits<{
 const formRef = ref<FormInstance>()
 const currentStep = ref(0)
 const submitting = ref(false)
-const departments = ref<Array<{ id: string; name: string }>>([])
+const departments = ref<Array<{ id: string; name: string; children?: any[] }>>([])
 const employees = ref<Employee[]>([])
 const uploadUrl = '/api/upload'
 
@@ -344,14 +342,15 @@ onMounted(async () => {
   }
 })
 
-function handleNext() {
+async function handleNext() {
   if (currentStep.value === 0) {
-    // 验证必填字段
-    formRef.value?.validateField(['name', 'gender', 'phone', 'email', 'departmentId', 'position', 'joinDate'], (valid) => {
-      if (valid) {
-        currentStep.value++
-      }
-    })
+    // 验证第一步的必填字段
+    try {
+      await formRef.value?.validate()
+      currentStep.value++
+    } catch {
+      // 验证失败，不做任何操作
+    }
   } else {
     currentStep.value++
   }
@@ -365,20 +364,26 @@ function handlePrev() {
 
 async function handleSubmit() {
   // 表单验证
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) {
+  try {
+    await formRef.value?.validate()
+  } catch {
     ElMessage.warning('请检查表单填写是否正确')
     return
   }
 
-  try {
-    submitting.value = true
-    emit('submit', formData)
-    // emit 是同步的，需要等待父组件处理完成后再重置状态
-    // 但由于父组件的 handleSubmit 是异步的，我们需要通过其他方式处理
-  } catch {
-    submitting.value = false
+  // 手动验证直属上级
+  if (employees.value.length > 0 && (!formData.managerId || formData.managerId === '')) {
+    ElMessage.warning('请选择直属上级')
+    return
   }
+
+  submitting.value = true
+  emit('submit', formData)
+
+  // 使用 nextTick 确保在下一个事件循环中重置状态
+  // 这样父组件的异步处理已经开始了
+  await nextTick()
+  submitting.value = false
 }
 
 function handleCancel() {
