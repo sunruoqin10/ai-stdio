@@ -53,7 +53,7 @@
       <el-table-column label="使用人" width="120">
         <template #default="{ row }">
           <div v-if="row.userName" class="user-info">
-            <el-avatar :src="row.userAvatar" :size="24" />
+            <el-avatar :src="getImageUrl(row.userAvatar)" :size="24" />
             <span>{{ row.userName }}</span>
           </div>
           <span v-else>-</span>
