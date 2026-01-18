@@ -29,7 +29,7 @@ public class MyBatisPlusConfig {
         // true：返回首页；false：继续请求
         paginationInterceptor.setOverflow(false);
         // 设置单页分页条数限制（可选，默认无限制）
-        paginationInterceptor.setMaxLimit(500L);
+        paginationInterceptor.setMaxLimit(10000L);
 
         interceptor.addInnerInterceptor(paginationInterceptor);
 

@@ -36,8 +36,13 @@ public class DepartmentServiceImpl implements DepartmentService {
 
     @Override
     public IPage<DepartmentVO> getDepartmentList(DepartmentQueryRequest request) {
+        log.info("查询部门列表, keyword={}, status={}, level={}, leaderId={}, page={}, pageSize={}",
+                request.getKeyword(), request.getStatus(), request.getLevel(),
+                request.getLeaderId(), request.getPage(), request.getPageSize());
         Page<DepartmentVO> page = new Page<>(request.getPage(), request.getPageSize());
-        return departmentMapper.selectPageByQuery(page, request);
+        IPage<DepartmentVO> result = departmentMapper.selectPageByQuery(page, request);
+        log.info("查询部门列表结果, total={}, records={}", result.getTotal(), result.getRecords().size());
+        return result;
     }
 
     @Override

@@ -8,6 +8,7 @@ import com.example.oa_system_backend.module.department.service.DepartmentService
 import com.example.oa_system_backend.module.department.vo.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.List;
  * @author OA System
  * @since 2026-01-15
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/departments")
 @RequiredArgsConstructor
@@ -31,6 +33,9 @@ public class DepartmentController {
      */
     @GetMapping
     public ApiResponse<IPage<DepartmentVO>> getDepartmentList(DepartmentQueryRequest request) {
+        log.info("Controller接收到请求参数: keyword={}, status={}, level={}, leaderId={}, page={}, pageSize={}",
+                request.getKeyword(), request.getStatus(), request.getLevel(),
+                request.getLeaderId(), request.getPage(), request.getPageSize());
         IPage<DepartmentVO> result = departmentService.getDepartmentList(request);
         return ApiResponse.success(result);
     }

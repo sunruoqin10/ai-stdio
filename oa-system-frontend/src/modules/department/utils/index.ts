@@ -31,6 +31,7 @@ export function buildTree<T extends { id: string; parentId: string | null }>(
 
   const map = new Map<string, any>()
   const roots: any[] = []
+  const orphanedItems: any[] = []
 
   // 先建立映射
   flatList.forEach(item => {
@@ -46,9 +47,18 @@ export function buildTree<T extends { id: string; parentId: string | null }>(
       const parent = map.get(item.parentId)
       if (parent) {
         parent[childrenKey].push(node)
+      } else {
+        // 父节点不存在（可能是筛选导致的），作为根节点处理
+        console.warn('buildTree - 父节点不存在，将作为根节点处理:', item.id, 'parentId:', item.parentId)
+        orphanedItems.push(node)
+        roots.push(node)
       }
     }
   })
+
+  if (orphanedItems.length > 0) {
+    console.warn('buildTree - 发现' + orphanedItems.length + '个孤立项（父节点不在结果中）')
+  }
 
   return roots
 }

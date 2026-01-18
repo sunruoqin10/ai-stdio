@@ -60,14 +60,19 @@ export const useDepartmentStore = defineStore('department', () => {
         return data
       } else {
         // 调用分页API，获取所有数据
+        console.log('loadList - calling api.getList with filter:', filter.value)
         const data = await api.getList({
           ...filter.value,
           page,
           pageSize
         })
+        console.log('loadList - received data:', data)
+        console.log('loadList - data.list length:', data.list.length)
 
         list.value = data.list
+        console.log('loadList - building tree from list:', data.list)
         tree.value = buildTree(data.list) as Department[]
+        console.log('loadList - built tree:', tree.value)
         return data
       }
     } finally {

@@ -36,6 +36,7 @@ export async function getList(
   if (params.leaderId) queryParams.leaderId = params.leaderId
   if (params.level) queryParams.level = params.level
 
+  console.log('getList - queryParams:', queryParams)
   const response = await http.get<{
     code: number
     message: string
@@ -47,13 +48,18 @@ export async function getList(
     }
   }>('/departments', { params: queryParams })
 
+  console.log('getList - response:', response)
+  console.log('getList - response.data:', response.data)
+
   // 转换MyBatis Plus的分页格式为前端格式
-  return {
+  const result = {
     list: response.data.records,
     total: response.data.total,
     page: response.data.current,
     pageSize: response.data.size,
   }
+  console.log('getList - result:', result)
+  return result
 }
 
 /**

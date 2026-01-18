@@ -13,7 +13,8 @@
           v-model="filterForm.keyword"
           placeholder="搜索部门名称/简称"
           clearable
-          @change="handleFilterChange"
+          @input="handleKeywordInput"
+          @clear="handleFilterChange"
         >
           <template #prefix>
             <el-icon><Search /></el-icon>
@@ -79,6 +80,22 @@ import type { DepartmentFilter } from '../types'
 import { useDepartmentStore } from '../store'
 import { getDictList } from '../api'
 
+// ==================== 防抖函数 ====================
+
+let debounceTimer: number | null = null
+
+function debounce(func: Function, delay: number) {
+  return function(this: any, ...args: any[]) {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer)
+    }
+    debounceTimer = setTimeout(() => {
+      func.apply(this, args)
+      debounceTimer = null
+    }, delay)
+  }
+}
+
 // ==================== Emits ====================
 
 const emit = defineEmits<{
@@ -93,7 +110,7 @@ const departmentStore = useDepartmentStore()
 // ==================== 响应式数据 ====================
 
 const filterForm = reactive<DepartmentFilter>({
-  keyword: '',
+  keyword: undefined,
   status: undefined,
   level: undefined,
   leaderId: undefined
@@ -131,9 +148,18 @@ async function loadDictData() {
 }
 
 /**
+ * 处理关键词输入（带防抖）
+ */
+const handleKeywordInput = debounce(() => {
+  console.log('handleKeywordInput - keyword:', filterForm.keyword)
+  handleFilterChange()
+}, 500)
+
+/**
  * 处理筛选条件变化
  */
 function handleFilterChange() {
+  console.log('handleFilterChange - filterForm:', filterForm)
   emit('filter', { ...filterForm })
 }
 
@@ -141,10 +167,11 @@ function handleFilterChange() {
  * 重置筛选条件
  */
 function handleReset() {
-  filterForm.keyword = ''
+  filterForm.keyword = undefined
   filterForm.status = undefined
   filterForm.level = undefined
   filterForm.leaderId = undefined
+  console.log('handleReset - filterForm:', filterForm)
   emit('reset')
 }
 

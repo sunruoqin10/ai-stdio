@@ -219,6 +219,12 @@ const currentDepartment = ref<Department | null>(null)
 const currentDepartmentId = ref<string | null>(null)
 
 const tableHeight = ref(600)
+const hasFilter = computed(() => {
+  const { keyword, status, level, leaderId } = departmentStore.filter
+  const result = !!(keyword && keyword.trim() !== '' || status || level || leaderId)
+  console.log('hasFilter - computed:', { keyword, status, level, leaderId, result })
+  return result
+})
 const displayList = computed(() => {
   return activeTab.value === 'list' ? departmentStore.tree : []
 })
@@ -230,7 +236,15 @@ const displayList = computed(() => {
  */
 async function loadDepartments() {
   try {
-    await departmentStore.loadList('tree')
+    if (hasFilter.value) {
+      // 有筛选条件时，使用分页API（支持筛选），获取所有数据
+      console.log('loadDepartments - hasFilter=true, filter:', departmentStore.filter)
+      await departmentStore.loadList('flat', 1, 10000)
+    } else {
+      // 无筛选条件时，使用树形API（获取完整树形结构）
+      console.log('loadDepartments - hasFilter=false')
+      await departmentStore.loadList('tree')
+    }
     console.log('loadDepartments - departmentStore.list:', departmentStore.list)
     console.log('loadDepartments - departmentStore.tree:', departmentStore.tree)
   } catch (error: any) {
@@ -242,7 +256,9 @@ async function loadDepartments() {
  * 处理筛选
  */
 function handleFilter(filter: DepartmentFilter) {
+  console.log('handleFilter - received filter:', filter)
   departmentStore.setFilter(filter)
+  console.log('handleFilter - after setFilter, departmentStore.filter:', departmentStore.filter)
   loadDepartments()
 }
 
