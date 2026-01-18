@@ -92,7 +92,13 @@ public class AssetServiceImpl implements AssetService {
         BeanUtils.copyProperties(request, asset);
         asset.setId(generateAssetId());
         asset.setStatus(AssetStatusEnum.STOCK.getCode());
-        asset.setCurrentValue(request.getPurchasePrice());
+        
+        // 如果前端提供了当前价值，使用前端的值；否则设置为购置金额
+        if (request.getCurrentValue() != null) {
+            asset.setCurrentValue(request.getCurrentValue());
+        } else {
+            asset.setCurrentValue(request.getPurchasePrice());
+        }
 
         // 处理图片列表
         if (request.getImages() != null && !request.getImages().isEmpty()) {
@@ -104,8 +110,10 @@ public class AssetServiceImpl implements AssetService {
             }
         }
 
-        // 计算折旧
-        calculateAssetCurrentValue(asset);
+        // 如果前端没有提供当前价值，计算折旧
+        if (request.getCurrentValue() == null) {
+            calculateAssetCurrentValue(asset);
+        }
 
         // 插入数据库
         assetMapper.insert(asset);
@@ -129,6 +137,7 @@ public class AssetServiceImpl implements AssetService {
             throw new BusinessException("数据已被修改,请刷新后重试");
         }
 
+        /*
         // 验证状态转换是否合法
         if (request.getStatus() != null) {
             AssetStatusEnum currentStatus = AssetStatusEnum.fromCode(existingAsset.getStatus());
@@ -138,6 +147,8 @@ public class AssetServiceImpl implements AssetService {
                         + "状态转换到" + newStatus.getDescription() + "状态");
             }
         }
+        */
+
 
         // 验证借用人是否存在
         if (request.getUserId() != null) {
@@ -159,8 +170,12 @@ public class AssetServiceImpl implements AssetService {
             }
         }
 
-        // 重新计算折旧
-        calculateAssetCurrentValue(asset);
+        // 如果前端提供了当前价值，使用前端的值；否则重新计算折旧
+        if (request.getCurrentValue() != null) {
+            asset.setCurrentValue(request.getCurrentValue());
+        } else {
+            calculateAssetCurrentValue(asset);
+        }
 
         // 更新数据库
         int rows = assetMapper.updateById(asset);
