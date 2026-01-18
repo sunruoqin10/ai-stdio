@@ -73,6 +73,7 @@ export interface AssetForm {
   id?: string
   name?: string
   category?: AssetCategory
+  status?: AssetStatus
   brandModel?: string
   purchaseDate?: string
   purchasePrice?: number

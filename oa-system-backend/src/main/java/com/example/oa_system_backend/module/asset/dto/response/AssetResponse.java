@@ -152,4 +152,9 @@ public class AssetResponse {
      * 持有年限
      */
     private Integer ownedYears;
+
+    /**
+     * 乐观锁版本号
+     */
+    private Integer version;
 }

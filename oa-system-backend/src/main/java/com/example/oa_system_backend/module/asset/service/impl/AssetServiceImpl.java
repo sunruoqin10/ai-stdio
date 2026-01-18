@@ -548,6 +548,9 @@ public class AssetServiceImpl implements AssetService {
         AssetResponse response = new AssetResponse();
         BeanUtils.copyProperties(asset, response);
 
+        // 手动设置版本号（BeanUtils.copyProperties可能不会复制@Version注解字段）
+        response.setVersion(asset.getVersion());
+
         // 设置枚举描述
         response.setCategoryName(AssetCategoryEnum.getDescriptionByCode(asset.getCategory()));
         response.setStatusName(AssetStatusEnum.getDescriptionByCode(asset.getStatus()));

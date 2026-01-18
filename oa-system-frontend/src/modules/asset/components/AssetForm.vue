@@ -20,6 +20,17 @@
         </el-select>
       </el-form-item>
 
+      <el-form-item label="资产状态" prop="status">
+        <el-select v-model="form.status" placeholder="请选择资产状态" style="width: 100%">
+          <el-option
+            v-for="option in statusOptions"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
+        </el-select>
+      </el-form-item>
+
       <el-form-item label="品牌/型号" prop="brandModel">
         <el-input v-model="form.brandModel" placeholder="请输入品牌/型号" />
       </el-form-item>
@@ -79,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules, UploadUserFile, UploadRequestOptions } from 'element-plus'
@@ -87,6 +98,7 @@ import { useAssetStore } from '../store'
 import { uploadFile } from '../api'
 import { getImageUrl } from '../utils'
 import type { Asset, AssetForm } from '../types'
+import { useDictStore } from '@/modules/dict/store'
 
 interface Props {
   modelValue: boolean
@@ -103,8 +115,18 @@ const emit = defineEmits<{
 }>()
 
 const assetStore = useAssetStore()
+const dictStore = useDictStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
+
+const statusOptions = computed(() => {
+  return dictStore.dictItems
+    .filter(item => item.dictTypeCode === 'asset_status' && item.status === 'enabled')
+    .map(item => ({
+      label: item.label,
+      value: item.value
+    }))
+})
 
 // 图片上传相关
 const fileList = ref<UploadUserFile[]>([])
@@ -117,11 +139,20 @@ const handleDialogVisibleChange = (val: boolean) => {
   emit('update:modelValue', val)
 }
 
+onMounted(async () => {
+  try {
+    await dictStore.fetchDictItems({ dictTypeCode: 'asset_status', page: 1, pageSize: 100 })
+  } catch (error) {
+    console.error('加载资产状态字典失败:', error)
+  }
+})
+
 const isEdit = computed(() => !!props.asset)
 
 const form = reactive<AssetForm>({
   name: '',
   category: 'electronic',
+  status: 'stock',
   brandModel: '',
   purchaseDate: '',
   purchasePrice: 0,
@@ -214,6 +245,7 @@ watch(
         version: props.asset.version,
         name: props.asset.name,
         category: props.asset.category,
+        status: props.asset.status,
         brandModel: props.asset.brandModel,
         purchaseDate: props.asset.purchaseDate.split('T')[0],
         purchasePrice: props.asset.purchasePrice,

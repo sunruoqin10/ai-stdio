@@ -107,4 +107,9 @@ public class AssetVO {
      * 是否超期
      */
     private Boolean isOverdue;
+
+    /**
+     * 乐观锁版本号
+     */
+    private Integer version;
 }
