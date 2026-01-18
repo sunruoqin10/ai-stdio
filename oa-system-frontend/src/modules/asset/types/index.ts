@@ -77,6 +77,7 @@ export interface AssetForm {
   brandModel?: string
   purchaseDate?: string
   purchasePrice?: number
+  currentValue?: number
   location?: string
   images?: string[]
   notes?: string

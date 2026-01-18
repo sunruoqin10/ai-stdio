@@ -56,6 +56,11 @@ public class AssetUpdateRequest {
     private BigDecimal purchasePrice;
 
     /**
+     * 当前价值
+     */
+    private BigDecimal currentValue;
+
+    /**
      * 资产状态
      */
     @Pattern(regexp = "^(stock|in_use|borrowed|maintenance|scrapped)$",

@@ -17,6 +17,56 @@
       </div>
     </div>
 
+        <!-- 统计卡片 -->
+    <div class="stats-cards">
+      <el-row :gutter="16">
+        <el-col :span="6">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <el-icon :size="32"><OfficeBuilding /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">总部门数</div>
+              <div class="stat-value">{{ departmentStore.totalCount }}</div>
+            </div>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <el-icon :size="32"><FolderOpened /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">一级部门</div>
+              <div class="stat-value">{{ departmentStore.level1Count }}</div>
+            </div>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <el-icon :size="32"><Histogram /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">最大层级</div>
+              <div class="stat-value">{{ departmentStore.maxLevel }}</div>
+            </div>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <el-icon :size="32"><User /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label">有负责人</div>
+              <div class="stat-value">{{ departmentStore.withLeaderCount }}</div>
+            </div>
+          </div>
+        </el-col>
+      </el-row>
+    </div>
+    
     <!-- Tab切换 -->
     <el-tabs v-model="activeTab" class="page-tabs">
       <el-tab-pane label="列表视图" name="list">
@@ -124,56 +174,6 @@
         </div>
       </el-tab-pane>
     </el-tabs>
-
-    <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <el-row :gutter="16">
-        <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-icon">
-              <el-icon :size="32"><OfficeBuilding /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">总部门数</div>
-              <div class="stat-value">{{ departmentStore.totalCount }}</div>
-            </div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-icon">
-              <el-icon :size="32"><FolderOpened /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">一级部门</div>
-              <div class="stat-value">{{ departmentStore.level1Count }}</div>
-            </div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-icon">
-              <el-icon :size="32"><Histogram /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">最大层级</div>
-              <div class="stat-value">{{ departmentStore.maxLevel }}</div>
-            </div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-icon">
-              <el-icon :size="32"><User /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">有负责人</div>
-              <div class="stat-value">{{ departmentStore.withLeaderCount }}</div>
-            </div>
-          </div>
-        </el-col>
-      </el-row>
-    </div>
 
     <!-- 部门表单对话框 -->
     <DepartmentForm

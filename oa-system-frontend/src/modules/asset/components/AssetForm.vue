@@ -50,6 +50,10 @@
         <el-input-number v-model="form.purchasePrice" :min="0" :precision="2" style="width: 100%" />
       </el-form-item>
 
+      <el-form-item label="现值" prop="currentValue">
+        <el-input-number v-model="form.currentValue" :min="0" :precision="2" style="width: 100%" />
+      </el-form-item>
+
       <el-form-item label="存放位置" prop="location">
         <el-input v-model="form.location" placeholder="请输入存放位置" />
       </el-form-item>
@@ -163,6 +167,7 @@ const form = reactive<AssetForm>({
   brandModel: '',
   purchaseDate: '',
   purchasePrice: 0,
+  currentValue: 0,
   location: '',
   images: [],
   notes: ''
@@ -256,6 +261,7 @@ watch(
         brandModel: props.asset.brandModel,
         purchaseDate: props.asset.purchaseDate.split('T')[0],
         purchasePrice: props.asset.purchasePrice,
+        currentValue: props.asset.currentValue,
         location: props.asset.location,
         images: images,
         notes: props.asset.notes

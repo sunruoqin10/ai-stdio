@@ -50,6 +50,11 @@ public class AssetCreateRequest {
     private BigDecimal purchasePrice;
 
     /**
+     * 当前价值
+     */
+    private BigDecimal currentValue;
+
+    /**
      * 使用人ID (可选)
      */
     private String userId;
