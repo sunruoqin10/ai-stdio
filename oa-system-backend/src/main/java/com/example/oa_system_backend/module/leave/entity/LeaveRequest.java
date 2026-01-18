@@ -38,6 +38,9 @@ public class LeaveRequest {
     @TableField("current_approval_level")
     private Integer currentApprovalLevel;
 
+    @Version
+    private Integer version;
+
     @TableField("created_at")
     private LocalDateTime createdAt;
 

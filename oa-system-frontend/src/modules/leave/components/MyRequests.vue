@@ -173,6 +173,7 @@
     <LeaveDetail
       v-model="showDetail"
       :request-id="currentRequestId"
+      @edit="handleEditFromDetail"
     />
 
     <!-- 编辑对话框 -->
@@ -245,7 +246,19 @@ function handleView(request: LeaveRequest) {
   showDetail.value = true
 }
 
-function handleEdit(request: LeaveRequest) {
+async function handleEdit(request: LeaveRequest) {
+  // 从列表点击编辑时，先加载完整数据（包含 version 字段）
+  try {
+    const fullRequest = await leaveStore.loadRequest(request.id)
+    currentRequest.value = fullRequest
+    showForm.value = true
+  } catch (error: any) {
+    ElMessage.error(error.message || '加载数据失败')
+  }
+}
+
+function handleEditFromDetail(request: LeaveRequest) {
+  showDetail.value = false
   currentRequest.value = request
   showForm.value = true
 }
@@ -294,9 +307,15 @@ async function handleDelete(request: LeaveRequest) {
   }
 }
 
-function handleResubmit(request: LeaveRequest) {
-  currentRequest.value = request
-  showForm.value = true
+async function handleResubmit(request: LeaveRequest) {
+  // 重新提交时，先加载完整数据（包含 version 字段）
+  try {
+    const fullRequest = await leaveStore.loadRequest(request.id)
+    currentRequest.value = fullRequest
+    showForm.value = true
+  } catch (error: any) {
+    ElMessage.error(error.message || '加载数据失败')
+  }
 }
 
 function handleFormSuccess() {

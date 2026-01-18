@@ -57,6 +57,8 @@ public class LeaveDetailVO {
 
     private Integer totalApprovalLevels;
 
+    private Integer version;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

@@ -42,6 +42,7 @@ export interface LeaveRequest {
   currentApprovalLevel: number      // 当前审批层级(0/1/2/3)
   totalApprovalLevels?: number      // 总审批层级
   approvers?: ApprovalRecord[]      // 审批记录(查询时包含)
+  version: number                   // 版本号(乐观锁)
   createdAt: string                 // 创建时间
   updatedAt: string                 // 更新时间
 }
@@ -68,6 +69,7 @@ export interface LeaveForm {
   duration?: number
   reason: string
   attachments?: string[]
+  version?: number                  // 版本号(编辑时需要)
 }
 
 /**

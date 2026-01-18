@@ -190,7 +190,8 @@ const form = reactive<LeaveForm>({
   endTime: '',
   duration: 0,
   reason: '',
-  attachments: []
+  attachments: [],
+  version: undefined
 })
 
 const rules: FormRules = {
@@ -231,7 +232,8 @@ watch(
         endTime: props.leaveRequest.endTime,
         duration: props.leaveRequest.duration,
         reason: props.leaveRequest.reason,
-        attachments: props.leaveRequest.attachments || []
+        attachments: props.leaveRequest.attachments || [],
+        version: props.leaveRequest.version
       })
       // TODO: 填充附件列表
     } else if (val) {
@@ -271,7 +273,17 @@ async function handleSaveDraft() {
     loading.value = true
     try {
       if (isEdit.value && props.leaveRequest) {
-        await leaveStore.updateRequest(props.leaveRequest.id, form)
+        // 编辑模式：只传递需要更新的字段，确保包含 version
+        const updateData = {
+          type: form.type,
+          startTime: form.startTime,
+          endTime: form.endTime,
+          duration: form.duration,
+          reason: form.reason,
+          attachments: form.attachments,
+          version: form.version
+        }
+        await leaveStore.updateRequest(props.leaveRequest.id, updateData)
         ElMessage.success('保存成功')
       } else {
         await leaveStore.createRequest(form)
@@ -304,9 +316,22 @@ async function handleSubmit() {
 
     loading.value = true
     try {
-      const request = isEdit.value && props.leaveRequest
-        ? await leaveStore.updateRequest(props.leaveRequest.id, form)
-        : await leaveStore.createRequest(form)
+      let request: LeaveRequest
+      if (isEdit.value && props.leaveRequest) {
+        // 编辑模式：只传递需要更新的字段，确保包含 version
+        const updateData = {
+          type: form.type,
+          startTime: form.startTime,
+          endTime: form.endTime,
+          duration: form.duration,
+          reason: form.reason,
+          attachments: form.attachments,
+          version: form.version
+        }
+        request = await leaveStore.updateRequest(props.leaveRequest.id, updateData)
+      } else {
+        request = await leaveStore.createRequest(form)
+      }
 
       // 提交申请
       await leaveStore.submitRequest(request.id)
@@ -357,7 +382,8 @@ function resetForm() {
     endTime: '',
     duration: 0,
     reason: '',
-    attachments: []
+    attachments: [],
+    version: undefined
   })
   fileList.value = []
 }

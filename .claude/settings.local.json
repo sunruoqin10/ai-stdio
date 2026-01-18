@@ -48,7 +48,9 @@
       "Bash(javap:*)",
       "Bash(powershell -Command:*)",
       "mcp__database-server__describe_table",
-      "Bash(/mcp:*)"
+      "Bash(/mcp:*)",
+      "mcp__database-server__list_insights",
+      "Bash(mvn:*)"
     ]
   }
 }
