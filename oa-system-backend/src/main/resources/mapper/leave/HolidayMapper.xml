@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.oa_system_backend.module.leave.mapper.HolidayMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.oa_system_backend.module.leave.entity.Holiday">
+        <id column="id" property="id"/>
+        <result column="date" property="date"/>
+        <result column="name" property="name"/>
+        <result column="type" property="type"/>
+        <result column="year" property="year"/>
+        <result column="is_workday" property="isWorkday"/>
+    </resultMap>
+
+    <resultMap id="HolidayVOMap" type="com.example.oa_system_backend.module.leave.vo.HolidayVO"
+               extends="BaseResultMap">
+        <result column="type_name" property="typeName"/>
+        <result column="is_workday_name" property="isWorkdayName"/>
+    </resultMap>
+
+    <select id="selectByCondition" resultMap="HolidayVOMap">
+        SELECT
+            h.*,
+            CASE h.type
+                WHEN 'national' THEN '法定节假日'
+                WHEN 'company' THEN '公司节假日'
+                ELSE h.type
+            END AS type_name,
+            CASE h.is_workday
+                WHEN 0 THEN '否'
+                WHEN 1 THEN '是'
+                ELSE NULL
+            END AS is_workday_name
+        FROM approval_holiday h
+        WHERE 1=1
+        <if test="year != null">
+            AND h.year = #{year}
+        </if>
+        <if test="type != null and type != ''">
+            AND h.type = #{type}
+        </if>
+        <if test="startDate != null">
+            AND h.date >= #{startDate}
+        </if>
+        <if test="endDate != null">
+            AND h.date &lt;= #{endDate}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND h.name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        ORDER BY h.date
+    </select>
+
+    <select id="selectByDate" resultMap="HolidayVOMap">
+        SELECT
+            h.*,
+            CASE h.type
+                WHEN 'national' THEN '法定节假日'
+                WHEN 'company' THEN '公司节假日'
+                ELSE h.type
+            END AS type_name,
+            CASE h.is_workday
+                WHEN 0 THEN '否'
+                WHEN 1 THEN '是'
+                ELSE NULL
+            END AS is_workday_name
+        FROM approval_holiday h
+        WHERE h.date = #{date}
+    </select>
+
+    <select id="selectByYear" resultMap="HolidayVOMap">
+        SELECT
+            h.*,
+            CASE h.type
+                WHEN 'national' THEN '法定节假日'
+                WHEN 'company' THEN '公司节假日'
+                ELSE h.type
+            END AS type_name,
+            CASE h.is_workday
+                WHEN 0 THEN '否'
+                WHEN 1 THEN '是'
+                ELSE NULL
+            END AS is_workday_name
+        FROM approval_holiday h
+        WHERE h.year = #{year}
+        ORDER BY h.date
+    </select>
+
+    <select id="countByDateRange" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM approval_holiday
+        WHERE date >= #{startDate} AND date &lt;= #{endDate}
+    </select>
+
+</mapper>

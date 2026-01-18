@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.oa_system_backend.module.leave.mapper.LeaveBalanceMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.oa_system_backend.module.leave.entity.LeaveBalance">
+        <id column="id" property="id"/>
+        <result column="employee_id" property="employeeId"/>
+        <result column="year" property="year"/>
+        <result column="annual_total" property="annualTotal"/>
+        <result column="annual_used" property="annualUsed"/>
+        <result column="annual_remaining" property="annualRemaining"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <resultMap id="BalanceWithInfoMap" type="com.example.oa_system_backend.module.leave.vo.LeaveBalanceVO"
+               extends="BaseResultMap">
+        <result column="employee_name" property="employeeName"/>
+        <result column="employee_avatar" property="employeeAvatar"/>
+        <result column="department_id" property="departmentId"/>
+        <result column="department_name" property="departmentName"/>
+    </resultMap>
+
+    <select id="selectByEmployeeIdAndYear" resultMap="BaseResultMap">
+        SELECT * FROM approval_leave_balance
+        WHERE employee_id = #{employeeId} AND year = #{year}
+    </select>
+
+    <select id="selectByCondition" resultMap="BalanceWithInfoMap">
+        SELECT
+            b.*,
+            e.name AS employee_name,
+            e.avatar AS employee_avatar,
+            d.id AS department_id,
+            d.name AS department_name
+        FROM approval_leave_balance b
+        LEFT JOIN sys_employee e ON b.employee_id = e.id
+        LEFT JOIN sys_department d ON e.department_id = d.id
+        WHERE 1=1
+        <if test="employeeId != null and employeeId != ''">
+            AND b.employee_id = #{employeeId}
+        </if>
+        <if test="year != null">
+            AND b.year = #{year}
+        </if>
+        ORDER BY b.year DESC, b.employee_id
+    </select>
+
+    <select id="selectSummaryByYear" resultType="java.util.HashMap">
+        SELECT
+            COUNT(*) AS total,
+            SUM(annual_total) AS total_quota,
+            SUM(annual_used) AS total_used,
+            SUM(annual_remaining) AS total_remaining
+        FROM approval_leave_balance
+        WHERE year = #{year}
+    </select>
+
+</mapper>

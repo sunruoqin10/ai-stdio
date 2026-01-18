@@ -40,9 +40,22 @@ export interface LeaveRequest {
   attachments?: string[]            // 附件URL数组
   status: LeaveStatus               // 状态
   currentApprovalLevel: number      // 当前审批层级(0/1/2/3)
+  totalApprovalLevels?: number      // 总审批层级
   approvers?: ApprovalRecord[]      // 审批记录(查询时包含)
   createdAt: string                 // 创建时间
   updatedAt: string                 // 更新时间
+}
+
+/**
+ * 请假申请详情（包含更多信息）
+ */
+export interface LeaveDetail extends LeaveRequest {
+  applicantPosition?: string         // 申请人职位
+  applicantPhone?: string            // 申请人电话
+  applicantEmail?: string            // 申请人邮箱
+  applicantAvatar?: string           // 申请人头像
+  managerName?: string               // 直属主管姓名
+  approvals?: ApprovalRecord[]      // 审批记录
 }
 
 /**

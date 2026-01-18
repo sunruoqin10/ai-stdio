@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.oa_system_backend.module.leave.mapper.LeaveRequestMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.oa_system_backend.module.leave.entity.LeaveRequest">
+        <id column="id" property="id"/>
+        <result column="applicant_id" property="applicantId"/>
+        <result column="department_id" property="departmentId"/>
+        <result column="type" property="type"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="duration" property="duration"/>
+        <result column="reason" property="reason"/>
+        <result column="attachments" property="attachments" typeHandler="com.example.oa_system_backend.common.handler.JsonListTypeHandler"/>
+        <result column="status" property="status"/>
+        <result column="current_approval_level" property="currentApprovalLevel"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <resultMap id="LeaveRequestVOMap" type="com.example.oa_system_backend.module.leave.vo.LeaveRequestVO"
+               extends="BaseResultMap">
+        <result column="applicant_name" property="applicantName"/>
+        <result column="applicant_position" property="applicantPosition"/>
+        <result column="applicant_avatar" property="applicantAvatar"/>
+        <result column="department_name" property="departmentName"/>
+    </resultMap>
+
+    <select id="selectPageByCondition" resultMap="LeaveRequestVOMap">
+        SELECT
+            r.*,
+            e.name AS applicant_name,
+            e.position AS applicant_position,
+            e.avatar AS applicant_avatar,
+            d.name AS department_name
+        FROM approval_leave_request r
+        LEFT JOIN sys_employee e ON r.applicant_id = e.id
+        LEFT JOIN sys_department d ON r.department_id = d.id
+        WHERE 1=1
+        <if test="query.applicantId != null and query.applicantId != ''">
+            AND r.applicant_id = #{query.applicantId}
+        </if>
+        <if test="query.departmentId != null and query.departmentId != ''">
+            AND r.department_id = #{query.departmentId}
+        </if>
+        <if test="query.type != null and query.type != ''">
+            AND r.type = #{query.type}
+        </if>
+        <if test="query.status != null and query.status != ''">
+            AND r.status = #{query.status}
+        </if>
+        <if test="query.startTimeStart != null">
+            AND r.start_time >= #{query.startTimeStart}
+        </if>
+        <if test="query.startTimeEnd != null">
+            AND r.start_time &lt;= #{query.startTimeEnd}
+        </if>
+        <if test="query.endTimeStart != null">
+            AND r.end_time >= #{query.endTimeStart}
+        </if>
+        <if test="query.endTimeEnd != null">
+            AND r.end_time &lt;= #{query.endTimeEnd}
+        </if>
+        <if test="query.keyword != null and query.keyword != ''">
+            AND (e.name LIKE CONCAT('%', #{query.keyword}, '%')
+            OR r.reason LIKE CONCAT('%', #{query.keyword}, '%'))
+        </if>
+        ORDER BY ${query.sortBy} ${query.sortOrder}
+    </select>
+
+    <select id="countTimeConflict" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM approval_leave_request
+        WHERE applicant_id = #{applicantId}
+          AND status IN ('pending', 'approving', 'approved')
+          AND (
+              (start_time &lt;= #{startTime} AND end_time > #{startTime})
+              OR (start_time &lt; #{endTime} AND end_time >= #{endTime})
+              OR (start_time >= #{startTime} AND end_time &lt;= #{endTime})
+          )
+        <if test="excludeId != null and excludeId != ''">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <select id="selectStatisticsByType" resultType="java.util.HashMap">
+        SELECT
+            type,
+            COUNT(*) AS count,
+            SUM(duration) AS total_duration
+        FROM approval_leave_request
+        WHERE applicant_id = #{applicantId}
+          AND status = 'approved'
+          AND YEAR(start_time) = #{year}
+        GROUP BY type
+    </select>
+
+    <select id="selectStatisticsByStatus" resultType="java.util.HashMap">
+        SELECT
+            status,
+            COUNT(*) AS count
+        FROM approval_leave_request
+        WHERE applicant_id = #{applicantId}
+          AND YEAR(start_time) = #{year}
+        GROUP BY status
+    </select>
+
+    <select id="selectStatisticsByMonth" resultType="java.util.HashMap">
+        SELECT
+            DATE_FORMAT(start_time, '%Y-%m') AS month,
+            COUNT(*) AS count,
+            SUM(duration) AS duration
+        FROM approval_leave_request
+        WHERE applicant_id = #{applicantId}
+          AND status = 'approved'
+          AND YEAR(start_time) = #{year}
+        GROUP BY DATE_FORMAT(start_time, '%Y-%m')
+        ORDER BY month
+    </select>
+
+</mapper>

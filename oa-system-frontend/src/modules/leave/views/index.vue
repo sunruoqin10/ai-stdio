@@ -86,24 +86,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { Plus, Document, Clock, SuccessFilled, InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useLeaveStore } from '../store'
+import { useAuthStore } from '@/modules/auth/store'
 import MyRequests from '../components/MyRequests.vue'
 import ApprovalManagement from '../components/ApprovalManagement.vue'
 import LeaveRequestForm from '../components/LeaveRequestForm.vue'
 
 const leaveStore = useLeaveStore()
+const authStore = useAuthStore()
 
 const activeTab = ref('my-requests')
 const showForm = ref(false)
+
+// 获取当前登录用户ID
+const currentUserId = computed(() => authStore.userInfo?.id)
 
 onMounted(async () => {
   await loadData()
 })
 
 async function loadData() {
+  if (!currentUserId.value) {
+    ElMessage.warning('请先登录')
+    return
+  }
+
   try {
     // 加载我的申请列表
     await leaveStore.loadMyRequests()
@@ -112,7 +122,7 @@ async function loadData() {
     await leaveStore.loadPendingApprovals()
 
     // 加载年假余额
-    await leaveStore.loadLeaveBalance('EMP000001', new Date().getFullYear())
+    await leaveStore.loadLeaveBalance(currentUserId.value, new Date().getFullYear())
   } catch (error: any) {
     ElMessage.error(error.message || '加载数据失败')
   }

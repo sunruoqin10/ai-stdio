@@ -145,6 +145,7 @@ import { ref, reactive, watch, computed } from 'vue'
 import { ElMessage, type FormInstance, type FormRules, type UploadUserFile, type UploadProps } from 'element-plus'
 import { Plus, Warning } from '@element-plus/icons-vue'
 import { useLeaveStore } from '../store'
+import { useAuthStore } from '@/modules/auth/store'
 import { calculateDuration, getBalanceWarningType, getBalanceWarningMessage, needsAttachment as needsAttachmentUtil } from '../utils'
 import type { LeaveForm, LeaveRequest } from '../types'
 
@@ -169,18 +170,19 @@ const emit = defineEmits<{
 }>()
 
 const leaveStore = useLeaveStore()
+const authStore = useAuthStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 const visible = ref(false)
 const fileList = ref<UploadUserFile[]>([])
 const uploadUrl = '/api/upload'
 
-// 模拟当前用户
-const currentUser = ref<User>({
-  id: 'EMP000001',
-  name: '张三',
-  department: '技术部'
-})
+// 获取当前登录用户
+const currentUser = computed(() => ({
+  id: authStore.userInfo?.id || '',
+  name: authStore.userInfo?.name || '',
+  department: authStore.userInfo?.departmentName || ''
+}))
 
 const form = reactive<LeaveForm>({
   type: 'annual',

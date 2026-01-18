@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.oa_system_backend.module.leave.mapper.LeaveUsageLogMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.oa_system_backend.module.leave.entity.LeaveUsageLog">
+        <id column="id" property="id"/>
+        <result column="employee_id" property="employeeId"/>
+        <result column="request_id" property="requestId"/>
+        <result column="type" property="type"/>
+        <result column="duration" property="duration"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="change_type" property="changeType"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <select id="selectByEmployeeIdAndYear" resultMap="BaseResultMap">
+        SELECT * FROM approval_leave_usage_log
+        WHERE employee_id = #{employeeId} AND YEAR(created_at) = #{year}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByRequestId" resultMap="BaseResultMap">
+        SELECT * FROM approval_leave_usage_log
+        WHERE request_id = #{requestId}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectSummaryByEmployeeIdAndYear" resultType="java.util.HashMap">
+        SELECT
+            change_type,
+            COUNT(*) AS count,
+            SUM(duration) AS total_duration
+        FROM approval_leave_usage_log
+        WHERE employee_id = #{employeeId}
+          AND YEAR(created_at) = #{year}
+        GROUP BY change_type
+    </select>
+
+</mapper>

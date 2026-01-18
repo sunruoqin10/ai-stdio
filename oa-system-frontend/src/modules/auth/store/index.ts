@@ -62,6 +62,12 @@ export const useAuthStore = defineStore('auth', () => {
         setAccessToken(newToken, response.data.expiresIn)
         setRefreshToken(newRefreshToken)
 
+        // 存储用户信息到 localStorage
+        localStorage.setItem('user_info', JSON.stringify(newUserInfo))
+        
+        // 存储用户ID到 localStorage(用于权限管理)
+        localStorage.setItem('userId', newUserInfo.id)
+
         // 更新状态
         accessToken.value = newToken
         refreshToken.value = newRefreshToken
@@ -113,6 +119,11 @@ export const useAuthStore = defineStore('auth', () => {
         setAccessToken(newToken, response.data.expiresIn)
         setRefreshToken(newRefreshToken)
 
+        // 如果用户信息存在,更新localStorage
+        if (userInfo.value) {
+          localStorage.setItem('user_info', JSON.stringify(userInfo.value))
+        }
+
         // 更新状态
         accessToken.value = newToken
         refreshToken.value = newRefreshToken
@@ -137,11 +148,31 @@ export const useAuthStore = defineStore('auth', () => {
     // const response = await authApi.getUserInfo()
     // userInfo.value = response.data
 
-    // 临时:从localStorage恢复用户信息
+    // 从localStorage恢复用户信息
     const storedUserInfo = localStorage.getItem('user_info')
     if (storedUserInfo) {
       try {
         userInfo.value = JSON.parse(storedUserInfo)
+      } catch (error) {
+        console.error('解析用户信息失败:', error)
+      }
+    }
+  }
+
+  /**
+   * 同步恢复用户信息(用于初始化时立即恢复)
+   */
+  function restoreUserInfo(): void {
+    const storedUserInfo = localStorage.getItem('user_info')
+    
+    if (storedUserInfo) {
+      try {
+        userInfo.value = JSON.parse(storedUserInfo)
+        
+        // 确保userId也设置到localStorage
+        if (userInfo.value?.id) {
+          localStorage.setItem('userId', userInfo.value.id)
+        }
       } catch (error) {
         console.error('解析用户信息失败:', error)
       }
@@ -163,6 +194,7 @@ export const useAuthStore = defineStore('auth', () => {
   function isAuthenticated(): boolean {
     if (!accessToken.value) return false
     if (isTokenExpired()) return false
+    if (!userInfo.value) return false
     return true
   }
 
@@ -180,6 +212,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // 清除用户信息缓存
     localStorage.removeItem('user_info')
+    localStorage.removeItem('userId')
   }
 
   /**
@@ -220,9 +253,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   // ==================== 初始化 ====================
 
-  // 如果Token存在,尝试恢复用户信息
+  // 如果Token存在,尝试恢复用户信息(使用同步恢复,确保立即生效)
   if (accessToken.value && !isTokenExpired()) {
-    fetchUserInfo()
+    restoreUserInfo()
   } else if (isTokenExpired()) {
     clearAuthState()
   }
@@ -242,6 +275,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     refreshAccessToken,
     fetchUserInfo,
+    restoreUserInfo,
     shouldRefreshToken,
     isAuthenticated,
     clearAuthState,
