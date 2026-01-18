@@ -21,12 +21,13 @@
       </el-form-item>
 
       <el-form-item label="资产状态" prop="status">
-        <el-select v-model="form.status" placeholder="请选择资产状态" style="width: 100%">
+        <el-select v-model="form.status" placeholder="请选择资产状态" style="width: 100%" :disabled="isStatusDisabled">
           <el-option
             v-for="option in statusOptions"
             :key="option.value"
             :label="option.label"
             :value="option.value"
+            :disabled="option.disabled"
           />
         </el-select>
       </el-form-item>
@@ -120,12 +121,18 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 
 const statusOptions = computed(() => {
-  return dictStore.dictItems
-    .filter(item => item.dictTypeCode === 'asset_status' && item.status === 'enabled' && item.value !== 'borrowed')
+  const options = dictStore.dictItems
+    .filter(item => item.dictTypeCode === 'asset_status' && item.status === 'enabled')
     .map(item => ({
       label: item.label,
-      value: item.value
+      value: item.value,
+      disabled: item.value === 'borrowed'
     }))
+  return options
+})
+
+const isStatusDisabled = computed(() => {
+  return form.status === 'borrowed'
 })
 
 // 图片上传相关
