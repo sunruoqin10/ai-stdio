@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class LeaveQueryRequest {
@@ -15,6 +16,8 @@ public class LeaveQueryRequest {
     private String type;
 
     private String status;
+
+    private List<String> statusList;
 
     private LocalDateTime startTimeStart;
 

@@ -41,36 +41,22 @@ public class LeaveApprovalServiceImpl extends ServiceImpl<LeaveApprovalMapper, L
     public IPage<LeaveRequestVO> getPendingApprovals(LeaveQueryRequest query) {
         log.info("查询待审批列表,查询条件: {}", query);
 
-        QueryWrapper<LeaveRequest> wrapper = new QueryWrapper<>();
-        wrapper.in("status", LeaveStatus.PENDING.getCode(), LeaveStatus.APPROVING.getCode());
-        wrapper.orderByDesc("created_at");
-
-        if (query.getDepartmentId() != null && !query.getDepartmentId().isEmpty()) {
-            wrapper.eq("department_id", query.getDepartmentId());
-        }
-        if (query.getType() != null && !query.getType().isEmpty()) {
-            wrapper.eq("type", query.getType());
-        }
-        if (query.getKeyword() != null && !query.getKeyword().isEmpty()) {
-            wrapper.like("reason", query.getKeyword());
-        }
+        query.setStatusList(java.util.Arrays.asList(LeaveStatus.PENDING.getCode(), LeaveStatus.APPROVING.getCode()));
+        query.setSortBy("created_at");
+        query.setSortOrder("DESC");
 
         Page<LeaveRequest> page = new Page<>(query.getPage(), query.getPageSize());
-        IPage<LeaveRequest> result = leaveRequestMapper.selectPage(page, wrapper);
+        IPage<LeaveRequestVO> result = leaveRequestMapper.selectPageByCondition(page, query);
 
-        IPage<LeaveRequestVO> voPage = new Page<>(result.getCurrent(), result.getSize(), result.getCurrent());
-        voPage.setRecords(result.getRecords().stream().map(entity -> {
-            LeaveRequestVO vo = new LeaveRequestVO();
-            BeanUtils.copyProperties(entity, vo);
-            vo.setTypeName(LeaveType.fromCode(entity.getType()).getName());
-            vo.setStatusName(LeaveStatus.fromCode(entity.getStatus()).getName());
-            if (entity.getCurrentApprovalLevel() != null && entity.getDuration() != null) {
-                vo.setTotalApprovalLevels(calculateTotalApprovalLevels(entity.getDuration()));
+        result.getRecords().forEach(vo -> {
+            vo.setTypeName(LeaveType.fromCode(vo.getType()).getName());
+            vo.setStatusName(LeaveStatus.fromCode(vo.getStatus()).getName());
+            if (vo.getCurrentApprovalLevel() != null && vo.getDuration() != null) {
+                vo.setTotalApprovalLevels(calculateTotalApprovalLevels(vo.getDuration()));
             }
-            return vo;
-        }).collect(Collectors.toList()));
+        });
 
-        return voPage;
+        return result;
     }
 
     @Override

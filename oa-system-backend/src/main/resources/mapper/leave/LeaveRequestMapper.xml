@@ -25,6 +25,7 @@
         <result column="applicant_position" property="applicantPosition"/>
         <result column="applicant_avatar" property="applicantAvatar"/>
         <result column="department_name" property="departmentName"/>
+        <result column="attachments" property="attachments" javaType="java.lang.String"/>
     </resultMap>
 
     <select id="selectPageByCondition" resultMap="LeaveRequestVOMap">
@@ -49,6 +50,12 @@
         </if>
         <if test="query.status != null and query.status != ''">
             AND r.status = #{query.status}
+        </if>
+        <if test="query.statusList != null and query.statusList.size() > 0">
+            AND r.status IN
+            <foreach collection="query.statusList" item="status" open="(" separator="," close=")">
+                #{status}
+            </foreach>
         </if>
         <if test="query.startTimeStart != null">
             AND r.start_time >= #{query.startTimeStart}

@@ -9,6 +9,10 @@ import com.example.oa_system_backend.module.auth.entity.*;
 import com.example.oa_system_backend.module.auth.mapper.*;
 import com.example.oa_system_backend.module.auth.service.AuthService;
 import com.example.oa_system_backend.module.auth.vo.*;
+import com.example.oa_system_backend.module.department.entity.Department;
+import com.example.oa_system_backend.module.department.mapper.DepartmentMapper;
+import com.example.oa_system_backend.module.employee.entity.Employee;
+import com.example.oa_system_backend.module.employee.mapper.EmployeeMapper;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +41,8 @@ public class AuthServiceImpl implements AuthService {
     private final JavaMailSender mailSender;
     private final CaptchaUtils captchaUtils;
     private final UserAgentUtils userAgentUtils;
+    private final EmployeeMapper employeeMapper;
+    private final DepartmentMapper departmentMapper;
 
     @Override
     @Transactional
@@ -369,15 +375,42 @@ public class AuthServiceImpl implements AuthService {
     private UserInfoVO buildUserInfo(AuthUser user) {
         UserInfoVO userInfo = new UserInfoVO();
         userInfo.setId(user.getId());
-        // TODO: Fetch from sys_employee table
-        userInfo.setEmployeeNo("");
-        userInfo.setName(user.getUsername());
-        userInfo.setEmail(user.getEmail());
-        userInfo.setPhone(user.getMobile());
-        userInfo.setAvatar("");
-        userInfo.setDepartmentId("");
-        userInfo.setDepartmentName("");
-        userInfo.setPosition("");
+        
+        // 从员工表获取详细信息
+        Employee employee = employeeMapper.selectById(user.getId());
+        if (employee != null) {
+            userInfo.setEmployeeNo(employee.getId() != null ? employee.getId() : "");
+            userInfo.setName(employee.getName() != null ? employee.getName() : user.getUsername());
+            userInfo.setEmail(employee.getEmail() != null ? employee.getEmail() : user.getEmail());
+            userInfo.setPhone(employee.getPhone() != null ? employee.getPhone() : user.getMobile());
+            userInfo.setAvatar(employee.getAvatar() != null ? employee.getAvatar() : "");
+            userInfo.setDepartmentId(employee.getDepartmentId() != null ? employee.getDepartmentId() : "");
+            userInfo.setPosition(employee.getPosition() != null ? employee.getPosition() : "");
+            
+            // 获取部门名称
+            if (employee.getDepartmentId() != null && !employee.getDepartmentId().isEmpty()) {
+                Department department = departmentMapper.selectById(employee.getDepartmentId());
+                if (department != null) {
+                    userInfo.setDepartmentName(department.getName());
+                } else {
+                    userInfo.setDepartmentName("");
+                }
+            } else {
+                userInfo.setDepartmentName("");
+            }
+        } else {
+            // 如果员工信息不存在,使用 auth_user 表的信息
+            userInfo.setEmployeeNo("");
+            userInfo.setName(user.getUsername());
+            userInfo.setEmail(user.getEmail());
+            userInfo.setPhone(user.getMobile());
+            userInfo.setAvatar("");
+            userInfo.setDepartmentId("");
+            userInfo.setDepartmentName("");
+            userInfo.setPosition("");
+        }
+        
+        // TODO: 获取角色和权限信息
         userInfo.setRoles(java.util.List.of());
         userInfo.setPermissions(java.util.List.of());
         return userInfo;
