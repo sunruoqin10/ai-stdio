@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.oa_system_backend.common.exception.BusinessException;
+import com.example.oa_system_backend.common.utils.SecurityUtils;
 import com.example.oa_system_backend.module.leave.dto.ApprovalRequest;
 import com.example.oa_system_backend.module.leave.dto.LeaveQueryRequest;
 import com.example.oa_system_backend.module.leave.entity.LeaveApproval;
@@ -203,7 +204,7 @@ public class LeaveApprovalServiceImpl extends ServiceImpl<LeaveApprovalMapper, L
     }
 
     private String getCurrentUserId() {
-        return "EMP000001";
+        return SecurityUtils.getCurrentUserId();
     }
 
     private LeaveDetailVO getLeaveDetailVO(String requestId) {

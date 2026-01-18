@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.oa_system_backend.common.exception.BusinessException;
+import com.example.oa_system_backend.common.utils.SecurityUtils;
 import com.example.oa_system_backend.module.department.entity.Department;
 import com.example.oa_system_backend.module.department.mapper.DepartmentMapper;
 import com.example.oa_system_backend.module.employee.entity.Employee;
@@ -22,6 +23,7 @@ import com.example.oa_system_backend.module.leave.service.LeaveRequestService;
 import com.example.oa_system_backend.module.leave.util.LeaveDurationCalculator;
 import com.example.oa_system_backend.module.leave.util.LeaveIdGenerator;
 import com.example.oa_system_backend.module.leave.vo.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -46,6 +48,7 @@ public class LeaveRequestServiceImpl extends ServiceImpl<LeaveRequestMapper, Lea
     private final LeaveDurationCalculator durationCalculator;
     private final LeaveIdGenerator idGenerator;
     private final com.example.oa_system_backend.module.leave.util.LeaveDictLabelUtil dictLabelUtil;
+    private final ObjectMapper objectMapper;
 
     public IPage<LeaveRequestVO> getLeaveRequests(LeaveQueryRequest query) {
         log.info("查询请假申请列表,查询条件: {}", query);
@@ -138,6 +141,25 @@ public class LeaveRequestServiceImpl extends ServiceImpl<LeaveRequestMapper, Lea
         leaveRequest.setCreatedAt(LocalDateTime.now());
         leaveRequest.setUpdatedAt(LocalDateTime.now());
 
+        String currentUserId = getCurrentUserId();
+        leaveRequest.setApplicantId(currentUserId);
+
+        Employee employee = employeeMapper.selectById(currentUserId);
+        if (employee != null && employee.getDepartmentId() != null) {
+            leaveRequest.setDepartmentId(employee.getDepartmentId());
+        }
+
+        if (request.getAttachments() != null && !request.getAttachments().isEmpty()) {
+            try {
+                leaveRequest.setAttachments(objectMapper.writeValueAsString(request.getAttachments()));
+            } catch (Exception e) {
+                log.error("转换附件列表失败", e);
+                leaveRequest.setAttachments("[]");
+            }
+        } else {
+            leaveRequest.setAttachments("[]");
+        }
+
         BigDecimal duration = durationCalculator.calculateDuration(
                 request.getStartTime().toLocalDate(),
                 request.getEndTime().toLocalDate()
@@ -172,7 +194,11 @@ public class LeaveRequestServiceImpl extends ServiceImpl<LeaveRequestMapper, Lea
             leaveRequest.setEndTime(request.getEndTime());
         }
         if (request.getAttachments() != null) {
-            leaveRequest.setAttachments(request.getAttachments());
+            try {
+                leaveRequest.setAttachments(objectMapper.writeValueAsString(request.getAttachments()));
+            } catch (Exception e) {
+                log.error("转换附件列表失败", e);
+            }
         }
         if (request.getReason() != null) {
             leaveRequest.setReason(request.getReason());
@@ -387,6 +413,6 @@ public class LeaveRequestServiceImpl extends ServiceImpl<LeaveRequestMapper, Lea
     }
 
     private String getCurrentUserId() {
-        return "EMP000001";
+        return SecurityUtils.getCurrentUserId();
     }
 }

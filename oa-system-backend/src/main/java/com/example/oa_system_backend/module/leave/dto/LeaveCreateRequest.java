@@ -5,9 +5,14 @@ import lombok.Data;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class LeaveCreateRequest {
+
+    private String applicantId;
+
+    private String departmentId;
 
     @NotBlank(message = "请假类型不能为空")
     private String type;
@@ -18,7 +23,7 @@ public class LeaveCreateRequest {
     @NotNull(message = "结束时间不能为空")
     private LocalDateTime endTime;
 
-    private String attachments;
+    private List<String> attachments;
 
     @NotBlank(message = "请假事由不能为空")
     private String reason;
