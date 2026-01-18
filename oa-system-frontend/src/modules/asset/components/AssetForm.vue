@@ -121,7 +121,7 @@ const loading = ref(false)
 
 const statusOptions = computed(() => {
   return dictStore.dictItems
-    .filter(item => item.dictTypeCode === 'asset_status' && item.status === 'enabled')
+    .filter(item => item.dictTypeCode === 'asset_status' && item.status === 'enabled' && item.value !== 'borrowed')
     .map(item => ({
       label: item.label,
       value: item.value
