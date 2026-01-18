@@ -8,6 +8,7 @@ import com.example.oa_system_backend.module.asset.dto.response.AssetStatisticsRe
 import com.example.oa_system_backend.module.asset.entity.Asset;
 import com.example.oa_system_backend.module.asset.service.AssetService;
 import com.example.oa_system_backend.module.asset.vo.AssetBorrowRecordVO;
+import com.example.oa_system_backend.module.asset.vo.AssetVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -27,8 +28,8 @@ public class AssetController {
      * GET /api/assets
      */
     @GetMapping
-    public ApiResponse<IPage<Asset>> getAssetList(AssetQueryRequest request) {
-        IPage<Asset> result = assetService.getAssetList(request);
+    public ApiResponse<IPage<AssetVO>> getAssetList(AssetQueryRequest request) {
+        IPage<AssetVO> result = assetService.getAssetList(request);
         return ApiResponse.success(result);
     }
 

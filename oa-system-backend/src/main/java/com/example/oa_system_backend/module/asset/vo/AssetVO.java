@@ -5,6 +5,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 资产视图对象
@@ -73,9 +74,19 @@ public class AssetVO {
     private String userName;
 
     /**
+     * 使用人头像
+     */
+    private String userAvatar;
+
+    /**
      * 存放位置
      */
     private String location;
+
+    /**
+     * 资产图片URL数组
+     */
+    private List<String> images;
 
     /**
      * 借出日期

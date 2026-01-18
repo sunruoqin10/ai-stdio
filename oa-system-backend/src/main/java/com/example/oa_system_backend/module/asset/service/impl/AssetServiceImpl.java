@@ -16,6 +16,7 @@ import com.example.oa_system_backend.module.asset.mapper.AssetMapper;
 import com.example.oa_system_backend.module.asset.service.AssetService;
 import com.example.oa_system_backend.module.asset.util.AssetDepreciationUtil;
 import com.example.oa_system_backend.module.asset.vo.AssetBorrowRecordVO;
+import com.example.oa_system_backend.module.asset.vo.AssetVO;
 import com.example.oa_system_backend.module.employee.entity.Employee;
 import com.example.oa_system_backend.module.employee.mapper.EmployeeMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -49,13 +50,24 @@ public class AssetServiceImpl implements AssetService {
     private final ObjectMapper objectMapper;
 
     @Override
-    public IPage<Asset> getAssetList(AssetQueryRequest request) {
-        // 构建查询条件
-        LambdaQueryWrapper<Asset> wrapper = buildQueryWrapper(request);
-
-        // 分页查询
-        Page<Asset> page = new Page<>(request.getPageNum(), request.getPageSize());
-        return assetMapper.selectPage(page, wrapper);
+    public IPage<AssetVO> getAssetList(AssetQueryRequest request) {
+        // 构建分页对象
+        Page<AssetVO> page = new Page<>(request.getPageNum(), request.getPageSize());
+        
+        // 使用自定义查询方法（包含使用人姓名和头像）
+        return assetMapper.selectPageWithDetails(
+                page,
+                request.getKeyword(),
+                request.getCategory(),
+                request.getStatus(),
+                request.getUserId(),
+                request.getPurchaseDateStart() != null ? request.getPurchaseDateStart().toString() : null,
+                request.getPurchaseDateEnd() != null ? request.getPurchaseDateEnd().toString() : null,
+                request.getPurchasePriceMin(),
+                request.getPurchasePriceMax(),
+                request.getLocation(),
+                request.getSortOrder()
+        );
     }
 
     @Override

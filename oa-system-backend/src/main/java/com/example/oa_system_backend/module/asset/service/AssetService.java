@@ -6,6 +6,7 @@ import com.example.oa_system_backend.module.asset.dto.response.AssetResponse;
 import com.example.oa_system_backend.module.asset.dto.response.AssetStatisticsResponse;
 import com.example.oa_system_backend.module.asset.entity.Asset;
 import com.example.oa_system_backend.module.asset.vo.AssetBorrowRecordVO;
+import com.example.oa_system_backend.module.asset.vo.AssetVO;
 
 /**
  * 资产服务接口
@@ -15,7 +16,7 @@ public interface AssetService {
     /**
      * 分页查询资产列表
      */
-    IPage<Asset> getAssetList(AssetQueryRequest request);
+    IPage<AssetVO> getAssetList(AssetQueryRequest request);
 
     /**
      * 根据ID查询资产详情
