@@ -23,6 +23,7 @@ import com.example.oa_system_backend.module.leave.service.LeaveRequestService;
 import com.example.oa_system_backend.module.leave.util.LeaveDurationCalculator;
 import com.example.oa_system_backend.module.leave.util.LeaveIdGenerator;
 import com.example.oa_system_backend.module.leave.vo.*;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,9 +31,11 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.List;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -89,6 +92,19 @@ public class LeaveRequestServiceImpl extends ServiceImpl<LeaveRequestMapper, Lea
         detailVO.setTypeName(LeaveType.fromCode(request.getType()).getName());
         detailVO.setStatusName(LeaveStatus.fromCode(request.getStatus()).getName());
         detailVO.setTotalApprovalLevels(calculateTotalApprovalLevels(request.getDuration()));
+        
+        // 转换附件列表JSON字符串为List<String>
+        if (request.getAttachments() != null) {
+            try {
+                List<String> attachments = objectMapper.readValue(request.getAttachments(), new TypeReference<List<String>>() {});
+                detailVO.setAttachments(attachments);
+            } catch (Exception e) {
+                log.error("解析附件列表失败", e);
+                // 如果解析失败，尝试作为单个URL处理
+                List<String> singleAttachment = Collections.singletonList(request.getAttachments());
+                detailVO.setAttachments(singleAttachment);
+            }
+        }
 
         Employee applicant = employeeMapper.selectById(request.getApplicantId());
         if (applicant != null) {
@@ -199,6 +215,9 @@ public class LeaveRequestServiceImpl extends ServiceImpl<LeaveRequestMapper, Lea
             } catch (Exception e) {
                 log.error("转换附件列表失败", e);
             }
+        } else {
+            // 清除附件
+            leaveRequest.setAttachments(null);
         }
         if (request.getReason() != null) {
             leaveRequest.setReason(request.getReason());

@@ -2,6 +2,11 @@ package com.example.oa_system_backend.common.controller;
 
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -70,5 +75,35 @@ public class FileController {
         private Integer code;
         private String message;
         private String url;
+    }
+    
+    /**
+     * 下载文件
+     */
+    @GetMapping("/download")
+    public ResponseEntity<Resource> downloadFile(@RequestParam String filePath) {
+        try {
+            // 解析文件路径
+            Path fullPath = Paths.get(uploadPath, filePath);
+            
+            // 检查文件是否存在
+            if (!Files.exists(fullPath)) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            // 创建文件资源
+            Resource resource = new FileSystemResource(fullPath.toFile());
+            
+            // 设置响应头
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fullPath.getFileName().toString() + "\"");
+            headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE);
+            
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

@@ -153,15 +153,10 @@ export const useLeaveStore = defineStore('leave', () => {
   async function submitRequest(id: string) {
     loading.value = true
     try {
-      const updatedRequest = await leaveApi.submitLeaveRequest(id)
-      const index = myRequests.value.findIndex(req => req.id === id)
-      if (index !== -1) {
-        myRequests.value[index] = updatedRequest
-      }
-      if (currentRequest.value?.id === id) {
-        currentRequest.value = updatedRequest
-      }
-      return updatedRequest
+      await leaveApi.submitLeaveRequest(id)
+      // 如果需要更新本地状态，可以重新获取数据
+      // 这里简单处理，不直接更新，让用户手动刷新或通过其他方式更新
+      return null
     } finally {
       loading.value = false
     }
@@ -173,15 +168,10 @@ export const useLeaveStore = defineStore('leave', () => {
   async function cancelRequest(id: string) {
     loading.value = true
     try {
-      const updatedRequest = await leaveApi.cancelLeaveRequest(id)
-      const index = myRequests.value.findIndex(req => req.id === id)
-      if (index !== -1) {
-        myRequests.value[index] = updatedRequest
-      }
-      if (currentRequest.value?.id === id) {
-        currentRequest.value = updatedRequest
-      }
-      return updatedRequest
+      await leaveApi.cancelLeaveRequest(id)
+      // 如果需要更新本地状态，可以重新获取数据
+      // 这里简单处理，不直接更新，让用户手动刷新或通过其他方式更新
+      return null
     } finally {
       loading.value = false
     }

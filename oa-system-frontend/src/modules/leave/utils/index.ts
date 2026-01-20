@@ -303,3 +303,20 @@ export function isCurrentApprover(
 export function calculateProgress(currentLevel: number, totalLevels: number): number {
   return Math.round((currentLevel / totalLevels) * 100)
 }
+
+/**
+ * 获取完整的图片URL
+ */
+export function getImageUrl(url: string): string {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+  if (url.startsWith('/uploads/')) {
+    return `/api${url}`
+  }
+  if (url.startsWith('blob:')) {
+    return url
+  }
+  return `/api/uploads/${url}`
+}

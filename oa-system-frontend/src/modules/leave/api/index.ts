@@ -325,3 +325,43 @@ export async function getHolidaysByDateRange(startDate: string, endDate: string)
   })
   return res.data
 }
+
+/**
+ * 上传文件
+ */
+export async function uploadFile(file: File): Promise<string> {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  try {
+    const res = await http.post<any>('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    console.log('Upload response:', res)
+    
+    if (!res) {
+      throw new Error('Upload response is undefined')
+    }
+    
+    // 处理不同的响应格式
+    if (res.data) {
+      // 如果有data字段（ApiResponse格式）
+      if (!res.data.url) {
+        throw new Error('Upload response data does not contain url field')
+      }
+      return res.data.url
+    } else if (res.url) {
+      // 如果直接有url字段（UploadResponse格式）
+      return res.url
+    } else {
+      throw new Error('Upload response does not contain expected url field')
+    }
+  } catch (error: any) {
+    console.error('Upload error:', error)
+    console.error('Error response:', error.response)
+    throw new Error(`文件上传失败: ${error.message || '未知错误'}`)
+  }
+}

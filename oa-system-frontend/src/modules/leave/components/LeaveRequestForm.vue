@@ -105,13 +105,13 @@
       <el-form-item label="附件">
         <el-upload
           v-model:file-list="fileList"
-          :action="uploadUrl"
-          :on-success="handleUploadSuccess"
+          :http-request="handlePreviewUpload"
+          :on-preview="handlePicturePreview"
           :on-remove="handleUploadRemove"
           :limit="5"
           :on-exceed="handleExceed"
           :before-upload="beforeUpload"
-          list-type="picture-card"
+          :show-file-list="false"
           accept="image/*,.pdf,.doc,.docx"
         >
           <el-icon><Plus /></el-icon>
@@ -121,6 +121,52 @@
             </div>
           </template>
         </el-upload>
+        <!-- 手动渲染文件列表，添加下载功能 -->
+        <div class="custom-upload-list" v-if="fileList.length > 0">
+          <div
+            v-for="(file, index) in fileList"
+            :key="file.uid || index"
+            class="custom-upload-item"
+          >
+            <el-image
+              v-if="file.url && file.url.match(/\.(jpg|jpeg|png|gif)$/i)"
+              :src="file.url"
+              class="custom-upload-thumbnail"
+              fit="cover"
+            />
+            <div v-else class="custom-upload-icon">
+              <el-icon v-if="file.name?.match(/\.pdf$/i)"><Document /></el-icon>
+              <el-icon v-else-if="file.name?.match(/\.doc|docx$/i)"><Document /></el-icon>
+              <el-icon v-else><Document /></el-icon>
+            </div>
+            <div class="custom-upload-info">
+              <span class="custom-upload-name">{{ file.name }}</span>
+            </div>
+            <div class="custom-upload-actions">
+              <el-button
+                type="text"
+                size="small"
+                @click="handlePicturePreview(file)"
+              >
+                <el-icon><ZoomIn /></el-icon>
+              </el-button>
+              <el-button
+                type="text"
+                size="small"
+                @click="handleDownload(file)"
+              >
+                <el-icon><Download /></el-icon>
+              </el-button>
+              <el-button
+                type="text"
+                size="small"
+                @click="handleUploadRemove(file)"
+              >
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </div>
+          </div>
+        </div>
         <div v-if="needsAttachment" class="attachment-tip">
           <el-icon color="#E6A23C"><Warning /></el-icon>
           <span>建议上传相关证明材料</span>
@@ -138,16 +184,22 @@
       </el-button>
     </template>
   </el-dialog>
+
+  <!-- 图片预览对话框 -->
+  <el-dialog v-model="previewVisible" title="图片预览" width="800px">
+    <img :src="previewUrl" style="width: 100%" />
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, watch, computed } from 'vue'
-import { ElMessage, type FormInstance, type FormRules, type UploadUserFile, type UploadProps } from 'element-plus'
-import { Plus, Warning } from '@element-plus/icons-vue'
+import { ElMessage, type FormInstance, type FormRules, type UploadUserFile, type UploadProps, type UploadRequestOptions } from 'element-plus'
+import { Plus, Warning, Delete, ZoomIn, Download, Document } from '@element-plus/icons-vue'
 import { useLeaveStore } from '../store'
 import { useAuthStore } from '@/modules/auth/store'
-import { calculateDuration, getBalanceWarningType, getBalanceWarningMessage, needsAttachment as needsAttachmentUtil } from '../utils'
+import { calculateDuration, getBalanceWarningType, getBalanceWarningMessage, needsAttachment as needsAttachmentUtil, getImageUrl } from '../utils'
 import type { LeaveForm, LeaveRequest } from '../types'
+import { uploadFile } from '../api'
 
 interface Props {
   modelValue: boolean
@@ -175,7 +227,9 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 const visible = ref(false)
 const fileList = ref<UploadUserFile[]>([])
-const uploadUrl = '/api/upload'
+const uploadUrl = '/upload'
+const previewVisible = ref(false)
+const previewUrl = ref('')
 
 // 获取当前登录用户
 const currentUser = computed(() => ({
@@ -226,16 +280,73 @@ watch(
     visible.value = val
     if (val && props.leaveRequest) {
       // 编辑模式,填充表单
+      let attachments: string[] = []
+      
+      // 处理可能的JSON字符串格式
+      if (props.leaveRequest.attachments) {
+        if (typeof props.leaveRequest.attachments === 'string') {
+          try {
+            attachments = JSON.parse(props.leaveRequest.attachments)
+          } catch (error) {
+            console.error('Failed to parse attachments JSON:', error)
+            attachments = [props.leaveRequest.attachments] // 如果解析失败，作为单个URL处理
+          }
+        } else if (Array.isArray(props.leaveRequest.attachments)) {
+          attachments = props.leaveRequest.attachments
+        }
+      }
+      
+      console.log('Processed attachments array:', attachments)
+      
       Object.assign(form, {
         type: props.leaveRequest.type,
         startTime: props.leaveRequest.startTime,
         endTime: props.leaveRequest.endTime,
         duration: props.leaveRequest.duration,
         reason: props.leaveRequest.reason,
-        attachments: props.leaveRequest.attachments || [],
+        attachments: attachments,
         version: props.leaveRequest.version
       })
-      // TODO: 填充附件列表
+      
+      // 填充附件列表
+      const processedFiles = attachments.map((url, index) => {
+        if (!url) return null
+        
+        // 尝试从URL中提取文件名
+        const urlParts = url.split('/')
+        const fileName = urlParts[urlParts.length - 1]
+        
+        // 猜测文件类型
+        let fileType = ''
+        const ext = fileName.split('.').pop()?.toLowerCase()
+        if (['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) {
+          fileType = `image/${ext}`
+        } else if (ext === 'pdf') {
+          fileType = 'application/pdf'
+        } else if (['doc', 'docx'].includes(ext || '')) {
+          fileType = 'application/msword'
+        }
+        
+        const processedUrl = getImageUrl(url)
+        console.log('Processed attachment:', {
+          originalUrl: url,
+          processedUrl: processedUrl,
+          fileName: fileName,
+          fileType: fileType,
+          uid: index
+        })
+        
+        return {
+          name: fileName,
+          url: processedUrl,
+          uid: index,
+          type: fileType,
+          status: 'success' as const
+        } as UploadUserFile
+      }).filter((file): file is UploadUserFile => file !== null)
+      
+      console.log('Final fileList:', processedFiles)
+      fileList.value = processedFiles
     } else if (val) {
       // 新建模式,重置表单
       resetForm()
@@ -272,6 +383,28 @@ async function handleSaveDraft() {
 
     loading.value = true
     try {
+      // 上传所有新文件
+      const newFileUrls = await uploadAllFiles()
+      
+      // 合并已存在的附件URL和新上传的附件URL
+      const existingUrls = fileList.value
+        .filter(file => !file.raw && file.url)
+        .map(file => {
+          // 如果是新上传的本地URL (blob: 开头)，不包含在existingUrls中
+          if (file.url?.startsWith('blob:')) {
+            return null
+          }
+          // 将完整URL转换回存储的格式
+          const url = file.url || ''
+          if (url.startsWith('/api/uploads/')) {
+            return url.substring(4)
+          }
+          return url.startsWith('/uploads/') ? url : null
+        })
+        .filter((url): url is string => url !== null)
+      
+      form.attachments = [...existingUrls, ...newFileUrls]
+
       if (isEdit.value && props.leaveRequest) {
         // 编辑模式：只传递需要更新的字段，确保包含 version
         const updateData = {
@@ -316,6 +449,28 @@ async function handleSubmit() {
 
     loading.value = true
     try {
+      // 上传所有新文件
+      const newFileUrls = await uploadAllFiles()
+      
+      // 合并已存在的附件URL和新上传的附件URL
+      const existingUrls = fileList.value
+        .filter(file => !file.raw && file.url)
+        .map(file => {
+          // 如果是新上传的本地URL (blob: 开头)，不包含在existingUrls中
+          if (file.url?.startsWith('blob:')) {
+            return null
+          }
+          // 将完整URL转换回存储的格式
+          const url = file.url || ''
+          if (url.startsWith('/api/uploads/')) {
+            return url.substring(4)
+          }
+          return url.startsWith('/uploads/') ? url : null
+        })
+        .filter((url): url is string => url !== null)
+      
+      form.attachments = [...existingUrls, ...newFileUrls]
+
       let request: LeaveRequest
       if (isEdit.value && props.leaveRequest) {
         // 编辑模式：只传递需要更新的字段，确保包含 version
@@ -346,18 +501,27 @@ async function handleSubmit() {
   })
 }
 
-const handleUploadSuccess: UploadProps['onSuccess'] = (response, file) => {
-  if (response.code === 0) {
-    form.attachments = form.attachments || []
-    form.attachments.push(response.data.url)
-    ElMessage.success('上传成功')
-  }
-}
+
 
 const handleUploadRemove: UploadProps['onRemove'] = (file) => {
-  const index = form.attachments?.indexOf(file.response?.data?.url)
-  if (index && index > -1) {
-    form.attachments?.splice(index, 1)
+  // 移除文件列表中的文件
+  const index = fileList.value.findIndex(f => f.uid === file.uid)
+  if (index > -1) {
+    fileList.value.splice(index, 1)
+  }
+  
+  // 如果是已上传的文件，从attachments中移除
+  if (file.url && !file.url.startsWith('blob:')) {
+    const attachmentUrl = file.url.startsWith('/api/uploads/') 
+      ? file.url.substring(4) 
+      : file.url.startsWith('/uploads/') 
+        ? file.url 
+        : file.url;
+    
+    const attachmentIndex = form.attachments?.indexOf(attachmentUrl)
+    if (attachmentIndex !== undefined && attachmentIndex > -1) {
+      form.attachments?.splice(attachmentIndex, 1)
+    }
   }
 }
 
@@ -365,13 +529,104 @@ const handleExceed: UploadProps['onExceed'] = () => {
   ElMessage.warning('最多只能上传5个文件')
 }
 
-const beforeUpload: UploadProps['beforeUpload'] = (file) => {
+// 上传前校验
+const beforeUpload = (file: File) => {
   const isLt10M = file.size / 1024 / 1024 < 10
+  
   if (!isLt10M) {
-    ElMessage.error('上传文件大小不能超过 10MB')
+    ElMessage.error('文件大小不能超过 10MB!')
     return false
   }
+  
+  // 获取文件扩展名
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  const allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx']
+  
+  if (!allowedExts.includes(ext || '')) {
+    ElMessage.error('只允许上传图片、PDF和Word文件!')
+    return false
+  }
+  
   return true
+}
+
+// 预览上传 - 仅生成预览URL，不实际上传
+const handlePreviewUpload = async (options: UploadRequestOptions) => {
+  const file = options.file as File
+  const url = URL.createObjectURL(file)
+  options.onSuccess?.(url)
+}
+
+// 图片预览
+const handlePicturePreview = (file: UploadUserFile) => {
+  const fileName = file.name || ''
+  const ext = fileName.split('.').pop()?.toLowerCase()
+  if (['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) {
+    previewUrl.value = file.url ? getImageUrl(file.url) : ''
+    previewVisible.value = true
+  } else {
+    ElMessage.info('该文件类型不支持预览')
+  }
+}
+
+// 文件下载
+const handleDownload = async (file: UploadUserFile) => {
+  if (!file.url) {
+    ElMessage.error('文件下载地址不存在')
+    return
+  }
+  
+  try {
+    let filePath = ''
+    
+    // 从URL中提取文件路径
+    if (file.url.startsWith('/uploads/')) {
+      // 对于形如 /uploads/2023/10/01/file.jpg 的URL
+      filePath = file.url.substring(8) // 去掉 /uploads/ 前缀
+    } else if (file.url.startsWith('/api/uploads/')) {
+      // 对于形如 /api/uploads/2023/10/01/file.jpg 的URL
+      filePath = file.url.substring(12) // 去掉 /api/uploads/ 前缀
+    } else {
+      // 对于其他URL格式，直接使用
+      filePath = file.url
+    }
+    
+    // 构建下载URL
+    const downloadUrl = `${window.location.origin}/api/upload/download?filePath=${encodeURIComponent(filePath)}`
+    
+    // 创建下载链接
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = file.name || 'download'
+    link.target = '_blank'
+    
+    // 触发下载
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    ElMessage.success('文件下载已开始')
+  } catch (error) {
+    console.error('文件下载失败:', error)
+    ElMessage.error('文件下载失败，请重试')
+  }
+}
+
+// 上传所有文件
+const uploadAllFiles = async () => {
+  const uploadedUrls: string[] = []
+  const filesToUpload = fileList.value.filter(file => file.raw)
+  
+  for (const file of filesToUpload) {
+    try {
+      const url = await uploadFile(file.raw as File)
+      uploadedUrls.push(url)
+    } catch (error: any) {
+      throw new Error(`文件 ${file.name} 上传失败: ${error.message}`)
+    }
+  }
+  
+  return uploadedUrls
 }
 
 function resetForm() {
@@ -402,5 +657,75 @@ function handleClose() {
   margin-top: 8px;
   font-size: 13px;
   color: #E6A23C;
+}
+
+// 自定义上传列表样式
+.custom-upload-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.custom-upload-item {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: #f5f7fa;
+}
+
+.custom-upload-thumbnail {
+  width: 100%;
+  height: 100%;
+}
+
+.custom-upload-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 24px;
+  color: #909399;
+}
+
+.custom-upload-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 4px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-upload-actions {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.custom-upload-item:hover .custom-upload-actions {
+  opacity: 1;
+}
+
+.custom-upload-actions .el-button {
+  margin: 0 4px;
+  color: #fff;
 }
 </style>

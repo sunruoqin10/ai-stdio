@@ -45,7 +45,7 @@ public class LeaveDetailVO {
 
     private String reason;
 
-    private String attachments;
+    private List<String> attachments;
 
     private String status;
 

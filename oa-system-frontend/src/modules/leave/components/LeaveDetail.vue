@@ -95,14 +95,47 @@
       <section v-if="request.attachments && request.attachments.length > 0" class="detail-section">
         <h3 class="section-title">附件</h3>
         <div class="attachments">
-          <el-image
+          <div
             v-for="(file, index) in request.attachments"
             :key="index"
-            :src="file"
-            :preview-src-list="request.attachments"
-            fit="cover"
-            class="attachment-image"
-          />
+            class="attachment-item"
+          >
+            <div class="attachment-preview">
+              <template v-if="isImageFile(file) && !imageLoadErrors.has(file)">
+                <el-image
+                  :src="file"
+                  :preview-src-list="request.attachments.filter(f => isImageFile(f) && !imageLoadErrors.has(f))"
+                  fit="cover"
+                  class="attachment-image"
+                  @error="handleImageError(file)"
+                >
+                  <template #error>
+                    <div class="image-error">
+                      <el-icon :size="32"><Picture /></el-icon>
+                      <span class="error-text">加载失败</span>
+                    </div>
+                  </template>
+                </el-image>
+              </template>
+              <template v-else>
+                <div class="file-icon">
+                  <el-icon :size="48"><Document /></el-icon>
+                </div>
+              </template>
+            </div>
+            <div class="attachment-info">
+              <span class="file-name" :title="getFileName(file)">{{ getFileName(file) }}</span>
+              <el-button
+                type="primary"
+                size="small"
+                :icon="Download"
+                @click="handleDownload(file)"
+                class="download-button"
+              >
+                下载
+              </el-button>
+            </div>
+          </div>
         </div>
       </section>
     </div>
@@ -122,6 +155,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { Download, Document, Picture } from '@element-plus/icons-vue'
 import { useLeaveStore } from '../store'
 import {
   formatDateTime,
@@ -132,6 +166,7 @@ import {
   getApprovalStatusName
 } from '../utils'
 import type { LeaveRequest, ApprovalStatus } from '../types'
+import axios from 'axios'
 
 interface Props {
   modelValue: boolean
@@ -150,6 +185,21 @@ const emit = defineEmits<{
 const leaveStore = useLeaveStore()
 const visible = ref(false)
 const request = ref<LeaveRequest | null>(null)
+const imageLoadErrors = ref<Set<string>>(new Set())
+
+function isImageFile(url: string): boolean {
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg']
+  const lowerUrl = url.toLowerCase()
+  return imageExtensions.some(ext => lowerUrl.endsWith(ext))
+}
+
+function getFileName(url: string): string {
+  return url.split('/').pop() || 'unknown'
+}
+
+function handleImageError(url: string) {
+  imageLoadErrors.value.add(url)
+}
 
 watch(
   () => props.modelValue,
@@ -205,6 +255,27 @@ function handleClose() {
 function handleEdit() {
   if (request.value) {
     emit('edit', request.value)
+  }
+}
+
+async function handleDownload(fileUrl: string) {
+  try {
+    const fileName = fileUrl.split('/').pop() || 'download'
+    const response = await axios.get(fileUrl, {
+      responseType: 'blob'
+    })
+    
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', fileName)
+    document.body.appendChild(link)
+    link.click()
+    
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(link)
+  } catch (error) {
+    console.error('下载文件失败:', error)
   }
 }
 </script>
@@ -270,14 +341,80 @@ function handleEdit() {
 
 .attachments {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
 
-  .attachment-image {
-    width: 100px;
-    height: 100px;
-    border-radius: 4px;
-    cursor: pointer;
+  .attachment-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 140px;
+
+    .attachment-preview {
+      width: 100%;
+      height: 100px;
+      border: 1px solid #DCDFE6;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #F5F7FA;
+
+      .attachment-image {
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+      }
+
+      .image-error {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        color: #909399;
+        gap: 8px;
+
+        .error-text {
+          font-size: 12px;
+        }
+      }
+
+      .file-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        color: #409EFF;
+      }
+    }
+
+    .attachment-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+
+      .file-name {
+        font-size: 12px;
+        color: #606266;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 100%;
+        display: block;
+      }
+
+      .download-button {
+        min-width: 80px;
+      }
+    }
   }
 }
 

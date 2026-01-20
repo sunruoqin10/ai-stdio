@@ -4,6 +4,7 @@ import lombok.Data;
 
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class LeaveUpdateRequest {
@@ -14,7 +15,7 @@ public class LeaveUpdateRequest {
 
     private LocalDateTime endTime;
 
-    private String attachments;
+    private List<String> attachments;
 
     private String reason;
 
