@@ -21,15 +21,9 @@
         <result column="approver_department" property="approverDepartment"/>
     </resultMap>
 
-    <select id="selectByRequestId" resultMap="ApprovalWithInfoMap">
-        SELECT
-            a.*,
-            e.position AS approver_position,
-            e.avatar AS approver_avatar,
-            d.name AS approver_department
+    <select id="selectByRequestId" resultMap="BaseResultMap">
+        SELECT a.*
         FROM approval_leave_approval a
-        LEFT JOIN sys_employee e ON a.approver_id = e.id
-        LEFT JOIN sys_department d ON e.department_id = d.id
         WHERE a.request_id = #{requestId}
         ORDER BY a.approval_level ASC
     </select>

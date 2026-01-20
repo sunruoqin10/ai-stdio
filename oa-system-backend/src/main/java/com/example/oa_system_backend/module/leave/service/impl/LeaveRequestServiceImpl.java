@@ -402,12 +402,43 @@ public class LeaveRequestServiceImpl extends ServiceImpl<LeaveRequestMapper, Lea
 
     private void startWorkflow(LeaveRequest request) {
         Integer totalLevels = calculateTotalApprovalLevels(request.getDuration());
+        Employee applicant = employeeMapper.selectById(request.getApplicantId());
+        if (applicant == null) {
+            throw new BusinessException(3008, "申请人不存在");
+        }
 
         for (int level = 1; level <= totalLevels; level++) {
             LeaveApproval approval = new LeaveApproval();
             approval.setRequestId(request.getId());
             approval.setApprovalLevel(level);
             approval.setStatus(ApprovalStatus.PENDING.getCode());
+            approval.setTimestamp(LocalDateTime.now());
+
+            Employee approver = null;
+            if (level == 1) {
+                approver = employeeMapper.selectById(applicant.getManagerId());
+            } else if (level == 2) {
+                if (applicant.getDepartmentId() != null) {
+                    Department department = departmentMapper.selectById(applicant.getDepartmentId());
+                    if (department != null && department.getLeaderId() != null) {
+                        approver = employeeMapper.selectById(department.getLeaderId());
+                    }
+                }
+            } else if (level == 3) {
+                QueryWrapper<Employee> wrapper = new QueryWrapper<>();
+                wrapper.like("position", "经理");
+                wrapper.orderByDesc("level");
+                wrapper.last("LIMIT 1");
+                approver = employeeMapper.selectOne(wrapper);
+            }
+
+            if (approver != null) {
+                approval.setApproverId(approver.getId());
+                approval.setApproverName(approver.getName());
+            } else {
+                log.warn("审批级别{}未找到审批人，申请ID: {}", level, request.getId());
+            }
+
             leaveApprovalService.save(approval);
         }
     }
