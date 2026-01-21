@@ -327,6 +327,9 @@ import { ref, reactive, watch, computed, nextTick } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules, type UploadUserFile, type UploadProps, type UploadFile } from 'element-plus'
 import { Plus, Document, Check, View } from '@element-plus/icons-vue'
 import type { ExpenseForm, ExpenseItem, Invoice } from '../types'
+import { useExpenseStore } from '../store'
+
+const expenseStore = useExpenseStore()
 
 interface Props {
   modelValue: boolean
@@ -574,25 +577,19 @@ async function handleOCR(invoice: Invoice) {
 
   invoice.ocrLoading = true
   try {
-    // 模拟OCR API调用
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    // 调用实际的OCR API
+    const ocrInvoice = await import('../api').then(m => m.ocrInvoice)
+    const result = await ocrInvoice(invoice.imageUrl)
 
-    // 模拟OCR识别结果
-    const mockResult = {
-      number: '12345678',
-      amount: 1200.00,
-      date: '2026-01-05',
-      type: 'vat_common'
-    }
-
-    invoice.number = mockResult.number
-    invoice.amount = mockResult.amount
-    invoice.date = mockResult.date
-    invoice.type = mockResult.type
+    // 填充识别结果
+    if (result.type) invoice.type = result.type
+    if (result.number) invoice.number = result.number
+    if (result.amount) invoice.amount = result.amount
+    if (result.date) invoice.date = result.date
 
     ElMessage.success('OCR识别成功')
-  } catch (error) {
-    ElMessage.error('OCR识别失败,请手动输入')
+  } catch (error: any) {
+    ElMessage.error(error.message || 'OCR识别失败,请手动输入')
   } finally {
     invoice.ocrLoading = false
   }
@@ -647,8 +644,13 @@ async function handleSaveDraft() {
 
   loading.value = true
   try {
-    // TODO: 调用API保存草稿
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    if (isEdit.value) {
+      // 编辑模式
+      await expenseStore.updateExpense(props.expenseData.id, form)
+    } else {
+      // 新建模式
+      await expenseStore.createExpense(form)
+    }
 
     ElMessage.success('草稿保存成功')
     emit('success')
@@ -709,8 +711,15 @@ async function handleSubmit() {
 
   loading.value = true
   try {
-    // TODO: 调用API提交报销单
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    if (isEdit.value) {
+      // 编辑模式
+      await expenseStore.updateExpense(props.expenseData.id, form)
+      await expenseStore.submitExpense(props.expenseData.id)
+    } else {
+      // 新建模式
+      const newExpense = await expenseStore.createExpense(form)
+      await expenseStore.submitExpense(newExpense.id)
+    }
 
     ElMessage.success('提交成功')
     emit('success')

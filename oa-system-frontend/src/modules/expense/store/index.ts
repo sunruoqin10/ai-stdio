@@ -76,8 +76,8 @@ export const useExpenseStore = defineStore('expense', () => {
         size: params?.size || pagination.value.pageSize
       })
 
-      myExpenses.value = result.list
-      pagination.value.total = result.total
+      myExpenses.value = result.list || []
+      pagination.value.total = result.total || 0
       pagination.value.page = params?.page || pagination.value.page
       pagination.value.pageSize = params?.size || pagination.value.pageSize
     } finally {
@@ -200,7 +200,7 @@ export const useExpenseStore = defineStore('expense', () => {
     loading.value = true
     try {
       const result = await expenseApi.getPendingApprovals(params)
-      pendingApprovals.value = result.list
+      pendingApprovals.value = result.list || []
       return result
     } finally {
       loading.value = false
@@ -285,7 +285,7 @@ export const useExpenseStore = defineStore('expense', () => {
     loading.value = true
     try {
       const result = await expenseApi.getPayments(params)
-      paymentList.value = result.list
+      paymentList.value = result.list || []
       return result
     } finally {
       loading.value = false

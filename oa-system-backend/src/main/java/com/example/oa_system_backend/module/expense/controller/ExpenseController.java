@@ -17,7 +17,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/expense")
+@RequestMapping("/api/expense")
 @RequiredArgsConstructor
 public class ExpenseController {
 
