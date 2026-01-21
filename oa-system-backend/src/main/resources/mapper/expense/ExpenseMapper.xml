@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.oa_system_backend.module.expense.mapper.ExpenseMapper">
+
+    <resultMap id="ExpenseVOResultMap" type="com.example.oa_system_backend.module.expense.vo.ExpenseVO">
+        <id property="id" column="id"/>
+        <result property="applicantId" column="applicant_id"/>
+        <result property="applicantName" column="applicant_name"/>
+        <result property="departmentId" column="department_id"/>
+        <result property="departmentName" column="department_name"/>
+        <result property="type" column="type"/>
+        <result property="amount" column="amount"/>
+        <result property="reason" column="reason"/>
+        <result property="applyDate" column="apply_date"/>
+        <result property="expenseDate" column="expense_date"/>
+        <result property="status" column="status"/>
+        <result property="deptApproverName" column="dept_approver_name"/>
+        <result property="deptApprovalStatus" column="dept_approval_status"/>
+        <result property="deptApprovalTime" column="dept_approval_time"/>
+        <result property="financeApproverName" column="finance_approver_name"/>
+        <result property="financeApprovalStatus" column="finance_approval_status"/>
+        <result property="financeApprovalTime" column="finance_approval_time"/>
+        <result property="paymentDate" column="payment_date"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="selectPageByCondition" resultMap="ExpenseVOResultMap">
+        SELECT
+            e.*,
+            emp.name AS applicant_name,
+            d.name AS department_name,
+            dt.label AS type_name,
+            ds.label AS status_name,
+            (SELECT COUNT(*) FROM approval_expense_item WHERE expense_id = e.id) AS item_count,
+            (SELECT COUNT(*) FROM approval_expense_invoice WHERE expense_id = e.id) AS invoice_count
+        FROM approval_expense e
+        LEFT JOIN sys_employee emp ON e.applicant_id = emp.id
+        LEFT JOIN sys_department d ON e.department_id = d.id
+        LEFT JOIN sys_dict_item dt ON dt.type_code = 'expense_type' AND dt.value = e.type
+        LEFT JOIN sys_dict_item ds ON ds.type_code = 'expense_status' AND ds.value = e.status
+        <where>
+            e.deleted_at IS NULL
+            <if test="query.applicantId != null and query.applicantId != ''">
+                AND e.applicant_id = #{query.applicantId}
+            </if>
+            <if test="query.departmentId != null and query.departmentId != ''">
+                AND e.department_id = #{query.departmentId}
+            </if>
+            <if test="query.type != null and query.type != ''">
+                AND e.type = #{query.type}
+            </if>
+            <if test="query.status != null and query.status != ''">
+                AND e.status = #{query.status}
+            </if>
+            <if test="query.applyDateStart != null">
+                AND e.apply_date >= #{query.applyDateStart}
+            </if>
+            <if test="query.applyDateEnd != null">
+                AND e.apply_date &lt;= #{query.applyDateEnd}
+            </if>
+            <if test="query.keyword != null and query.keyword != ''">
+                AND (
+                    e.reason LIKE CONCAT('%', #{query.keyword}, '%')
+                    OR emp.name LIKE CONCAT('%', #{query.keyword}, '%')
+                    OR e.id LIKE CONCAT('%', #{query.keyword}, '%')
+                )
+            </if>
+        </where>
+        ORDER BY e.created_at DESC
+    </select>
+
+    <select id="selectDetailById" resultMap="ExpenseVOResultMap">
+        SELECT
+            e.*,
+            emp.name AS applicant_name,
+            emp.position AS applicant_position,
+            emp.phone AS applicant_phone,
+            emp.email AS applicant_email,
+            d.name AS department_name,
+            dt.label AS type_name,
+            ds.label AS status_name
+        FROM approval_expense e
+        LEFT JOIN sys_employee emp ON e.applicant_id = emp.id
+        LEFT JOIN sys_department d ON e.department_id = d.id
+        LEFT JOIN sys_dict_item dt ON dt.type_code = 'expense_type' AND dt.value = e.type
+        LEFT JOIN sys_dict_item ds ON ds.type_code = 'expense_status' AND ds.value = e.status
+        WHERE e.id = #{id} AND e.deleted_at IS NULL
+    </select>
+
+    <select id="selectPendingDeptApproval" resultMap="ExpenseVOResultMap">
+        SELECT
+            e.*,
+            emp.name AS applicant_name,
+            d.name AS department_name,
+            dt.label AS type_name,
+            ds.label AS status_name
+        FROM approval_expense e
+        LEFT JOIN sys_employee emp ON e.applicant_id = emp.id
+        LEFT JOIN sys_department d ON e.department_id = d.id
+        LEFT JOIN sys_dict_item dt ON dt.type_code = 'expense_type' AND dt.value = e.type
+        LEFT JOIN sys_dict_item ds ON ds.type_code = 'expense_status' AND ds.value = e.status
+        WHERE e.status = 'dept_pending'
+            AND e.deleted_at IS NULL
+            AND e.dept_approver_id = #{approverId}
+        ORDER BY e.created_at ASC
+    </select>
+
+    <select id="selectPendingFinanceApproval" resultMap="ExpenseVOResultMap">
+        SELECT
+            e.*,
+            emp.name AS applicant_name,
+            d.name AS department_name,
+            dt.label AS type_name,
+            ds.label AS status_name
+        FROM approval_expense e
+        LEFT JOIN sys_employee emp ON e.applicant_id = emp.id
+        LEFT JOIN sys_department d ON e.department_id = d.id
+        LEFT JOIN sys_dict_item dt ON dt.type_code = 'expense_type' AND dt.value = e.type
+        LEFT JOIN sys_dict_item ds ON ds.type_code = 'expense_status' AND ds.value = e.status
+        WHERE e.status = 'finance_pending'
+            AND e.deleted_at IS NULL
+            AND e.finance_approver_id = #{approverId}
+        ORDER BY e.dept_approval_time ASC
+    </select>
+
+    <select id="selectMonthlyTotalAmount" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(amount), 0)
+        FROM approval_expense
+        WHERE applicant_id = #{applicantId}
+          AND status = 'paid'
+          AND apply_date >= #{startDate}
+          AND apply_date &lt;= #{endDate}
+          AND deleted_at IS NULL
+    </select>
+
+    <select id="selectDepartmentStats" resultType="com.example.oa_system_backend.module.expense.vo.ExpenseStatisticsVO">
+        SELECT
+            type,
+            COUNT(*) AS count,
+            SUM(amount) AS total_amount,
+            SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS paid_amount,
+            SUM(CASE WHEN status = 'rejected' THEN amount ELSE 0 END) AS rejected_amount
+        FROM approval_expense
+        WHERE (#{departmentId} IS NULL OR department_id = #{departmentId})
+            AND (#{startDate} IS NULL OR apply_date >= #{startDate})
+            AND (#{endDate} IS NULL OR apply_date &lt;= #{endDate})
+            AND deleted_at IS NULL
+        GROUP BY type
+    </select>
+
+    <select id="selectTypeStats" resultType="com.example.oa_system_backend.module.expense.vo.ExpenseStatisticsVO">
+        SELECT
+            type,
+            COUNT(*) AS count,
+            SUM(amount) AS total_amount,
+            SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS paid_amount,
+            SUM(CASE WHEN status = 'rejected' THEN amount ELSE 0 END) AS rejected_amount
+        FROM approval_expense
+        WHERE (#{startDate} IS NULL OR apply_date >= #{startDate})
+            AND (#{endDate} IS NULL OR apply_date &lt;= #{endDate})
+            AND deleted_at IS NULL
+        GROUP BY type
+    </select>
+
+    <select id="selectMonthlyStats" resultType="com.example.oa_system_backend.module.expense.vo.ExpenseStatisticsVO">
+        SELECT
+            DATE_FORMAT(apply_date, '%Y-%m') AS month,
+            COUNT(*) AS count,
+            SUM(amount) AS total_amount,
+            SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS paid_amount,
+            SUM(CASE WHEN status = 'rejected' THEN amount ELSE 0 END) AS rejected_amount
+        FROM approval_expense
+        WHERE YEAR(apply_date) = #{year}
+            AND deleted_at IS NULL
+        GROUP BY DATE_FORMAT(apply_date, '%Y-%m')
+        ORDER BY month
+    </select>
+
+</mapper>
