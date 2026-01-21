@@ -74,27 +74,30 @@
         </el-menu>
 
         <div class="header-right">
-          <div class="user-info" @click="showUserMenu = !showUserMenu">
-            <el-avatar 
-              :size="32" 
-              :src="authStore.userInfo?.avatar" 
-              :icon="authStore.userInfo?.avatar ? undefined : UserFilled"
-            />
-            <span class="user-name">{{ authStore.userInfo?.name || '用户' }}</span>
-            <el-icon class="arrow-icon" :class="{ 'rotated': showUserMenu }"><ArrowDown /></el-icon>
-          </div>
-
           <el-dropdown 
             v-model="showUserMenu" 
             trigger="click" 
             class="user-dropdown"
             @command="handleUserMenuCommand"
           >
+            <div class="user-info">
+              <el-avatar 
+                :size="32" 
+                :src="authStore.userInfo?.avatar" 
+                :icon="authStore.userInfo?.avatar ? undefined : UserFilled"
+              />
+              <span class="user-name">{{ authStore.userInfo?.name || '用户' }}</span>
+              <el-icon class="arrow-icon" :class="{ 'rotated': showUserMenu }"><ArrowDown /></el-icon>
+            </div>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="profile">
                   <el-icon><User /></el-icon>
                   <span>个人信息</span>
+                </el-dropdown-item>
+                <el-dropdown-item command="changePassword">
+                  <el-icon><Lock /></el-icon>
+                  <span>修改密码</span>
                 </el-dropdown-item>
                 <el-dropdown-item command="logout" divided>
                   <el-icon><SwitchButton /></el-icon>
@@ -114,13 +117,63 @@
           </transition>
         </router-view>
       </el-main>
+
+      <!-- 修改密码模态框 -->
+      <el-dialog
+        v-model="showChangePasswordDialog"
+        title="修改密码"
+        width="400px"
+        :close-on-click-modal="true"
+        :close-on-press-escape="true"
+      >
+        <el-form
+          ref="changePasswordFormRef"
+          :model="changePasswordForm"
+          :rules="passwordRules"
+          label-width="100px"
+          class="change-password-form"
+        >
+          <el-form-item label="当前密码" prop="currentPassword">
+            <el-input
+              v-model="changePasswordForm.currentPassword"
+              type="password"
+              placeholder="请输入当前密码"
+              show-password
+            />
+          </el-form-item>
+          <el-form-item label="新密码" prop="newPassword">
+            <el-input
+              v-model="changePasswordForm.newPassword"
+              type="password"
+              placeholder="请输入新密码（至少6位，包含字母和数字）"
+              show-password
+            />
+          </el-form-item>
+          <el-form-item label="确认新密码" prop="confirmPassword">
+            <el-input
+              v-model="changePasswordForm.confirmPassword"
+              type="password"
+              placeholder="请再次输入新密码"
+              show-password
+            />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="closeChangePasswordDialog">取消</el-button>
+            <el-button type="primary" @click="handleChangePassword" :loading="changePasswordLoading">
+              确定
+            </el-button>
+          </span>
+        </template>
+      </el-dialog>
     </div>
   </el-config-provider>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   User,
   OfficeBuilding,
@@ -135,16 +188,54 @@ import {
   VideoCamera,
   Avatar,
   SwitchButton,
-  ArrowDown
+  ArrowDown,
+  Lock
 } from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { useAuthStore } from '@/modules/auth/store'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElForm, ElFormItem, ElInput, ElButton, ElDialog } from 'element-plus'
+import * as authApi from '@/modules/auth/api'
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const activeMenu = ref(route.path)
 const showUserMenu = ref(false)
+
+// 修改密码相关状态
+const showChangePasswordDialog = ref(false)
+const changePasswordForm = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+const changePasswordFormRef = ref<InstanceType<typeof ElForm> | null>(null)
+const changePasswordLoading = ref(false)
+const passwordRules = {
+  currentPassword: [
+    { required: true, message: '请输入当前密码', trigger: 'blur' }
+  ],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '新密码长度至少为6位', trigger: 'blur' },
+    { pattern: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/, message: '新密码必须包含字母和数字', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请确认新密码', trigger: 'blur' },
+    {
+      validator: (rule: any, value: string, callback: any) => {
+        if (value !== changePasswordForm.value.newPassword) {
+          callback(new Error('两次输入的密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ]
+}
+
+
 
 // 判断是否是认证相关页面(不需要顶部菜单)
 const isAuthPage = computed(() => {
@@ -180,27 +271,85 @@ watch(
   }
 )
 
-function handleUserMenuCommand(command: string) {
+async function handleUserMenuCommand(command: string) {
   if (command === 'profile') {
     ElMessage.info('个人信息功能开发中')
+  } else if (command === 'changePassword') {
+    showChangePasswordDialog.value = true
   } else if (command === 'logout') {
-    ElMessageBox.confirm(
-      '确定要退出登录吗？',
-      '提示',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      }
-    )
-      .then(() => {
-        authStore.logout()
-        ElMessage.success('已退出登录')
-      })
-      .catch(() => {
-      })
+    try {
+      await ElMessageBox.confirm(
+        '确定要退出登录吗？',
+        '提示',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning',
+        }
+      )
+      
+      await authStore.logout()
+      ElMessage.success('已退出登录')
+      // 重定向到登录页面
+      router.push('/login')
+    } catch (error) {
+      // 取消操作，不做任何处理
+    }
   }
 }
+
+// 修改密码
+async function handleChangePassword() {
+  if (!changePasswordFormRef.value) return
+  
+  await changePasswordFormRef.value.validate(async (valid: boolean) => {
+    if (valid) {
+      try {
+        changePasswordLoading.value = true
+        
+        // 调用修改密码API
+        const response = await authApi.changePassword({
+          currentPassword: changePasswordForm.value.currentPassword,
+          newPassword: changePasswordForm.value.newPassword
+        })
+        
+        if (response.code === 200) {
+          ElMessage.success('密码修改成功')
+          showChangePasswordDialog.value = false
+          // 重置表单
+          changePasswordForm.value = {
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+          }
+        } else {
+          ElMessage.error(response.message || '密码修改失败')
+        }
+      } catch (error: any) {
+        console.error('修改密码失败:', error)
+        ElMessage.error(error.message || '密码修改失败')
+      } finally {
+        changePasswordLoading.value = false
+      }
+    }
+  })
+}
+
+// 关闭修改密码对话框
+function closeChangePasswordDialog() {
+  showChangePasswordDialog.value = false
+  // 重置表单
+  changePasswordForm.value = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  }
+  // 重置验证状态
+  if (changePasswordFormRef.value) {
+    changePasswordFormRef.value.resetFields()
+  }
+}
+
 </script>
 
 <style lang="scss" scoped>

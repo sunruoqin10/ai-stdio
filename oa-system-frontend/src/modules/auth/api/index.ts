@@ -17,6 +17,12 @@ import type {
   LoginLog,
 } from '../types'
 
+// 修改密码请求参数接口
+interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
+
 /**
  * 用户登录
  * @param data 登录请求参数
@@ -107,4 +113,13 @@ export function getLoginLogs(
   return http.get<ApiResponse<{ records: LoginLog[], total: number, size: number, current: number, pages: number }>>('/auth/login-logs', {
     params: { page, size, startDate, endDate }
   })
+}
+
+/**
+ * 修改密码
+ * @param data 修改密码请求参数
+ * @returns 修改结果
+ */
+export async function changePassword(data: ChangePasswordRequest): Promise<ApiResponse<void>> {
+  return http.post<ApiResponse<void>>('/auth/change-password', data)
 }
