@@ -72,6 +72,38 @@
             </el-menu-item>
           </el-sub-menu>
         </el-menu>
+
+        <div class="header-right">
+          <div class="user-info" @click="showUserMenu = !showUserMenu">
+            <el-avatar 
+              :size="32" 
+              :src="authStore.userInfo?.avatar" 
+              :icon="authStore.userInfo?.avatar ? undefined : UserFilled"
+            />
+            <span class="user-name">{{ authStore.userInfo?.name || '用户' }}</span>
+            <el-icon class="arrow-icon" :class="{ 'rotated': showUserMenu }"><ArrowDown /></el-icon>
+          </div>
+
+          <el-dropdown 
+            v-model="showUserMenu" 
+            trigger="click" 
+            class="user-dropdown"
+            @command="handleUserMenuCommand"
+          >
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">
+                  <el-icon><User /></el-icon>
+                  <span>个人信息</span>
+                </el-dropdown-item>
+                <el-dropdown-item command="logout" divided>
+                  <el-icon><SwitchButton /></el-icon>
+                  <span>退出登录</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
       </el-header>
 
       <!-- 主内容区 -->
@@ -100,12 +132,19 @@ import {
   Key,
   Notebook,
   Menu,
-  VideoCamera
+  VideoCamera,
+  Avatar,
+  SwitchButton,
+  ArrowDown
 } from '@element-plus/icons-vue'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
+import { useAuthStore } from '@/modules/auth/store'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const route = useRoute()
+const authStore = useAuthStore()
 const activeMenu = ref(route.path)
+const showUserMenu = ref(false)
 
 // 判断是否是认证相关页面(不需要顶部菜单)
 const isAuthPage = computed(() => {
@@ -140,6 +179,28 @@ watch(
     }
   }
 )
+
+function handleUserMenuCommand(command: string) {
+  if (command === 'profile') {
+    ElMessage.info('个人信息功能开发中')
+  } else if (command === 'logout') {
+    ElMessageBox.confirm(
+      '确定要退出登录吗？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+      .then(() => {
+        authStore.logout()
+        ElMessage.success('已退出登录')
+      })
+      .catch(() => {
+      })
+  }
+}
 </script>
 
 <style lang="scss" scoped>
@@ -204,7 +265,113 @@ watch(
       }
     }
   }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    margin-left: $spacing-lg;
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+      padding: $spacing-sm $spacing-md;
+      border-radius: $border-radius-base;
+      cursor: pointer;
+      transition: all 0.3s;
+      user-select: none;
+
+      &:hover {
+        background-color: $background-color;
+      }
+
+      .user-name {
+        font-size: 14px;
+        color: $text-primary;
+        font-weight: $font-weight-medium;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .arrow-icon {
+        font-size: 12px;
+        color: $text-secondary;
+        transition: transform 0.3s;
+      }
+    }
+
+    .user-dropdown {
+      .el-dropdown-menu__item {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+
+        .el-icon {
+          font-size: 16px;
+        }
+      }
+    }
+  }
+
+  .arrow-icon.rotated {
+    transform: rotate(180deg);
+  }
 }
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 $spacing-md;
+  }
+
+  .header-left {
+    .app-title {
+      font-size: 18px;
+    }
+  }
+
+  .header-menu {
+    display: none;
+  }
+
+  .header-right {
+    margin-left: $spacing-sm;
+  }
+
+  .user-info {
+    padding: $spacing-xs $spacing-sm;
+  }
+
+  .user-name {
+    max-width: 80px;
+    font-size: 13px;
+  }
+
+  .arrow-icon {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    padding: 0 $spacing-sm;
+  }
+
+  .header-left {
+    margin-right: $spacing-md;
+  }
+
+  .app-title {
+    font-size: 16px;
+  }
+
+  .user-name {
+    display: none;
+  }
+}
+
 
 .app-main {
   flex: 1;
