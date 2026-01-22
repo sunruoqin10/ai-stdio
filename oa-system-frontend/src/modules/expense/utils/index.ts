@@ -40,6 +40,9 @@ export function formatDateTime(date: string): string {
  * 格式化金额
  */
 export function formatAmount(amount: number): string {
+  if (amount === undefined || amount === null) {
+    return '¥0.00'
+  }
   return `¥${amount.toFixed(2)}`
 }
 

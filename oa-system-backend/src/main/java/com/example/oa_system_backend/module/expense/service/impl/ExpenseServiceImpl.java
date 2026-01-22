@@ -49,8 +49,12 @@ public class ExpenseServiceImpl extends ServiceImpl<ExpenseMapper, Expense>
     @Transactional(rollbackFor = Exception.class)
     public Expense createExpense(ExpenseCreateRequest request) {
         for (ExpenseCreateRequest.ExpenseInvoiceRequest invoiceReq : request.getInvoices()) {
-            if (!invoiceValidator.validateUnique(invoiceReq.getInvoiceNumber())) {
-                throw new BusinessException(4001, "发票号 " + invoiceReq.getInvoiceNumber() + " 已被使用");
+            String invoiceNumber = invoiceReq.getInvoiceNumber();
+            if (invoiceNumber == null || invoiceNumber.isEmpty()) {
+                throw new BusinessException(4001, "发票号不能为空");
+            }
+            if (!invoiceValidator.validateUnique(invoiceNumber)) {
+                throw new BusinessException(4001, "发票号 " + invoiceNumber + " 已被使用");
             }
         }
 
@@ -302,6 +306,8 @@ public class ExpenseServiceImpl extends ServiceImpl<ExpenseMapper, Expense>
 
     @Override
     public IPage<ExpenseVO> getExpenseList(ExpenseQueryRequest query) {
+        // 设置当前用户为申请人，确保只返回当前用户的报销单
+        query.setApplicantId(SecurityUtils.getCurrentUserId());
         Page<ExpenseVO> page = new Page<>(query.getPage(), query.getPageSize());
         return expenseMapper.selectPageByCondition(page, query);
     }

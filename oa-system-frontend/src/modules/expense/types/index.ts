@@ -95,6 +95,12 @@ export interface Invoice {
   date: string
   imageUrl: string
   verified: boolean
+  // 后端字段名
+  invoiceType?: string
+  invoiceNumber?: string
+  invoiceDate?: string
+  fileList?: any[]
+  ocrLoading?: boolean
 }
 
 /**

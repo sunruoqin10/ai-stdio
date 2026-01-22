@@ -45,7 +45,7 @@
       <section class="detail-section">
         <h3 class="section-title">费用明细</h3>
         <el-table
-          :data="expense.items"
+          :data="expenseItems"
           border
           size="small"
         >
@@ -68,7 +68,7 @@
       <section class="detail-section">
         <h3 class="section-title">发票信息</h3>
         <el-table
-          :data="expense.invoices"
+          :data="expenseInvoices"
           border
           size="small"
         >
@@ -255,6 +255,16 @@ const expense = ref<Expense | null>(null)
 // 是否有审批记录
 const hasApprovalRecords = computed(() => {
   return expense.value?.departmentApproval || expense.value?.financeApproval
+})
+
+// 处理费用明细，确保始终是数组
+const expenseItems = computed(() => {
+  return expense.value?.items || []
+})
+
+// 处理发票信息，确保始终是数组
+const expenseInvoices = computed(() => {
+  return expense.value?.invoices || []
 })
 
 watch(

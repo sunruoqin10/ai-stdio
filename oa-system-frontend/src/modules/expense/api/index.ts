@@ -30,10 +30,22 @@ import { http } from '@/utils/request'
  * @returns 报销单分页列表
  */
 export async function getMyExpenses(params?: ExpenseQueryParams): Promise<PageResponse<Expense>> {
-  const result = await http.get('/expense', { params })
+  // 映射前端参数到后端参数
+  const mappedParams = {
+    ...params,
+    applyDateStart: params?.startDate,
+    applyDateEnd: params?.endDate,
+    // 移除前端特有参数，避免后端无法识别
+    startDate: undefined,
+    endDate: undefined
+  }
+  
+  const result = await http.get('/expense', { params: mappedParams })
+  // 处理后端返回的数据格式
+  const data = result.data || result
   return {
-    total: result.total || 0,
-    list: result.list || []
+    total: data.total || 0,
+    list: data.records || data.list || []
   }
 }
 

@@ -547,7 +547,7 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 
 // 上传成功回调
 function handleUploadSuccess(response: any, file: UploadFile, index: number) {
-  if (response.code === 0) {
+  if (response.code === 0 && response.data?.url) {
     form.invoices[index].imageUrl = response.data.url
     form.invoices[index].fileList = [file]
     ElMessage.success('上传成功')
@@ -565,7 +565,11 @@ function handleUploadRemove(file: UploadFile, index: number) {
 // 预览图片
 function handlePreview(file: UploadFile) {
   previewUrl.value = file.url || (file.response?.data?.url) || ''
-  previewVisible.value = true
+  if (previewUrl.value) {
+    previewVisible.value = true
+  } else {
+    ElMessage.warning('预览失败，无法获取图片URL')
+  }
 }
 
 // OCR识别
@@ -617,6 +621,34 @@ async function validateInvoiceForms(): Promise<boolean> {
   return true
 }
 
+// 转换表单数据为后端期望的格式
+function transformFormData(formData: any) {
+  // 转换发票字段
+  const transformedInvoices = formData.invoices.map((invoice: any) => ({
+    invoiceType: invoice.type,
+    invoiceNumber: invoice.number,
+    amount: invoice.amount,
+    invoiceDate: invoice.date,
+    imageUrl: invoice.imageUrl
+  }))
+
+  // 转换费用明细字段
+  const transformedItems = formData.items.map((item: any) => ({
+    description: item.description,
+    amount: item.amount,
+    expenseDate: item.date,
+    category: item.category
+  }))
+
+  return {
+    type: formData.type,
+    reason: formData.reason,
+    expenseDate: formData.expenseDate,
+    items: transformedItems,
+    invoices: transformedInvoices
+  }
+}
+
 // 保存草稿
 async function handleSaveDraft() {
   if (!formRef.value) return
@@ -644,12 +676,13 @@ async function handleSaveDraft() {
 
   loading.value = true
   try {
+    const transformedData = transformFormData(form)
     if (isEdit.value) {
       // 编辑模式
-      await expenseStore.updateExpense(props.expenseData.id, form)
+      await expenseStore.updateExpense(props.expenseData.id, transformedData)
     } else {
       // 新建模式
-      await expenseStore.createExpense(form)
+      await expenseStore.createExpense(transformedData)
     }
 
     ElMessage.success('草稿保存成功')
@@ -711,13 +744,14 @@ async function handleSubmit() {
 
   loading.value = true
   try {
+    const transformedData = transformFormData(form)
     if (isEdit.value) {
       // 编辑模式
-      await expenseStore.updateExpense(props.expenseData.id, form)
+      await expenseStore.updateExpense(props.expenseData.id, transformedData)
       await expenseStore.submitExpense(props.expenseData.id)
     } else {
       // 新建模式
-      const newExpense = await expenseStore.createExpense(form)
+      const newExpense = await expenseStore.createExpense(transformedData)
       await expenseStore.submitExpense(newExpense.id)
     }
 
