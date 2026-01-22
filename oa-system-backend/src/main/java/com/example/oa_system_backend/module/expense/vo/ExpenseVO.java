@@ -56,4 +56,7 @@ public class ExpenseVO {
     private Integer itemCount;
 
     private Integer invoiceCount;
+
+    // 乐观锁版本号
+    private Integer version;
 }

@@ -344,6 +344,7 @@ public class ExpenseServiceImpl extends ServiceImpl<ExpenseMapper, Expense>
         detailVO.setUpdatedAt(expenseVO.getUpdatedAt());
         detailVO.setItemCount(expenseVO.getItemCount());
         detailVO.setInvoiceCount(expenseVO.getInvoiceCount());
+        detailVO.setVersion(expenseVO.getVersion());
 
         List<ExpenseItem> items = expenseItemMapper.selectList(
                 new QueryWrapper<ExpenseItem>()

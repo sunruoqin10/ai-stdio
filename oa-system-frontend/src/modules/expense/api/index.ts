@@ -57,7 +57,34 @@ export async function getMyExpenses(params?: ExpenseQueryParams): Promise<PageRe
 export async function getExpense(id: string): Promise<Expense> {
   const result = await http.get(`/expense/${id}`)
   // 处理后端返回的数据结构，提取 data 字段
-  return result.data || result
+  const data = result.data || result
+
+  // 检查是否有code字段，如果有，使用result.data作为实际的数据
+  const actualData = result.code !== undefined ? (result.data || result) : data
+
+  // 转换数据格式以符合前端要求
+  return {
+    ...actualData,
+    items: (actualData.items || []).map((item: any) => ({
+      id: item.id,
+      description: item.description,
+      amount: item.amount,
+      date: item.expenseDate || item.date,
+      category: item.category
+    })),
+    invoices: (actualData.invoices || []).map((invoice: any) => ({
+      id: invoice.id,
+      type: invoice.invoiceType || invoice.type,
+      number: invoice.invoiceNumber || invoice.number,
+      amount: invoice.amount,
+      date: invoice.invoiceDate || invoice.date,
+      imageUrl: invoice.imageUrl,
+      verified: invoice.verified,
+      invoiceType: invoice.invoiceType,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceDate: invoice.invoiceDate
+    }))
+  }
 }
 
 /**

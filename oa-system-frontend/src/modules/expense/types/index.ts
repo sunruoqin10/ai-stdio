@@ -58,6 +58,9 @@ export interface Expense {
   // 状态
   status: ExpenseStatus
 
+  // 乐观锁版本号（更新时必填）
+  version?: number
+
   // 部门审批
   departmentApproval?: ApprovalRecord
 
@@ -140,6 +143,7 @@ export interface ExpenseForm {
   invoices: Invoice[]
   reason: string
   expenseDate: string
+  version?: number  // 乐观锁版本号，更新时必填
 }
 
 /**

@@ -160,7 +160,7 @@
     <!-- 编辑对话框 -->
     <ExpenseForm
       v-model="showForm"
-      :expense="currentExpense"
+      :expense-data="currentExpense"
       @success="handleFormSuccess"
     />
   </div>
@@ -237,9 +237,16 @@ function handleRowClick(row: Expense) {
   handleView(row)
 }
 
-function handleEdit(expense: Expense) {
-  currentExpense.value = expense
-  showForm.value = true
+async function handleEdit(expense: Expense) {
+  try {
+    // 获取完整的报销单详情（包含version字段）
+    const { getExpense } = await import('../api')
+    const fullExpense = await getExpense(expense.id)
+    currentExpense.value = fullExpense
+    showForm.value = true
+  } catch (error: any) {
+    ElMessage.error(error.message || '获取报销单详情失败')
+  }
 }
 
 async function handleSubmit(expense: Expense) {

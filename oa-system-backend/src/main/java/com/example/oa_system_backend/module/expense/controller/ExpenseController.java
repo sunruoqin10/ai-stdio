@@ -36,6 +36,7 @@ public class ExpenseController {
     public ApiResponse<ExpenseDetailVO> getExpenseDetail(@PathVariable String id) {
         log.info("查询报销单详情, id: {}", id);
         ExpenseDetailVO detail = expenseService.getExpenseDetail(id);
+        log.info("返回的报销单详情, version: {}", detail.getVersion());
         return ApiResponse.success(detail);
     }
 
@@ -52,7 +53,8 @@ public class ExpenseController {
     public ApiResponse<Expense> updateExpense(
             @PathVariable String id,
             @Valid @RequestBody ExpenseUpdateRequest request) {
-        log.info("更新报销单, id: {}", id);
+        log.info("更新报销单, id: {}, version: {}", id, request.getVersion());
+        log.info("完整的请求数据: {}", request);
         Expense expense = expenseService.updateExpense(id, request);
         return ApiResponse.success(expense);
     }

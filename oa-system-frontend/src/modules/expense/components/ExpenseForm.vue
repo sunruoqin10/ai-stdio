@@ -371,7 +371,8 @@ const form = reactive<ExpenseForm>({
   expenseDate: '',
   reason: '',
   items: [],
-  invoices: []
+  invoices: [],
+  version: undefined
 })
 
 // 费用明细验证规则
@@ -447,8 +448,19 @@ watch(
         expenseDate: props.expenseData.expenseDate || '',
         reason: props.expenseData.reason || '',
         items: props.expenseData.items || [],
-        invoices: props.expenseData.invoices || []
+        version: props.expenseData.version
       })
+      
+      // 处理发票数据，添加fileList字段
+      form.invoices = (props.expenseData.invoices || []).map((invoice: any) => ({
+        ...invoice,
+        fileList: invoice.imageUrl ? [{
+          uid: `invoice_${invoice.id || Date.now()}`,
+          name: `invoice_${invoice.id || Date.now()}`,
+          url: invoice.imageUrl,
+          status: 'success'
+        }] : []
+      }))
     } else if (val) {
       // 新建模式,初始化表单
       initForm()
@@ -467,7 +479,8 @@ function initForm() {
     expenseDate: '',
     reason: '',
     items: [],
-    invoices: []
+    invoices: [],
+    version: undefined
   })
   // 默认添加一条明细
   addItem()
@@ -547,8 +560,8 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 
 // 上传成功回调
 function handleUploadSuccess(response: any, file: UploadFile, index: number) {
-  if (response.code === 0 && response.data?.url) {
-    form.invoices[index].imageUrl = response.data.url
+  if (response.code === 0 && (response.data?.url || response.url)) {
+    form.invoices[index].imageUrl = response.data?.url || response.url
     form.invoices[index].fileList = [file]
     ElMessage.success('上传成功')
   } else {
@@ -645,7 +658,8 @@ function transformFormData(formData: any) {
     reason: formData.reason,
     expenseDate: formData.expenseDate,
     items: transformedItems,
-    invoices: transformedInvoices
+    invoices: transformedInvoices,
+    version: formData.version  // 包含版本号用于乐观锁
   }
 }
 
@@ -677,6 +691,13 @@ async function handleSaveDraft() {
   loading.value = true
   try {
     const transformedData = transformFormData(form)
+    console.log('=== 前端发送的数据 ===')
+    console.log('isEdit:', isEdit.value)
+    console.log('expenseData.id:', props.expenseData?.id)
+    console.log('form.version:', form.version)
+    console.log('transformedData:', transformedData)
+    console.log('====================')
+
     if (isEdit.value) {
       // 编辑模式
       await expenseStore.updateExpense(props.expenseData.id, transformedData)

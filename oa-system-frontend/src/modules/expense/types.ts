@@ -54,6 +54,7 @@ export interface ExpenseForm {
   reason: string
   items: ExpenseItem[]
   invoices: Invoice[]
+  version?: number  // 乐观锁版本号，更新时必填
 }
 
 /**
