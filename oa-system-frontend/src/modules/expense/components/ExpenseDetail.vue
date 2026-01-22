@@ -5,7 +5,10 @@
     size="700px"
     @close="handleClose"
   >
-    <div v-if="expense" class="expense-detail">
+    <div v-if="loading" class="loading-container">
+      <el-skeleton :rows="10" animated />
+    </div>
+    <div v-else-if="expense" class="expense-detail">
       <!-- 基本信息 -->
       <section class="detail-section">
         <h3 class="section-title">基本信息</h3>
@@ -205,6 +208,9 @@
         </el-descriptions>
       </section>
     </div>
+    <div v-else class="empty-container">
+      <el-empty description="暂无报销单详情" />
+    </div>
 
     <template #footer>
       <el-button @click="handleClose">关闭</el-button>
@@ -232,6 +238,7 @@ import {
   getInvoiceTypeName,
   canEdit
 } from '../utils'
+import { ElMessage } from 'element-plus'
 import type { Expense, ApprovalStatus } from '../types'
 
 interface Props {
@@ -251,6 +258,7 @@ const emit = defineEmits<{
 const expenseStore = useExpenseStore()
 const visible = ref(false)
 const expense = ref<Expense | null>(null)
+const loading = ref(false)
 
 // 是否有审批记录
 const hasApprovalRecords = computed(() => {
@@ -272,7 +280,16 @@ watch(
   async (val) => {
     visible.value = val
     if (val && props.expenseId) {
-      expense.value = await expenseStore.loadExpense(props.expenseId)
+      loading.value = true
+      try {
+        expense.value = await expenseStore.loadExpense(props.expenseId)
+      } catch (error) {
+        console.error('加载报销单详情失败:', error)
+        ElMessage.error('加载报销单详情失败，请稍后重试')
+        expense.value = null
+      } finally {
+        loading.value = false
+      }
     }
   }
 )
@@ -396,5 +413,18 @@ function handleEdit() {
 
 :deep(.el-card) {
   margin-bottom: 0;
+}
+
+.loading-container,
+.empty-container {
+  padding: 24px;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-container {
+  color: #909399;
 }
 </style>

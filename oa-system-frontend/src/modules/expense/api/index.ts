@@ -55,7 +55,9 @@ export async function getMyExpenses(params?: ExpenseQueryParams): Promise<PageRe
  * @returns 报销单详情
  */
 export async function getExpense(id: string): Promise<Expense> {
-  return await http.get(`/expense/${id}`)
+  const result = await http.get(`/expense/${id}`)
+  // 处理后端返回的数据结构，提取 data 字段
+  return result.data || result
 }
 
 /**

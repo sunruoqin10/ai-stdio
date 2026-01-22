@@ -154,6 +154,7 @@
     <ExpenseDetail
       v-model="showDetail"
       :expense-id="currentExpenseId"
+      @edit="handleEdit"
     />
 
     <!-- 编辑对话框 -->
