@@ -199,4 +199,10 @@
         ORDER BY month
     </select>
 
+    <select id="selectIdsByDatePrefix" resultType="java.lang.String">
+        SELECT id
+        FROM approval_expense
+        WHERE id LIKE CONCAT(#{datePrefix}, '%')
+        ORDER BY id DESC
+    </select>
 </mapper>

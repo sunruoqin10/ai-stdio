@@ -54,4 +54,11 @@ public interface ExpenseMapper extends BaseMapper<Expense> {
     List<ExpenseStatisticsVO> selectMonthlyStats(
         @Param("year") Integer year
     );
+
+    /**
+     * 根据日期前缀查询报销单ID列表
+     * @param datePrefix 日期前缀，格式为 EXPyyyyMMdd
+     * @return 报销单ID列表
+     */
+    List<String> selectIdsByDatePrefix(@Param("datePrefix") String datePrefix);
 }
