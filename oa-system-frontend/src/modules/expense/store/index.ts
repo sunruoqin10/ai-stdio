@@ -199,7 +199,11 @@ export const useExpenseStore = defineStore('expense', () => {
   }) {
     loading.value = true
     try {
+      console.log('[loadPendingApprovals] 开始加载待审批列表，参数:', params)
       const result = await expenseApi.getPendingApprovals(params)
+      console.log('[loadPendingApprovals] API返回结果:', result)
+      console.log('[loadPendingApprovals] 待审批列表:', result.list)
+      console.log('[loadPendingApprovals] 总数:', result.total)
       pendingApprovals.value = result.list || []
       return result
     } finally {

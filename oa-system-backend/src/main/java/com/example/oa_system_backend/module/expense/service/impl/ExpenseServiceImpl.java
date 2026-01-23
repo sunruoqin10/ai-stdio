@@ -293,7 +293,15 @@ public class ExpenseServiceImpl extends ServiceImpl<ExpenseMapper, Expense>
     }
 
     private String getFinanceApprover() {
-        return "FINANCE_ID";
+        // 查询财务部门的主管作为财务审批人
+        QueryWrapper<Department> wrapper = new QueryWrapper<>();
+        wrapper.eq("name", "财务部");
+        Department financeDept = departmentMapper.selectOne(wrapper);
+        if (financeDept == null) {
+            // 如果找不到财务部门，返回默认值
+            return "FINANCE_ID";
+        }
+        return financeDept.getLeaderId();
     }
 
     private String getEmployeeName(String employeeId) {
@@ -572,15 +580,21 @@ public class ExpenseServiceImpl extends ServiceImpl<ExpenseMapper, Expense>
     @Override
     public IPage<ExpenseVO> getPendingDeptApproval(ExpenseQueryRequest query) {
         String currentUserId = SecurityUtils.getCurrentUserId();
+        log.info("查询部门待审批列表，当前用户ID: {}", currentUserId);
         Page<ExpenseVO> page = new Page<>(query.getPage(), query.getPageSize());
-        return expenseMapper.selectPendingDeptApproval(page, currentUserId);
+        IPage<ExpenseVO> result = expenseMapper.selectPendingDeptApproval(page, currentUserId);
+        log.info("查询到部门待审批记录数: {}, 总数: {}", result.getRecords().size(), result.getTotal());
+        return result;
     }
 
     @Override
     public IPage<ExpenseVO> getPendingFinanceApproval(ExpenseQueryRequest query) {
         String currentUserId = SecurityUtils.getCurrentUserId();
+        log.info("查询财务待审批列表，当前用户ID: {}", currentUserId);
         Page<ExpenseVO> page = new Page<>(query.getPage(), query.getPageSize());
-        return expenseMapper.selectPendingFinanceApproval(page, currentUserId);
+        IPage<ExpenseVO> result = expenseMapper.selectPendingFinanceApproval(page, currentUserId);
+        log.info("查询到财务待审批记录数: {}, 总数: {}", result.getRecords().size(), result.getTotal());
+        return result;
     }
 
     @Override

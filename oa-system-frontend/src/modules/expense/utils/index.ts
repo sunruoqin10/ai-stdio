@@ -55,9 +55,9 @@ export function getExpenseTypeName(type: ExpenseType): string {
   const typeMap: Record<ExpenseType, string> = {
     travel: '差旅费',
     hospitality: '招待费',
-    office: '办公用品',
+    office: '办公费',
     transport: '交通费',
-    other: '其他费用'
+    other: '其他'
   }
   return typeMap[type] || type
 }

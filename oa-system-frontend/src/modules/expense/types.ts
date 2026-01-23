@@ -3,7 +3,7 @@
 /**
  * 报销类型
  */
-export type ExpenseType = 'travel' | 'entertainment' | 'office' | 'transport' | 'communication' | 'other'
+export type ExpenseType = 'travel' | 'hospitality' | 'office' | 'transport' | 'other'
 
 /**
  * 报销状态
@@ -43,6 +43,48 @@ export interface Invoice {
   imageUrl: string
   fileList?: any[]
   ocrLoading?: boolean
+}
+
+/**
+ * 报销单（后端 ExpenseVO 对应）
+ */
+export interface Expense {
+  id: string
+  applicantId: string
+  applicantName: string
+  departmentId: string
+  departmentName: string
+  type: ExpenseType
+  typeName: string
+  amount: number
+  reason: string
+  applyDate: string
+  expenseDate: string
+  status: ExpenseStatus
+  statusName: string
+  deptApproverName: string
+  deptApprovalStatus: string
+  deptApprovalTime: string
+  financeApproverName: string
+  financeApprovalStatus: string
+  financeApprovalTime: string
+  paymentDate: string
+  createdAt: string
+  updatedAt: string
+  itemCount: number
+  invoiceCount: number
+  version: number
+  // 审批信息对象
+  departmentApproval?: {
+    approverName: string
+    status: string
+    time: string
+  }
+  financeApproval?: {
+    approverName: string
+    status: string
+    time: string
+  }
 }
 
 /**
@@ -167,10 +209,9 @@ export interface OCRResult {
  */
 export const EXPENSE_TYPE_OPTIONS = [
   { label: '差旅费', value: 'travel' },
-  { label: '招待费', value: 'entertainment' },
-  { label: '办公用品', value: 'office' },
+  { label: '招待费', value: 'hospitality' },
+  { label: '办公费', value: 'office' },
   { label: '交通费', value: 'transport' },
-  { label: '通信费', value: 'communication' },
   { label: '其他', value: 'other' }
 ]
 

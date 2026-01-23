@@ -91,21 +91,8 @@
           </div>
 
           <!-- 费用明细预览 -->
-          <div class="items-preview">
-            <div class="preview-title">费用明细 (共{{ expense.items.length }}项):</div>
-            <div class="items-list">
-              <div
-                v-for="(item, index) in expense.items.slice(0, 2)"
-                :key="index"
-                class="item-row"
-              >
-                <span class="item-desc">{{ item.description }}</span>
-                <span class="item-amount">{{ formatAmount(item.amount) }}</span>
-              </div>
-              <div v-if="expense.items.length > 2" class="more-items">
-                还有{{ expense.items.length - 2 }}项...
-              </div>
-            </div>
+          <div v-if="expense.itemCount > 0" class="items-preview">
+            <div class="preview-title">费用明细 (共{{ expense.itemCount || 0 }}项)</div>
           </div>
 
           <!-- 审批流程 -->
@@ -304,6 +291,9 @@ const approvalForm = reactive({
 
 // 筛选后的报销列表
 const filteredExpenses = computed(() => {
+  console.log('[filteredExpenses] 原始待审批列表:', expenseStore.pendingApprovals)
+  console.log('[filteredExpenses] 待审批列表长度:', expenseStore.pendingApprovals.length)
+
   let expenses = [...expenseStore.pendingApprovals]
 
   // 关键字搜索
@@ -331,6 +321,9 @@ const filteredExpenses = computed(() => {
     expenses = expenses.filter(exp => exp.status === 'finance_pending')
   }
 
+  console.log('[filteredExpenses] 筛选后的列表:', expenses)
+  console.log('[filteredExpenses] 筛选后的长度:', expenses.length)
+
   return expenses
 })
 
@@ -345,6 +338,7 @@ const approvalPlaceholder = computed(() => {
 })
 
 onMounted(() => {
+  console.log('[ApprovalManagement] 组件已挂载，开始加载待审批数据')
   loadApprovals()
 })
 

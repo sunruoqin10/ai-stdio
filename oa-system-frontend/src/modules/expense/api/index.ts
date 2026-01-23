@@ -145,28 +145,55 @@ export async function getPendingApprovals(params?: {
   page?: number
   size?: number
 }): Promise<PageResponse<Expense>> {
+  console.log('[getPendingApprovals] 请求参数:', params)
+
   if (params?.approvalType === 'department') {
     const result = await http.get('/expense/pending/dept', { params })
-    return {
-      total: result.total || 0,
-      list: result.list || []
+    console.log('[getPendingApprovals] 部门待审批原始返回:', result)
+    // 处理后端返回的数据格式
+    const data = result.data || result
+    console.log('[getPendingApprovals] 部门待审批处理后data:', data)
+    const response = {
+      total: data.total || 0,
+      list: data.records || data.list || []
     }
+    console.log('[getPendingApprovals] 部门待审批最终返回:', response)
+    return response
   } else if (params?.approvalType === 'finance') {
     const result = await http.get('/expense/pending/finance', { params })
-    return {
-      total: result.total || 0,
-      list: result.list || []
+    console.log('[getPendingApprovals] 财务待审批原始返回:', result)
+    // 处理后端返回的数据格式
+    const data = result.data || result
+    console.log('[getPendingApprovals] 财务待审批处理后data:', data)
+    const response = {
+      total: data.total || 0,
+      list: data.records || data.list || []
     }
+    console.log('[getPendingApprovals] 财务待审批最终返回:', response)
+    return response
   }
-  
+
   // 默认返回所有待审批
   const deptPending = await http.get('/expense/pending/dept', { params })
   const financePending = await http.get('/expense/pending/finance', { params })
-  
-  return {
-    total: (deptPending.total || 0) + (financePending.total || 0),
-    list: [...(deptPending.list || []), ...(financePending.list || [])]
+
+  console.log('[getPendingApprovals] 部门待审批原始返回:', deptPending)
+  console.log('[getPendingApprovals] 财务待审批原始返回:', financePending)
+
+  // 处理后端返回的数据格式
+  const deptData = deptPending.data || deptPending
+  const financeData = financePending.data || financePending
+
+  console.log('[getPendingApprovals] 部门待审批处理后:', deptData)
+  console.log('[getPendingApprovals] 财务待审批处理后:', financeData)
+
+  const response = {
+    total: (deptData.total || 0) + (financeData.total || 0),
+    list: [...(deptData.records || deptData.list || []), ...(financeData.records || financeData.list || [])]
   }
+
+  console.log('[getPendingApprovals] 最终返回:', response)
+  return response
 }
 
 /**
