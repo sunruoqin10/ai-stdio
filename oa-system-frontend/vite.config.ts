@@ -26,6 +26,11 @@ export default defineConfig({
         changeOrigin: true,
         // 不需要重写路径，直接转发 /api 到后端
       },
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        // 不需要重写路径，直接转发 /uploads 到后端
+      },
     },
   },
 })

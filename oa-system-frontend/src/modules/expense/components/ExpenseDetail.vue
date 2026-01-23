@@ -106,7 +106,18 @@
                 :preview-src-list="[row.imageUrl]"
                 fit="cover"
                 style="width: 60px; height: 60px; border-radius: 4px; cursor: pointer"
-              />
+              >
+                <template #error>
+                  <div class="image-error">
+                    <el-icon><picture /></el-icon>
+                    <span>加载失败</span>
+                  </div>
+                </template>
+              </el-image>
+              <div v-else class="image-placeholder">
+                <el-icon><picture /></el-icon>
+                <span>暂无图片</span>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -238,7 +249,8 @@ import {
   getInvoiceTypeName,
   canEdit
 } from '../utils'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElIcon } from 'element-plus'
+import { Picture } from '@element-plus/icons-vue'
 import type { Expense, ApprovalStatus } from '../types'
 
 interface Props {
@@ -426,5 +438,27 @@ function handleEdit() {
 
 .empty-container {
   color: #909399;
+}
+
+.image-error,
+.image-placeholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f7fa;
+  border: 1px dashed #dcdfe6;
+  color: #c0c4cc;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.image-error {
+  border-color: #fbc4c4;
+  background-color: #fef0f0;
+  color: #f56c6c;
 }
 </style>
