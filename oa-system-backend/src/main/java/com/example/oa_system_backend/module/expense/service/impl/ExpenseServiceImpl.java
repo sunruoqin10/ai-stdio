@@ -78,9 +78,18 @@ public class ExpenseServiceImpl extends ServiceImpl<ExpenseMapper, Expense>
         String expenseId = expenseIdGenerator.generate();
         Expense expense = new Expense();
         expense.setId(expenseId);
-        expense.setApplicantId(SecurityUtils.getCurrentUserId());
-        // 暂时设置为默认部门ID，后续可以从用户信息中获取
-        expense.setDepartmentId("DEPT001");
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        expense.setApplicantId(currentUserId);
+        // 从员工表中获取部门ID
+        Employee employee = employeeMapper.selectById(currentUserId);
+        if (employee == null) {
+            throw new BusinessException(4012, "当前用户的员工记录不存在");
+        }
+        String departmentId = employee.getDepartmentId();
+        if (departmentId == null || departmentId.isEmpty()) {
+            throw new BusinessException(4013, "当前员工的部门信息未设置");
+        }
+        expense.setDepartmentId(departmentId);
         expense.setType(request.getType());
         expense.setAmount(itemsTotal);
         expense.setReason(request.getReason());
