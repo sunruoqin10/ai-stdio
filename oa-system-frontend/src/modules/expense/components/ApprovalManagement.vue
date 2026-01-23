@@ -21,10 +21,12 @@
         style="width: 150px"
         @change="handleFilter"
       >
-        <el-option label="技术部" value="DEPT001" />
-        <el-option label="销售部" value="DEPT002" />
-        <el-option label="市场部" value="DEPT003" />
-        <el-option label="财务部" value="DEPT004" />
+        <el-option
+          v-for="department in departmentList"
+          :key="department.id"
+          :label="department.name"
+          :value="department.id"
+        />
       </el-select>
 
       <el-select
@@ -284,6 +286,9 @@ const currentExpense = ref<Expense | null>(null)
 const approvalAction = ref<'approve' | 'reject'>('approve')
 const loading = ref(false)
 
+// 部门列表
+const departmentList = ref<any[]>([])
+
 const approvalFormRef = ref()
 const approvalForm = reactive({
   opinion: ''
@@ -337,9 +342,37 @@ const approvalPlaceholder = computed(() => {
     : '请填写驳回理由(必填)'
 })
 
+// 获取部门列表
+async function loadDepartments() {
+  try {
+    // 动态导入部门API，避免循环依赖
+    const departmentApi = await import('@/modules/department/api')
+    // 使用getDepartmentTree获取部门树结构
+    const departmentTree = await departmentApi.getDepartmentTree()
+    
+    // 扁平化部门树为列表
+    function flattenDepartments(tree: any[]): any[] {
+      return tree.reduce((acc, dept) => {
+        acc.push(dept)
+        if (dept.children && dept.children.length > 0) {
+          acc.push(...flattenDepartments(dept.children))
+        }
+        return acc
+      }, [])
+    }
+    
+    departmentList.value = flattenDepartments(departmentTree)
+    console.log('部门列表加载成功:', departmentList.value)
+  } catch (error: any) {
+    console.error('获取部门列表失败:', error)
+    departmentList.value = []
+  }
+}
+
 onMounted(() => {
   console.log('[ApprovalManagement] 组件已挂载，开始加载待审批数据')
   loadApprovals()
+  loadDepartments()
 })
 
 async function loadApprovals() {
