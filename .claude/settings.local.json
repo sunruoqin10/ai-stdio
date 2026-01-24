@@ -53,7 +53,8 @@
       "Bash(mvn:*)",
       "mcp__MySQL__execute_sql",
       "Bash(openspec validate:*)",
-      "Bash(openspec show:*)"
+      "Bash(openspec show:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

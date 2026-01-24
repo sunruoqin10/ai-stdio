@@ -10,14 +10,14 @@ import type {
   InvoiceType,
   PaymentMethod,
   PaymentStatus
-} from '../types'
+} from '../types/index'
 
 // ==================== 格式化函数 ====================
 
 /**
  * 格式化日期
  */
-export function formatDate(date: string): string {
+export function formatDate(date: string | undefined): string {
   if (!date) return ''
   return date.split('T')[0]
 }
@@ -94,10 +94,11 @@ export function getExpenseStatusType(status: ExpenseStatus): string {
  * 获取发票类型名称
  */
 export function getInvoiceTypeName(type: InvoiceType): string {
-  const typeMap: Record<InvoiceType, string> = {
+  const typeMap: Record<string, string> = {
     vat_special: '增值税专用发票',
     vat_common: '增值税普通发票',
-    electronic: '电子发票'
+    electronic: '电子发票',
+    other: '其他'
   }
   return typeMap[type] || type
 }

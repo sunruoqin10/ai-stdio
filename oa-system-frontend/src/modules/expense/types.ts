@@ -222,7 +222,7 @@ export const EXPENSE_STATUS_OPTIONS = [
   { label: '草稿', value: 'draft' },
   { label: '部门审批', value: 'dept_pending' },
   { label: '财务审批', value: 'finance_pending' },
-  { label: '已打款', value: 'paid' },
+  { label: '待打款', value: 'paid' },
   { label: '已驳回', value: 'rejected' }
 ]
 
