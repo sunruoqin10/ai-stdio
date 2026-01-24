@@ -14,7 +14,7 @@ export type ExpenseType = 'travel' | 'hospitality' | 'office' | 'transport' | 'o
 /**
  * 报销状态
  */
-export type ExpenseStatus = 'draft' | 'dept_pending' | 'finance_pending' | 'paid' | 'rejected'
+export type ExpenseStatus = 'draft' | 'dept_pending' | 'finance_pending' | 'paid' | 'completed' | 'rejected'
 
 /**
  * 发票类型

@@ -128,9 +128,9 @@
         <el-form-item label="凭证图片">
           <el-upload
             class="proof-uploader"
-            :action="uploadAction"
+            :auto-upload="false"
             :show-file-list="false"
-            :on-success="handleUploadSuccess"
+            :on-change="handleFileChange"
             :before-upload="beforeUpload"
           >
             <img v-if="uploadForm.proof" :src="uploadForm.proof" class="proof-image" />
@@ -148,8 +148,13 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showUploadDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleConfirmUpload" :loading="uploading">
+        <el-button @click="handleCancelUpload">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleConfirmUpload"
+          :loading="uploading"
+          :disabled="!uploadForm.file"
+        >
           确认上传
         </el-button>
       </template>
@@ -213,15 +218,11 @@ const showUploadDialog = ref(false)
 const uploading = ref(false)
 const uploadForm = ref({
   proof: '',
-  remark: ''
+  remark: '',
+  file: null as File | null
 })
-const currentPaymentId = ref<number | null>(null)
-
-// 上传配置
-const uploadAction = computed(() => {
-  // TODO: 替换为实际的上传接口地址
-  return '/api/upload'
-})
+const currentPaymentId = ref<string | null>(null)
+const uploadProgress = ref(0)
 
 // 查看凭证对话框
 const showViewDialog = ref(false)
@@ -290,10 +291,17 @@ function handleCurrentChange(page: number) {
 }
 
 function handleUploadProof(row: PaymentRecord) {
-  currentPaymentId.value = row.id || null
+  currentPaymentId.value = row.expenseId
+
+  // 清理之前的预览URL
+  if (uploadForm.value.proof && uploadForm.value.proof.startsWith('blob:')) {
+    URL.revokeObjectURL(uploadForm.value.proof)
+  }
+
   uploadForm.value = {
     proof: row.proof || '',
-    remark: row.remark || ''
+    remark: row.remark || '',
+    file: null
   }
   showUploadDialog.value = true
 }
@@ -336,15 +344,54 @@ function beforeUpload(file: File) {
   return true
 }
 
-function handleUploadSuccess(response: any) {
-  // TODO: 根据实际接口返回格式调整
-  uploadForm.value.proof = response.url || response.data?.url
-  ElMessage.success('图片上传成功')
+// 处理文件选择，只做本地预览
+function handleFileChange(file: any) {
+  const selectedFile = file.raw
+  if (!selectedFile) {
+    return
+  }
+
+  // 验证文件
+  if (!beforeUpload(selectedFile)) {
+    return
+  }
+
+  // 生成本地预览URL
+  const localUrl = URL.createObjectURL(selectedFile)
+  uploadForm.value.proof = localUrl
+  uploadForm.value.file = selectedFile
+}
+
+// 上传图片到服务器
+async function uploadImageToServer(): Promise<string> {
+  if (!uploadForm.value.file) {
+    throw new Error('请先选择凭证图片')
+  }
+
+  const formData = new FormData()
+  formData.append('file', uploadForm.value.file)
+
+  try {
+    // 使用 http 工具上传
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!response.ok) {
+      throw new Error('上传失败')
+    }
+
+    const result = await response.json()
+    return result.url || result.data?.url
+  } catch (error: any) {
+    throw new Error(error.message || '图片上传失败')
+  }
 }
 
 async function handleConfirmUpload() {
-  if (!uploadForm.value.proof) {
-    ElMessage.warning('请先上传凭证图片')
+  if (!uploadForm.value.file) {
+    ElMessage.warning('请先选择凭证图片')
     return
   }
 
@@ -355,7 +402,16 @@ async function handleConfirmUpload() {
 
   try {
     uploading.value = true
-    await expenseStore.uploadPaymentProof(currentPaymentId.value, uploadForm.value.proof)
+    uploadProgress.value = 0
+
+    // 第一步：上传图片到服务器
+    const imageUrl = await uploadImageToServer()
+    uploadProgress.value = 50
+
+    // 第二步：调用后端API保存凭证URL
+    await expenseStore.uploadPaymentProof(currentPaymentId.value, imageUrl)
+    uploadProgress.value = 100
+
     ElMessage.success('凭证上传成功')
     showUploadDialog.value = false
     loadPayments()
@@ -363,7 +419,24 @@ async function handleConfirmUpload() {
     ElMessage.error(error.message || '上传失败')
   } finally {
     uploading.value = false
+    uploadProgress.value = 0
   }
+}
+
+// 处理取消上传
+function handleCancelUpload() {
+  // 清理本地预览URL
+  if (uploadForm.value.proof && uploadForm.value.proof.startsWith('blob:')) {
+    URL.revokeObjectURL(uploadForm.value.proof)
+  }
+
+  uploadForm.value = {
+    proof: '',
+    remark: '',
+    file: null
+  }
+  uploadProgress.value = 0
+  showUploadDialog.value = false
 }
 
 function handleViewProof(row: PaymentRecord) {

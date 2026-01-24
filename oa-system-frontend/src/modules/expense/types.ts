@@ -223,6 +223,7 @@ export const EXPENSE_STATUS_OPTIONS = [
   { label: '部门审批', value: 'dept_pending' },
   { label: '财务审批', value: 'finance_pending' },
   { label: '待打款', value: 'paid' },
+  { label: '已完成', value: 'completed' },
   { label: '已驳回', value: 'rejected' }
 ]
 

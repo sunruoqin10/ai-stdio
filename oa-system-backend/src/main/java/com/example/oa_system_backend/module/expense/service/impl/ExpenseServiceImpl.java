@@ -584,10 +584,11 @@ public class ExpenseServiceImpl extends ServiceImpl<ExpenseMapper, Expense>
         }
 
         expense.setPaymentProof(proofUrl);
+        expense.setStatus(ExpenseStatus.COMPLETED.getCode());
         expense.setUpdatedAt(LocalDateTime.now());
         updateById(expense);
 
-        log.info("上传打款凭证成功: {}", expenseId);
+        log.info("上传打款凭证成功，报销单状态已更新为已完成: {}", expenseId);
     }
 
     @Override

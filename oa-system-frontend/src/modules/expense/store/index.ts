@@ -314,13 +314,13 @@ export const useExpenseStore = defineStore('expense', () => {
       const expenseIndex = myExpenses.value.findIndex(exp => exp.id === updatedPayment.expenseId)
       if (expenseIndex !== -1) {
         const expense = myExpenses.value[expenseIndex]
-        expense.status = 'paid'
+        expense.status = 'completed'
         expense.paymentDate = updatedPayment.paymentDate
         expense.paymentProof = proofUrl
       }
 
-      if (currentExpense.value?.id === updatedPayment.expenseId) {
-        currentExpense.value.status = 'paid'
+      if (currentExpense.value && currentExpense.value.id === updatedPayment.expenseId) {
+        currentExpense.value.status = 'completed'
         currentExpense.value.paymentDate = updatedPayment.paymentDate
         currentExpense.value.paymentProof = proofUrl
       }

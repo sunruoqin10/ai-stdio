@@ -54,7 +54,9 @@
       "mcp__MySQL__execute_sql",
       "Bash(openspec validate:*)",
       "Bash(openspec show:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(openspec:*)",
+      "Bash(npx vite build:*)"
     ]
   }
 }

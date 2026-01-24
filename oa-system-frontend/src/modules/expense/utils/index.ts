@@ -71,6 +71,7 @@ export function getExpenseStatusName(status: ExpenseStatus): string {
     dept_pending: '部门审批',
     finance_pending: '财务审批',
     paid: '待打款',
+    completed: '已完成',
     rejected: '已驳回'
   }
   return statusMap[status] || status
@@ -85,6 +86,7 @@ export function getExpenseStatusType(status: ExpenseStatus): string {
     dept_pending: 'warning',
     finance_pending: 'primary',
     paid: 'success',
+    completed: 'success',
     rejected: 'danger'
   }
   return typeMap[status] || 'info'
@@ -320,6 +322,7 @@ export function getStatusTip(status: ExpenseStatus): string {
     dept_pending: '等待部门主管审批',
     finance_pending: '等待财务人员审批',
     paid: '审批已完成，等待财务打款',
+    completed: '报销流程已完成，打款凭证已上传',
     rejected: '报销已被驳回,可以修改后重新提交'
   }
   return tipMap[status] || ''
