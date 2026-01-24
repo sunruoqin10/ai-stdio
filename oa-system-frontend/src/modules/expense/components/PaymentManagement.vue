@@ -5,9 +5,12 @@
       <el-form :inline="true" :model="filterForm" class="filter-form">
         <el-form-item label="打款状态">
           <el-select v-model="filterForm.status" placeholder="全部状态" clearable @change="handleFilter">
-            <el-option label="待打款" value="pending" />
-            <el-option label="已完成" value="completed" />
-            <el-option label="打款失败" value="failed" />
+            <el-option
+              v-for="item in paymentStatusOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="日期范围">
@@ -188,11 +191,13 @@ import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useExpenseStore } from '../store'
+import { useDictStore } from '@/modules/dict/store'
 import { formatAmount, formatDate, getPaymentMethodName, getPaymentStatusName } from '../utils'
 import ExpenseDetail from './ExpenseDetail.vue'
 import type { PaymentRecord } from '../types'
 
 const expenseStore = useExpenseStore()
+const dictStore = useDictStore()
 
 // 筛选表单
 const filterForm = ref({
@@ -213,6 +218,9 @@ const pagination = ref({
 // 选中的项
 const selectedPayments = ref<PaymentRecord[]>([])
 
+// 打款状态字典选项
+const paymentStatusOptions = ref<Array<{ label: string; value: string }>>([])
+
 // 上传对话框
 const showUploadDialog = ref(false)
 const uploading = ref(false)
@@ -232,9 +240,20 @@ const currentProof = ref('')
 const showDetail = ref(false)
 const currentExpenseId = ref<string | null>(null)
 
-onMounted(() => {
+onMounted(async () => {
+  await loadDictData()
   loadPayments()
 })
+
+// 加载字典数据
+async function loadDictData() {
+  try {
+    const statusDict = await dictStore.fetchDictData('payment_status')
+    paymentStatusOptions.value = statusDict.items
+  } catch (error) {
+    console.error('加载字典数据失败:', error)
+  }
+}
 
 async function loadPayments() {
   try {

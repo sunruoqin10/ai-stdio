@@ -606,10 +606,26 @@ public class ExpenseServiceImpl extends ServiceImpl<ExpenseMapper, Expense>
             throw new BusinessException(4015, "当前状态不允许上传打款凭证");
         }
 
+        // 更新报销单状态
         expense.setPaymentProof(proofUrl);
         expense.setStatus(ExpenseStatus.COMPLETED.getCode());
         expense.setUpdatedAt(LocalDateTime.now());
         updateById(expense);
+
+        // 同步更新打款记录表
+        QueryWrapper<ExpensePayment> paymentWrapper = new QueryWrapper<>();
+        paymentWrapper.eq("expense_id", expenseId);
+        ExpensePayment payment = expensePaymentMapper.selectOne(paymentWrapper);
+
+        if (payment != null) {
+            payment.setProof(proofUrl);
+            payment.setStatus("completed");
+            payment.setUpdatedAt(LocalDateTime.now());
+            expensePaymentMapper.updateById(payment);
+            log.info("打款记录已同步更新: expenseId={}, paymentId={}", expenseId, payment.getId());
+        } else {
+            log.warn("未找到对应的打款记录: expenseId={}", expenseId);
+        }
 
         log.info("上传打款凭证成功，报销单状态已更新为已完成: {}", expenseId);
     }
