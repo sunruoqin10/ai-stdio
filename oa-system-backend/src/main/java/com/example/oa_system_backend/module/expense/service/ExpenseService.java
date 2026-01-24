@@ -3,6 +3,7 @@ package com.example.oa_system_backend.module.expense.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.oa_system_backend.module.expense.dto.*;
 import com.example.oa_system_backend.module.expense.entity.Expense;
+import com.example.oa_system_backend.module.expense.entity.ExpensePayment;
 import com.example.oa_system_backend.module.expense.vo.ExpenseDetailVO;
 import com.example.oa_system_backend.module.expense.vo.ExpenseStatisticsVO;
 import com.example.oa_system_backend.module.expense.vo.ExpenseVO;
@@ -31,6 +32,8 @@ public interface ExpenseService {
     void cancelExpense(String id);
 
     void createPayment(String id);
+
+    IPage<ExpensePayment> getPaymentList(String status, int page, int size);
 
     void uploadPaymentProof(String expenseId, String proofUrl);
 

@@ -70,7 +70,7 @@ export function getExpenseStatusName(status: ExpenseStatus): string {
     draft: '草稿',
     dept_pending: '部门审批',
     finance_pending: '财务审批',
-    paid: '已打款',
+    paid: '待打款',
     rejected: '已驳回'
   }
   return statusMap[status] || status
@@ -318,7 +318,7 @@ export function getStatusTip(status: ExpenseStatus): string {
     draft: '草稿状态的报销单可以编辑和删除',
     dept_pending: '等待部门主管审批',
     finance_pending: '等待财务人员审批',
-    paid: '报销已完成并打款',
+    paid: '审批已完成，等待财务打款',
     rejected: '报销已被驳回,可以修改后重新提交'
   }
   return tipMap[status] || ''

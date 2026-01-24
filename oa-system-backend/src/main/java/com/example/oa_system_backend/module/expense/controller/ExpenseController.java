@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.oa_system_backend.common.vo.ApiResponse;
 import com.example.oa_system_backend.module.expense.dto.*;
 import com.example.oa_system_backend.module.expense.entity.Expense;
+import com.example.oa_system_backend.module.expense.entity.ExpensePayment;
 import com.example.oa_system_backend.module.expense.service.ExpenseService;
 import com.example.oa_system_backend.module.expense.vo.*;
 import jakarta.validation.Valid;
@@ -109,6 +110,17 @@ public class ExpenseController {
         log.info("创建打款记录, id: {}", id);
         expenseService.createPayment(id);
         return ApiResponse.success(null);
+    }
+
+    @GetMapping("/payments")
+    @PreAuthorize("hasAuthority('expense:payment')")
+    public ApiResponse<IPage<ExpensePayment>> getPaymentList(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        log.info("查询打款列表, status: {}, page: {}, size: {}", status, page, size);
+        IPage<ExpensePayment> result = expenseService.getPaymentList(status, page, size);
+        return ApiResponse.success(result);
     }
 
     @PostMapping("/{id}/payment-proof")

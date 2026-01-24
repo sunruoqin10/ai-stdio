@@ -50,7 +50,10 @@
       "mcp__database-server__describe_table",
       "Bash(/mcp:*)",
       "mcp__database-server__list_insights",
-      "Bash(mvn:*)"
+      "Bash(mvn:*)",
+      "mcp__MySQL__execute_sql",
+      "Bash(openspec validate:*)",
+      "Bash(openspec show:*)"
     ]
   }
 }

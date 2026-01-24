@@ -559,6 +559,19 @@ public class ExpenseServiceImpl extends ServiceImpl<ExpenseMapper, Expense>
     }
 
     @Override
+    public IPage<ExpensePayment> getPaymentList(String status, int page, int size) {
+        Page<ExpensePayment> pageObj = new Page<>(page, size);
+        QueryWrapper<ExpensePayment> wrapper = new QueryWrapper<>();
+
+        if (status != null && !status.isEmpty()) {
+            wrapper.eq("status", status);
+        }
+
+        wrapper.orderByDesc("created_at");
+        return expensePaymentMapper.selectPage(pageObj, wrapper);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void uploadPaymentProof(String expenseId, String proofUrl) {
         Expense expense = getById(expenseId);

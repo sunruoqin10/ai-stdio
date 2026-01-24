@@ -8,7 +8,7 @@ public enum ExpenseStatus {
     DRAFT("draft", "草稿"),
     DEPT_PENDING("dept_pending", "待部门审批"),
     FINANCE_PENDING("finance_pending", "待财务审批"),
-    PAID("paid", "已打款"),
+    PAID("paid", "待打款"),
     REJECTED("rejected", "已拒绝");
 
     private final String code;

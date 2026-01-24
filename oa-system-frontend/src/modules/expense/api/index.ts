@@ -273,10 +273,18 @@ export async function getPayments(params?: {
   page?: number
   size?: number
 }): Promise<PageResponse<PaymentRecord>> {
-  // 暂时返回空数据，后端可能需要添加此接口
+  const result = await http.get('/expense/payments', {
+    params: {
+      status: params?.status,
+      page: params?.page || 1,
+      size: params?.size || 10
+    }
+  })
+  // 处理后端返回的数据格式
+  const data = result.data || result
   return {
-    total: 0,
-    list: []
+    total: data.total || 0,
+    list: data.records || data.list || []
   }
 }
 
