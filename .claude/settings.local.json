@@ -56,7 +56,8 @@
       "Bash(openspec show:*)",
       "Bash(npm run build:*)",
       "Bash(openspec:*)",
-      "Bash(npx vite build:*)"
+      "Bash(npx vite build:*)",
+      "Bash(npx vue-tsc:*)"
     ]
   }
 }

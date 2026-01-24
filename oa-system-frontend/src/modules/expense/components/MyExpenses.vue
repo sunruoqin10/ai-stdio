@@ -9,11 +9,12 @@
         style="width: 150px"
         @change="handleFilter"
       >
-        <el-option label="差旅费" value="travel" />
-        <el-option label="招待费" value="hospitality" />
-        <el-option label="办公用品" value="office" />
-        <el-option label="交通费" value="transport" />
-        <el-option label="其他费用" value="other" />
+        <el-option
+          v-for="item in expenseTypeOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
       </el-select>
 
       <el-select
@@ -23,11 +24,12 @@
         style="width: 150px"
         @change="handleFilter"
       >
-        <el-option label="草稿" value="draft" />
-        <el-option label="部门审批" value="dept_pending" />
-        <el-option label="财务审批" value="finance_pending" />
-        <el-option label="已打款" value="paid" />
-        <el-option label="已驳回" value="rejected" />
+        <el-option
+          v-for="item in expenseStatusOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        />
       </el-select>
 
       <el-date-picker
@@ -171,6 +173,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useExpenseStore } from '../store'
+import { useDictStore } from '@/modules/dict/store'
 import {
   formatDate,
   formatAmount,
@@ -187,6 +190,7 @@ import ExpenseDetail from './ExpenseDetail.vue'
 import ExpenseForm from './ExpenseForm.vue'
 
 const expenseStore = useExpenseStore()
+const dictStore = useDictStore()
 
 const filterType = ref<string>()
 const filterStatus = ref<string>()
@@ -196,9 +200,29 @@ const showForm = ref(false)
 const currentExpenseId = ref<string>()
 const currentExpense = ref<Expense | null>(null)
 
-onMounted(() => {
+// 字典选项
+const expenseTypeOptions = ref<Array<{ label: string; value: string }>>([])
+const expenseStatusOptions = ref<Array<{ label: string; value: string }>>([])
+
+onMounted(async () => {
+  await loadDictData()
   loadExpenses()
 })
+
+// 加载字典数据
+async function loadDictData() {
+  try {
+    // 加载费用类型字典
+    const typeDict = await dictStore.fetchDictData('expense_type')
+    expenseTypeOptions.value = typeDict.items
+
+    // 加载报销状态字典
+    const statusDict = await dictStore.fetchDictData('expense_status')
+    expenseStatusOptions.value = statusDict.items
+  } catch (error) {
+    console.error('加载字典数据失败:', error)
+  }
+}
 
 async function loadExpenses() {
   try {

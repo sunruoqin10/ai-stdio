@@ -571,6 +571,29 @@ public class ExpenseServiceImpl extends ServiceImpl<ExpenseMapper, Expense>
         return expensePaymentMapper.selectPage(pageObj, wrapper);
     }
 
+    /**
+     * 上传打款凭证
+     *
+     * <p>功能说明：</p>
+     * <ul>
+     *   <li>验证报销单状态必须为"待打款"（PAID）</li>
+     *   <li>保存打款凭证URL到数据库</li>
+   *   <li>将报销单状态自动更新为"已完成"（COMPLETED）</li>
+     *   <li>记录更新时间戳</li>
+     * </ul>
+     *
+     * <p>业务规则：</p>
+     * <ul>
+     *   <li>只有"待打款"状态的报销单才能上传凭证</li>
+     *   <li>上传凭证后自动变更为"已完成"状态</li>
+     *   <li>"已完成"是报销流程的终止状态</li>
+     * </ul>
+     *
+     * @param expenseId 报销单号
+     * @param proofUrl 打款凭证URL
+     * @throws BusinessException 报销单不存在
+     * @throws BusinessException 当前状态不允许上传打款凭证
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void uploadPaymentProof(String expenseId, String proofUrl) {
