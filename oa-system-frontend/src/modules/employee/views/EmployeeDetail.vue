@@ -33,9 +33,19 @@
         <el-card shadow="never" class="info-card">
           <div class="avatar-section">
             <el-avatar :src="employee?.avatar" :size="150" />
-            <el-button v-if="!editing" link type="primary" class="change-avatar">
-              更换头像
-            </el-button>
+            <el-upload
+              v-if="!editing"
+              class="avatar-uploader"
+              :action="uploadUrl"
+              :show-file-list="false"
+              :on-success="handleAvatarSuccess"
+              :on-error="handleAvatarError"
+              :before-upload="beforeAvatarUpload"
+            >
+              <el-button link type="primary" class="change-avatar">
+                更换头像
+              </el-button>
+            </el-upload>
           </div>
           <el-divider />
           <div class="basic-info">
@@ -211,6 +221,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'
+import type { UploadProps } from 'element-plus'
 import { useEmployeeStore } from '../store'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
@@ -227,6 +238,33 @@ const editing = ref(false)
 const activeTab = ref('basic')
 const logs = ref<any[]>([])
 const employeeList = ref<Employee[]>([])
+const uploadUrl = '/api/upload'
+
+const handleAvatarSuccess: UploadProps['onSuccess'] = (response, file) => {
+  if (response && response.url) {
+    const newAvatar = response.url.startsWith('http') ? response.url : `/api${response.url}`
+    form.value.avatar = newAvatar
+    employee.value!.avatar = newAvatar
+    ElMessage.success('头像上传成功')
+  } else {
+    ElMessage.error('上传响应格式错误')
+  }
+}
+
+const handleAvatarError: UploadProps['onError'] = () => {
+  ElMessage.error('上传失败，请重试')
+}
+
+const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
+  if (!rawFile.type.startsWith('image/')) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  } else if (rawFile.size / 1024 / 1024 > 2) {
+    ElMessage.error('图片大小不能超过 2MB!')
+    return false
+  }
+  return true
+}
 
 const form = ref<EmployeeForm>({
   employeeNo: '',
@@ -349,6 +387,12 @@ async function handleCommand(command: string) {
     .avatar-section {
       @include flex-column-center;
       padding: $spacing-xl 0;
+
+      .avatar-uploader {
+        :deep(.el-upload) {
+          cursor: pointer;
+        }
+      }
 
       .change-avatar {
         margin-top: $spacing-md;
