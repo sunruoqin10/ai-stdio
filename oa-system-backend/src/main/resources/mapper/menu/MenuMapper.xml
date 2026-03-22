@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.oa_system_backend.module.menu.mapper.MenuMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.oa_system_backend.module.menu.entity.Menu">
+        <id column="id" property="id"/>
+        <result column="menu_code" property="menuCode"/>
+        <result column="menu_name" property="menuName"/>
+        <result column="menu_type" property="menuType"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="menu_level" property="menuLevel"/>
+        <result column="route_path" property="routePath"/>
+        <result column="component_path" property="componentPath"/>
+        <result column="redirect_path" property="redirectPath"/>
+        <result column="icon" property="icon"/>
+        <result column="permission" property="permission"/>
+        <result column="sort" property="sort"/>
+        <result column="visible" property="visible"/>
+        <result column="status" property="status"/>
+        <result column="is_cache" property="isCache"/>
+        <result column="is_frame" property="isFrame"/>
+        <result column="frame_url" property="frameUrl"/>
+        <result column="menu_target" property="menuTarget"/>
+        <result column="is_system" property="isSystem"/>
+        <result column="remark" property="remark"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="updated_by" property="updatedBy"/>
+        <result column="is_deleted" property="isDeleted"/>
+        <result column="deleted_at" property="deletedAt"/>
+        <result column="deleted_by" property="deletedBy"/>
+    </resultMap>
+
+    <select id="selectMenuTree" resultMap="BaseResultMap">
+        SELECT * FROM sys_menu
+        WHERE parent_id = #{parentId}
+        AND is_deleted = 0
+        ORDER BY sort ASC
+    </select>
+
+    <select id="selectMenuList" resultMap="BaseResultMap">
+        SELECT * FROM sys_menu
+        WHERE is_deleted = 0
+        <if test="menuType != null and menuType != ''">
+            AND menu_type = #{menuType}
+        </if>
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (menu_name LIKE CONCAT('%', #{keyword}, '%')
+            OR menu_code LIKE CONCAT('%', #{keyword}, '%')
+            OR route_path LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY sort ASC
+    </select>
+
+    <select id="selectByMenuCode" resultMap="BaseResultMap">
+        SELECT * FROM sys_menu
+        WHERE menu_code = #{menuCode}
+        AND is_deleted = 0
+        LIMIT 1
+    </select>
+
+    <select id="countByParentId" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM sys_menu
+        WHERE parent_id = #{parentId}
+        AND is_deleted = 0
+    </select>
+
+    <select id="selectParentOptions" resultMap="BaseResultMap">
+        SELECT * FROM sys_menu
+        WHERE is_deleted = 0
+        AND (menu_type = 'directory' OR menu_type = 'menu')
+        ORDER BY sort ASC
+    </select>
+
+    <select id="selectMenuRoutes" resultMap="BaseResultMap">
+        SELECT * FROM sys_menu
+        WHERE is_deleted = 0
+        AND status = 'enabled'
+        AND visible = 1
+        AND (menu_type = 'directory' OR menu_type = 'menu')
+        ORDER BY sort ASC
+    </select>
+
+</mapper>

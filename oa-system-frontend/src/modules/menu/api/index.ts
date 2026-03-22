@@ -2,12 +2,7 @@
  * 菜单管理模块 API接口
  */
 
-// 开发环境使用Mock API
-import * as mockApi from './mock-adapter'
-
-// 生产环境使用真实API
-// import request from '@/utils/request'
-
+import { http } from '@/utils/request'
 import type { MenuItem, MenuForm, MenuQuery, RouteMenuItem } from '../types'
 
 /**
@@ -16,15 +11,7 @@ import type { MenuItem, MenuForm, MenuQuery, RouteMenuItem } from '../types'
  * @returns 菜单列表
  */
 export function getMenuList(params?: MenuQuery) {
-  // 开发环境使用mock
-  return mockApi.mockMenuApiHandlers.getMenuList()
-
-  // 生产环境使用真实API
-  // return request<MenuItem[]>({
-  //   url: '/menus',
-  //   method: 'get',
-  //   params
-  // })
+  return http.get<MenuItem[]>('/menus', { params })
 }
 
 /**
@@ -33,13 +20,7 @@ export function getMenuList(params?: MenuQuery) {
  * @returns 菜单详情
  */
 export function getMenuDetail(id: number) {
-  return mockApi.mockMenuApiHandlers.getMenuDetail(String(id))
-
-  // 生产环境使用真实API
-  // return request<MenuItem>({
-  //   url: `/menus/${id}`,
-  //   method: 'get'
-  // })
+  return http.get<MenuItem>(`/menus/${id}`)
 }
 
 /**
@@ -48,14 +29,7 @@ export function getMenuDetail(id: number) {
  * @returns 创建的菜单
  */
 export function createMenu(data: MenuForm) {
-  return mockApi.mockMenuApiHandlers.createMenu(data)
-
-  // 生产环境使用真实API
-  // return request<MenuItem>({
-  //   url: '/menus',
-  //   method: 'post',
-  //   data
-  // })
+  return http.post<MenuItem>('/menus', data)
 }
 
 /**
@@ -65,14 +39,7 @@ export function createMenu(data: MenuForm) {
  * @returns 更新的菜单
  */
 export function updateMenu(id: number, data: MenuForm) {
-  return mockApi.mockMenuApiHandlers.updateMenu(String(id), data)
-
-  // 生产环境使用真实API
-  // return request<MenuItem>({
-  //   url: `/menus/${id}`,
-  //   method: 'put',
-  //   data
-  // })
+  return http.put<MenuItem>(`/menus/${id}`, data)
 }
 
 /**
@@ -81,13 +48,7 @@ export function updateMenu(id: number, data: MenuForm) {
  * @returns 删除结果
  */
 export function deleteMenu(id: number) {
-  return mockApi.mockMenuApiHandlers.deleteMenu(String(id))
-
-  // 生产环境使用真实API
-  // return request({
-  //   url: `/menus/${id}`,
-  //   method: 'delete'
-  // })
+  return http.delete(`/menus/${id}`)
 }
 
 /**
@@ -95,13 +56,7 @@ export function deleteMenu(id: number) {
  * @returns 父级菜单列表
  */
 export function getParentOptions() {
-  return mockApi.mockMenuApiHandlers.getParentOptions()
-
-  // 生产环境使用真实API
-  // return request<MenuItem[]>({
-  //   url: '/menus/parent-options',
-  //   method: 'get'
-  // })
+  return http.get<MenuItem[]>('/menus/parent-options')
 }
 
 /**
@@ -111,14 +66,7 @@ export function getParentOptions() {
  * @returns 切换结果
  */
 export function toggleMenuStatus(id: number, status: boolean) {
-  return mockApi.mockMenuApiHandlers.toggleMenuStatus(String(id), { status })
-
-  // 生产环境使用真实API
-  // return request({
-  //   url: `/menus/${id}/status`,
-  //   method: 'patch',
-  //   data: { status }
-  // })
+  return http.patch(`/menus/${id}/status`, { status })
 }
 
 /**
@@ -126,11 +74,5 @@ export function toggleMenuStatus(id: number, status: boolean) {
  * @returns 路由菜单列表
  */
 export function getMenuRoutes() {
-  return mockApi.mockMenuApiHandlers.getMenuRoutes()
-
-  // 生产环境使用真实API
-  // return request<RouteMenuItem[]>({
-  //   url: '/menus/routes',
-  //   method: 'get'
-  // })
+  return http.get<RouteMenuItem[]>('/menus/routes')
 }
