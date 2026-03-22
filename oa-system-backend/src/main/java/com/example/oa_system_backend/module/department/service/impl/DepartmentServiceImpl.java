@@ -1,5 +1,6 @@
 package com.example.oa_system_backend.module.department.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.oa_system_backend.common.exception.BusinessException;
@@ -16,6 +17,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -397,6 +399,57 @@ public class DepartmentServiceImpl implements DepartmentService {
                     dept.setChildren(children);
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public void exportDepartments(jakarta.servlet.http.HttpServletResponse response) throws IOException {
+        log.info("导出部门列表");
+
+        LambdaQueryWrapper<Department> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByAsc(Department::getLevel, Department::getSort);
+
+        List<Department> departments = departmentMapper.selectList(wrapper);
+
+        List<DepartmentExportVO> exportList = departments.stream().map(dept -> {
+            DepartmentExportVO vo = new DepartmentExportVO();
+            vo.setId(dept.getId());
+            vo.setName(dept.getName());
+            vo.setShortName(dept.getShortName());
+            vo.setParentId(dept.getParentId());
+            vo.setLevel(dept.getLevel());
+            vo.setSort(dept.getSort());
+            
+            if (dept.getEstablishedDate() != null) {
+                vo.setEstablishedDate(dept.getEstablishedDate().toString());
+            }
+            
+            vo.setDescription(dept.getDescription());
+            vo.setStatus("active".equals(dept.getStatus()) ? "正常" : "停用");
+            
+            if (dept.getCreatedAt() != null) {
+                vo.setCreatedAt(dept.getCreatedAt().format(
+                        java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            }
+            
+            return vo;
+        }).collect(Collectors.toList());
+
+        List<String> headers = List.of(
+                "部门编号", "部门名称", "部门简称", "上级部门ID", "上级部门",
+                "负责人姓名", "部门层级", "排序号", "成立时间", "部门描述", "状态", "创建时间"
+        );
+
+        List<String> fieldNames = List.of(
+                "id", "name", "shortName", "parentId", "parentName",
+                "leaderName", "level", "sort", "establishedDate", "description", "status", "createdAt"
+        );
+
+        String fileName = "部门列表_" + java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+
+        com.example.oa_system_backend.common.utils.ExcelUtils.exportExcel(
+                response, exportList, headers, fieldNames, fileName
+        );
     }
 
     @Override

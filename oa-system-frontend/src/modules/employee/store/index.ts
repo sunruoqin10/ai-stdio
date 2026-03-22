@@ -288,9 +288,10 @@ export const useEmployeeStore = defineStore('employee', () => {
   /**
    * 导出员工
    */
-  async function exportEmployees(filter?: EmployeeFilter) {
+   async function exportEmployees(filter?: EmployeeFilter) {
     try {
-      const blob = await employeeApi.exportEmployees({ filter })
+      const response = await employeeApi.exportEmployees({ filter })
+      const blob = response.data as Blob
       // 创建下载链接
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')

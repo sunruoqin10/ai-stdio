@@ -163,4 +163,11 @@ public interface DepartmentService {
      * @return 部门ID
      */
     String generateDepartmentId();
+
+    /**
+     * 导出部门列表
+     *
+     * @param response HTTP响应对象
+     */
+    void exportDepartments(jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException;
 }

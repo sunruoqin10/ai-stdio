@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -187,5 +188,15 @@ public class DepartmentController {
     public ApiResponse<Boolean> hasMembers(@PathVariable String id) {
         boolean hasMembers = departmentService.hasMembers(id);
         return ApiResponse.success(hasMembers);
+    }
+
+    /**
+     * 导出部门列表
+     * GET /api/departments/export
+     */
+    @GetMapping("/export")
+    public void exportDepartments(jakarta.servlet.http.HttpServletResponse response) throws IOException {
+        log.info("导出部门列表");
+        departmentService.exportDepartments(response);
     }
 }

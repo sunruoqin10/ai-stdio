@@ -169,10 +169,11 @@ export const useDepartmentStore = defineStore('department', () => {
   /**
    * 导出部门列表
    */
-  async function exportList() {
+   async function exportList() {
     loading.value = true
     try {
-      const blob = await api.exportDepartments(filter.value)
+      const response = await api.exportDepartments(filter.value)
+      const blob = response.data as Blob
 
       // 创建下载链接
       const url = window.URL.createObjectURL(blob)
