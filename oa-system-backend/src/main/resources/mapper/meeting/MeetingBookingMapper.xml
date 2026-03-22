@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.oa_system_backend.module.meeting.mapper.MeetingBookingMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.oa_system_backend.module.meeting.entity.MeetingBooking">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="room_id" property="roomId"/>
+        <result column="room_name" property="roomName"/>
+        <result column="room_location" property="roomLocation"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="booker_id" property="bookerId"/>
+        <result column="booker_name" property="bookerName"/>
+        <result column="booker_position" property="bookerPosition"/>
+        <result column="department_id" property="departmentId"/>
+        <result column="department_name" property="departmentName"/>
+        <result column="participant_count" property="participantCount"/>
+        <result column="participant_ids" property="participantIds"/>
+        <result column="agenda" property="agenda"/>
+        <result column="equipment" property="equipment"/>
+        <result column="level" property="level"/>
+        <result column="reminder" property="reminder"/>
+        <result column="status" property="status"/>
+        <result column="recurring_rule" property="recurringRule"/>
+        <result column="actual_start_time" property="actualStartTime"/>
+        <result column="actual_end_time" property="actualEndTime"/>
+        <result column="check_in_user" property="checkInUser"/>
+        <result column="check_out_user" property="checkOutUser"/>
+        <result column="rating" property="rating"/>
+        <result column="feedback" property="feedback"/>
+        <result column="approver_id" property="approverId"/>
+        <result column="approver_name" property="approverName"/>
+        <result column="approval_opinion" property="approvalOpinion"/>
+        <result column="approval_time" property="approvalTime"/>
+        <result column="rejection_reason" property="rejectionReason"/>
+        <result column="version" property="version"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <select id="selectPageByCondition" resultMap="BaseResultMap">
+        SELECT b.*,
+               r.location AS room_location,
+               e.position AS booker_position
+        FROM admin_meeting_booking b
+        LEFT JOIN admin_meeting_room r ON b.room_id = r.id
+        LEFT JOIN sys_employee e ON b.booker_id = e.id
+        WHERE 1=1
+        <if test="query.roomId != null and query.roomId != ''">
+            AND b.room_id = #{query.roomId}
+        </if>
+        <if test="query.bookerId != null and query.bookerId != ''">
+            AND b.booker_id = #{query.bookerId}
+        </if>
+        <if test="query.status != null and query.status != ''">
+            AND b.status = #{query.status}
+        </if>
+        <if test="query.keyword != null and query.keyword != ''">
+            AND (b.title LIKE CONCAT('%', #{query.keyword}, '%')
+                 OR b.booker_name LIKE CONCAT('%', #{query.keyword}, '%'))
+        </if>
+        <if test="query.startDate != null and query.startDate != ''">
+            AND b.start_time >= #{query.startDate}
+        </if>
+        <if test="query.endDate != null and query.endDate != ''">
+            AND b.end_time &lt;= #{query.endDate}
+        </if>
+        ORDER BY b.start_time DESC
+    </select>
+
+    <select id="countTimeConflict" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM admin_meeting_booking
+        WHERE room_id = #{roomId}
+          AND status NOT IN ('cancelled', 'rejected')
+          AND (
+              (start_time &lt;= #{startTime} AND end_time > #{startTime})
+              OR (start_time &lt; #{endTime} AND end_time >= #{endTime})
+              OR (start_time >= #{startTime} AND end_time &lt;= #{endTime})
+          )
+        <if test="excludeId != null and excludeId != ''">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <select id="selectByRoomAndDateRange" resultMap="BaseResultMap">
+        SELECT * FROM admin_meeting_booking
+        WHERE room_id = #{roomId}
+          AND status NOT IN ('cancelled', 'rejected')
+          AND start_time &lt;= #{endDate}
+          AND end_time >= #{startDate}
+        ORDER BY start_time ASC
+    </select>
+
+    <select id="selectApprovedByDateRange" resultMap="BaseResultMap">
+        SELECT * FROM admin_meeting_booking
+        WHERE status = 'approved'
+          AND start_time >= #{startTime}
+          AND end_time &lt;= #{endTime}
+        ORDER BY start_time ASC
+    </select>
+
+    <select id="countByStatus" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM admin_meeting_booking
+        WHERE status = #{status}
+    </select>
+
+    <select id="selectRoomUsageStats" resultMap="BaseResultMap">
+        SELECT * FROM admin_meeting_booking
+        WHERE start_time >= #{startDate}
+          AND end_time &lt;= #{endDate}
+          AND status NOT IN ('cancelled', 'rejected')
+    </select>
+
+    <select id="selectDepartmentStats" resultMap="BaseResultMap">
+        SELECT * FROM admin_meeting_booking
+        WHERE start_time >= #{startDate}
+          AND end_time &lt;= #{endDate}
+          AND status NOT IN ('cancelled', 'rejected')
+    </select>
+
+    <select id="selectTimeSlotStats" resultMap="BaseResultMap">
+        SELECT * FROM admin_meeting_booking
+        WHERE start_time >= #{startDate}
+          AND end_time &lt;= #{endDate}
+          AND status NOT IN ('cancelled', 'rejected')
+    </select>
+
+    <select id="selectMonthlyStats" resultMap="BaseResultMap">
+        SELECT * FROM admin_meeting_booking
+        WHERE YEAR(start_time) = #{year}
+          AND MONTH(start_time) = #{month}
+          AND status NOT IN ('cancelled', 'rejected')
+    </select>
+
+    <select id="countActiveBookings" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM admin_meeting_booking
+        WHERE room_id = #{roomId}
+          AND status NOT IN ('cancelled', 'rejected')
+    </select>
+
+</mapper>

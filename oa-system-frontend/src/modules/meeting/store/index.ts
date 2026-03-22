@@ -6,6 +6,7 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useAuthStore } from '@/modules/auth/store'
 import type {
   MeetingRoom,
   MeetingBooking,
@@ -212,11 +213,13 @@ export const useMeetingStore = defineStore('meeting', () => {
    * 加载我的预定
    */
   async function loadMyBookings(params?: BookingQueryParams) {
+    const authStore = useAuthStore()
+    const currentUserId = authStore.userInfo?.id
     myBookingsLoading.value = true
     try {
       const response = await meetingApi.getMeetingBookings({
         ...params,
-        organizerId: 'CURRENT_USER' // TODO: 从用户store获取
+        bookerId: currentUserId
       })
       myBookings.value = response.list
     } catch (error) {
@@ -304,6 +307,23 @@ export const useMeetingStore = defineStore('meeting', () => {
       return success
     } catch (error) {
       console.error('取消会议预定失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 删除会议预定(物理删除)
+   */
+  async function deleteBooking(bookingId: string) {
+    try {
+      await meetingApi.deleteMeetingBooking(bookingId)
+      bookings.value = bookings.value.filter(b => b.id !== bookingId)
+      myBookings.value = myBookings.value.filter(b => b.id !== bookingId)
+      if (currentBooking.value?.id === bookingId) {
+        currentBooking.value = null
+      }
+    } catch (error) {
+      console.error('删除会议预定失败:', error)
       throw error
     }
   }
@@ -452,8 +472,11 @@ export const useMeetingStore = defineStore('meeting', () => {
    * 加载通知
    */
   async function loadNotifications() {
+    const authStore = useAuthStore()
+    const currentUserId = authStore.userInfo?.id
+    if (!currentUserId) return
     try {
-      const list = await meetingApi.getNotifications('CURRENT_USER')
+      const list = await meetingApi.getNotifications(currentUserId)
       notifications.value = list
       unreadCount.value = list.filter(n => !n.isRead).length
     } catch (error) {
@@ -560,6 +583,7 @@ export const useMeetingStore = defineStore('meeting', () => {
     createBooking,
     updateBooking,
     cancelBooking,
+    deleteBooking,
 
     // 审批方法
     loadPendingApprovals,

@@ -232,6 +232,13 @@ export function canRate(booking: MeetingBooking): boolean {
   return booking.status === 'approved' && !!booking.actualEndTime && !booking.rating
 }
 
+/**
+ * 是否可删除(只有预定者或管理员可以删除)
+ */
+export function canDelete(booking: MeetingBooking, currentUserId: string, isAdmin: boolean): boolean {
+  return booking.bookerId === currentUserId || isAdmin
+}
+
 // ==================== 时间计算函数 ====================
 
 /**

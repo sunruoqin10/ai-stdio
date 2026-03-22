@@ -140,9 +140,9 @@
         />
       </el-form-item>
 
-      <el-form-item label="参会人员" prop="attendeeIds">
+      <el-form-item label="参会人员" prop="participantIds">
         <el-select
-          v-model="form.attendeeIds"
+          v-model="form.participantIds"
           multiple
           filterable
           placeholder="请选择参会人员"
@@ -156,7 +156,7 @@
           />
         </el-select>
         <div style="font-size: 12px; color: #909399; margin-top: 5px">
-          已选择 {{ form.attendeeIds.length }} 人
+          已选择 {{ form.participantIds.length }} 人
         </div>
       </el-form-item>
 
@@ -207,12 +207,12 @@
           <el-descriptions-item label="面积">{{ selectedRoom.area }}㎡</el-descriptions-item>
           <el-descriptions-item label="设备" :span="2">
             <el-tag
-              v-for="eq in selectedRoom.equipments"
+              v-for="eq in roomEquipments"
               :key="eq.id"
               size="small"
               style="margin-right: 5px; margin-bottom: 5px"
             >
-              {{ getEquipmentTypeName(eq.type) }} × {{ eq.quantity }}
+              {{ eq.name }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="描述" :span="2">
@@ -293,7 +293,7 @@ const form = reactive<BookingForm>({
   agenda: '',
   level: 'normal',
   isPrivate: false,
-  attendeeIds: [],
+  participantIds: [],
   reminder: '30min'
 })
 
@@ -310,6 +310,18 @@ const availableRooms = computed(() => {
 const selectedRoom = computed(() => {
   if (!form.roomId) return null
   return meetingStore.rooms.find(r => r.id === form.roomId)
+})
+
+// 会议室设备（处理后端返回的字符串数组）
+const roomEquipments = computed(() => {
+  if (!selectedRoom.value?.equipment) return []
+  return selectedRoom.value.equipment.map((eq: string, index: number) => ({
+    id: String(index),
+    type: eq,
+    name: eq,
+    quantity: 1,
+    available: true
+  }))
 })
 
 // 冲突信息
@@ -366,7 +378,7 @@ const rules: FormRules = {
     { required: true, message: '请输入联系电话', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
   ],
-  attendeeIds: [
+  participantIds: [
     { required: true, message: '请选择参会人员', trigger: 'change' },
     { type: 'array', min: 1, message: '至少选择一名参会人员', trigger: 'change' }
   ]
@@ -483,7 +495,7 @@ function resetForm() {
     agenda: '',
     level: 'normal',
     isPrivate: false,
-    attendeeIds: [],
+    participantIds: [],
     reminder: '30min'
   })
   recurrenceType.value = 'none'
@@ -507,11 +519,19 @@ async function handleSubmit() {
 
     submitting.value = true
 
+    // 合并日期和时间为完整时间格式
+    const submitData = {
+      ...form,
+      startTime: `${form.date} ${form.startTime}:00`,
+      endTime: `${form.date} ${form.endTime}:00`
+    }
+    delete (submitData as any).date
+
     // 处理重复设置
     if (recurrenceType.value !== 'none') {
       const endDate = new Date()
       endDate.setDate(endDate.getDate() + 30 * recurrenceInterval.value)
-      form.recurrence = {
+      submitData.recurrence = {
         type: recurrenceType.value,
         interval: recurrenceInterval.value,
         endDate: endDate.toISOString()
@@ -520,11 +540,11 @@ async function handleSubmit() {
 
     if (isEdit.value && props.bookingData) {
       // 编辑模式
-      await meetingStore.updateBooking(props.bookingData.id, form)
+      await meetingStore.updateBooking(props.bookingData.id, submitData)
       ElMessage.success('更新成功')
     } else {
       // 创建模式
-      await meetingStore.createBooking(form)
+      await meetingStore.createBooking(submitData)
       ElMessage.success('预定成功,等待审批')
     }
 
@@ -557,7 +577,7 @@ watch(() => props.modelValue, (val) => {
     form.agenda = booking.agenda || ''
     form.level = booking.level
     form.isPrivate = booking.isPrivate
-    form.attendeeIds = booking.attendees.map(a => a.userId)
+    form.participantIds = booking.attendees.map(a => a.userId)
     form.reminder = booking.reminder
 
     if (booking.recurrence) {

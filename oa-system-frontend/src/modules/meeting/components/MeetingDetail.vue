@@ -70,8 +70,8 @@
       </div>
 
       <!-- 参会人员 -->
-      <el-divider content-position="left">参会人员 ({{ booking.attendees.length }}人)</el-divider>
-      <div class="attendees-list">
+      <el-divider content-position="left">参会人员 ({{ booking.attendees?.length || booking.participantCount || 0 }}人)</el-divider>
+      <div v-if="booking.attendees?.length" class="attendees-list">
         <el-tag
           v-for="attendee in booking.attendees"
           :key="attendee.userId"
@@ -84,6 +84,9 @@
           <span v-else-if="attendee.status === 'declined'" style="color: #f56c6c">✗</span>
           <span v-else style="color: #909399">?</span>
         </el-tag>
+      </div>
+      <div v-else class="attendees-list" style="color: #909399">
+        暂无参会人员
       </div>
 
       <!-- 审批记录 -->

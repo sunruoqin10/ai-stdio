@@ -2,7 +2,7 @@
   <div class="approval-management">
     <el-table v-loading="loading" :data="pendingApprovals" stripe>
       <el-table-column prop="title" label="会议主题" min-width="180" />
-      <el-table-column prop="organizerName" label="申请人" width="100" />
+      <el-table-column prop="bookerName" label="申请人" width="100" />
       <el-table-column prop="departmentName" label="部门" width="120" />
       <el-table-column prop="roomName" label="会议室" width="120" />
       <el-table-column label="会议时间" width="180">

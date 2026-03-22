@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.oa_system_backend.module.meeting.mapper.MeetingAttendeeMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.oa_system_backend.module.meeting.entity.MeetingAttendee">
+        <id column="id" property="id"/>
+        <result column="booking_id" property="bookingId"/>
+        <result column="user_id" property="userId"/>
+        <result column="user_name" property="userName"/>
+        <result column="department_id" property="departmentId"/>
+        <result column="department_name" property="departmentName"/>
+        <result column="is_required" property="isRequired"/>
+        <result column="status" property="status"/>
+        <result column="response_time" property="responseTime"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <select id="selectByBookingId" resultMap="BaseResultMap">
+        SELECT * FROM meeting_attendee
+        WHERE booking_id = #{bookingId}
+    </select>
+
+    <delete id="deleteByBookingId">
+        DELETE FROM meeting_attendee WHERE booking_id = #{bookingId}
+    </delete>
+
+</mapper>

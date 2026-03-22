@@ -1,3 +1,7 @@
+<!-- LANGUAGE: 中文 (Chinese) - Always communicate with users in Chinese -->
+
+<!-- NO_AUTO_START: Do not automatically start frontend or backend services. User will start them manually. -->
+
 <!-- OPENSPEC:START -->
 # OpenSpec Instructions
 

@@ -105,7 +105,7 @@
 
         <el-table-column label="参会人数" width="80" align="center">
           <template #default="{ row }">
-            <el-badge :value="row.attendees.length" :max="99" />
+            <el-badge :value="row.attendees?.length || row.participantCount || 0" :max="99" />
           </template>
         </el-table-column>
 
@@ -158,6 +158,15 @@
             >
               签退
             </el-button>
+
+            <el-button
+              v-if="canDelete(row, authStore.userInfo?.id || '', authStore.userInfo?.roles?.includes('ADMIN') || false)"
+              link
+              type="danger"
+              @click="handleDelete(row)"
+            >
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -196,6 +205,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Plus } from '@element-plus/icons-vue'
 import { useMeetingStore } from '../store'
+import { useAuthStore } from '@/modules/auth/store'
 import BookingDialog from './BookingDialog.vue'
 import MeetingDetail from './MeetingDetail.vue'
 import {
@@ -208,12 +218,14 @@ import {
   canEdit,
   canCancel,
   canCheckIn,
-  canCheckOut
+  canCheckOut,
+  canDelete
 } from '../utils'
 import type { MeetingBooking } from '../types'
 
 // Store
 const meetingStore = useMeetingStore()
+const authStore = useAuthStore()
 
 // 加载状态
 const loading = ref(false)
@@ -360,9 +372,30 @@ async function handleCheckOut(row: MeetingBooking) {
   }
 }
 
+// 删除
+async function handleDelete(row: MeetingBooking) {
+  try {
+    await ElMessageBox.confirm('确定要删除这个会议预定吗?此操作不可恢复。', '警告', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    await meetingStore.deleteBooking(row.id)
+    ElMessage.success('删除成功')
+    loadData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }
+}
+
 // 成功回调
 function handleSuccess() {
   loadData()
+  meetingStore.loadPendingApprovals()
 }
 
 // 分页变化

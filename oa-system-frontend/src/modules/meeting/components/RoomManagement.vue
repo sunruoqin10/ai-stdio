@@ -8,12 +8,12 @@
       <el-table-column label="设备" min-width="200">
         <template #default="{ row }">
           <el-tag
-            v-for="eq in row.equipments"
+            v-for="eq in transformEquipments(row.equipment)"
             :key="eq.id"
             size="small"
             style="margin-right: 5px; margin-bottom: 5px"
           >
-            {{ getEquipmentTypeName(eq.type) }} × {{ eq.quantity }}
+            {{ eq.name }}
           </el-tag>
         </template>
       </el-table-column>
@@ -61,12 +61,11 @@
         <el-descriptions-item label="设备" :span="2">
           <div style="display: flex; flex-wrap: wrap; gap: 8px">
             <el-tag
-              v-for="eq in currentRoom.equipments"
+              v-for="eq in transformEquipments(currentRoom.equipment)"
               :key="eq.id"
-              :type="eq.available ? 'success' : 'info'"
+              type="success"
             >
-              {{ getEquipmentTypeName(eq.type) }} × {{ eq.quantity }}
-              {{ !eq.available ? '(不可用)' : '' }}
+              {{ eq.name }}
             </el-tag>
           </div>
         </el-descriptions-item>
@@ -113,6 +112,18 @@ async function loadData() {
 function handleView(row: MeetingRoom) {
   currentRoom.value = row
   detailVisible.value = true
+}
+
+// 转换设备数据（处理后端返回的字符串数组）
+function transformEquipments(equipments: string[] | undefined) {
+  if (!equipments || !Array.isArray(equipments)) return []
+  return equipments.map((eq: string, index: number) => ({
+    id: String(index),
+    type: eq,
+    name: eq,
+    quantity: 1,
+    available: true
+  }))
 }
 
 onMounted(() => {

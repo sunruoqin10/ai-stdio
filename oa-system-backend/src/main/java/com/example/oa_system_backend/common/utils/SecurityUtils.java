@@ -12,4 +12,12 @@ public class SecurityUtils {
         }
         return null;
     }
+
+    public static String getCurrentUserName() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getName() != null) {
+            return authentication.getName();
+        }
+        return null;
+    }
 }

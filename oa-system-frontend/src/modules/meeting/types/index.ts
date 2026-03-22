@@ -1,7 +1,7 @@
 /**
  * 会议室预定模块 - TypeScript类型定义
- *
- * 基于 meeting_Technical.md 规范实现
+ * 
+ * 与后端API匹配
  */
 
 // ==================== 基础类型 ====================
@@ -9,12 +9,12 @@
 /**
  * 预定状态
  */
-export type BookingStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
+export type BookingStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'checked_in' | 'checked_out' | 'completed'
 
 /**
  * 会议室状态
  */
-export type RoomStatus = 'available' | 'occupied' | 'maintenance'
+export type RoomStatus = 'available' | 'unavailable' | 'disabled'
 
 /**
  * 重复类型
@@ -24,7 +24,7 @@ export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly'
 /**
  * 提醒时间
  */
-export type ReminderTime = 'none' | '15min' | '30min' | '1hour' | '1day'
+export type ReminderTime = 'none' | '5' | '10' | '15' | '30' | '60' | '1440'
 
 /**
  * 会议等级
@@ -41,104 +41,59 @@ export interface MeetingRoom {
   name: string
   location: string
   capacity: number
-  floor: number
-  area: number // 平方米
-
-  // 设备
-  equipments: Equipment[]
-
-  // 状态
-  status: RoomStatus
-
-  // 图片
-  images?: string[]
-
-  // 描述
+  floor?: number
+  area?: number
+  equipment: string[]
   description?: string
-
-  // 价格(如果是外部会议室)
-  hourlyRate?: number
-
-  // 审计字段
+  images?: string
+  status: RoomStatus
+  statusName: string
+  bookingCount7Days?: number
   createdAt: string
   updatedAt: string
 }
-
-/**
- * 设备
- */
-export interface Equipment {
-  id: string
-  name: string
-  type: EquipmentType
-  quantity: number
-  available: boolean
-}
-
-/**
- * 设备类型
- */
-export type EquipmentType = 'projector' | 'screen' | 'whiteboard' | 'audio' | 'video' | 'computer' | 'other'
 
 /**
  * 会议预定实体
  */
 export interface MeetingBooking {
   id: string
-
-  // 基本信息
   title: string
-  organizerId: string
-  organizerName: string
-  organizerPhone: string
-  departmentId: string
-  departmentName: string
-
-  // 会议室
   roomId: string
   roomName: string
-
-  // 时间
+  roomLocation?: string
   startTime: string
   endTime: string
-  duration: number // 分钟
-
-  // 参会人员
-  attendees: Attendee[]
-
-  // 会议详情
+  duration?: number
+  bookerId: string
+  bookerName: string
+  bookerPosition?: string
+  departmentId?: string
+  departmentName?: string
+  participantCount?: number
+  attendees?: Attendee[]
   agenda?: string
+  equipment?: string[]
   level: MeetingLevel
-  isPrivate: boolean
-
-  // 重复
-  recurrence?: Recurrence
-
-  // 提醒
-  reminder: ReminderTime
-
-  // 状态
+  levelName?: string
+  reminder?: ReminderTime
   status: BookingStatus
-  approvalRemark?: string
-  rejectionReason?: string
-
-  // 审批记录
-  approval?: ApprovalRecord
-
-  // 实际使用
+  statusName?: string
+  recurringRule?: string
   actualStartTime?: string
   actualEndTime?: string
   checkInUser?: string
   checkOutUser?: string
-
-  // 评价
   rating?: number
   feedback?: string
-
-  // 审计字段
+  approverId?: string
+  approverName?: string
+  approvalOpinion?: string
+  approvalTime?: string
+  rejectionReason?: string
+  version?: number
   createdAt: string
   updatedAt: string
-  createdBy: string
 }
 
 /**
@@ -147,41 +102,10 @@ export interface MeetingBooking {
 export interface Attendee {
   userId: string
   userName: string
-  department?: string
-  email?: string
-  phone?: string
-  required: boolean // 是否必须参加
-  status: 'pending' | 'accepted' | 'declined'
-}
-
-/**
- * 重复规则
- */
-export interface Recurrence {
-  type: RecurrenceType
-  interval: number // 间隔
-  endDate: string // 结束日期
-  occurrences?: number // 重复次数
-}
-
-/**
- * 审批记录
- */
-export interface ApprovalRecord {
-  approverId?: string
-  approverName?: string
-  status: 'approved' | 'rejected'
-  opinion?: string
-  timestamp?: string
-}
-
-/**
- * 冲突信息
- */
-export interface ConflictInfo {
-  type: 'time_conflict' | 'overbooking' | 'equipment_unavailable'
-  conflictBooking?: MeetingBooking
-  message: string
+  departmentName?: string
+  required?: boolean
+  status?: 'pending' | 'accepted' | 'declined'
+  responseTime?: string
 }
 
 // ==================== 表单类型 ====================
@@ -192,16 +116,19 @@ export interface ConflictInfo {
 export interface BookingForm {
   title: string
   roomId: string
-  date: string // YYYY-MM-DD
-  startTime: string // HH:mm
-  endTime: string // HH:mm
-  organizerPhone: string
+  startTime: string
+  endTime: string
+  bookerId?: string
+  bookerName?: string
+  departmentId?: string
+  departmentName?: string
   agenda?: string
-  level: MeetingLevel
-  isPrivate: boolean
-  attendeeIds: string[]
-  recurrence?: Recurrence
-  reminder: ReminderTime
+  participantCount?: number
+  participantIds?: string[]
+  equipment?: string[]
+  level?: MeetingLevel
+  reminder?: ReminderTime
+  recurringRule?: string
 }
 
 /**
@@ -209,7 +136,7 @@ export interface BookingForm {
  */
 export interface MeetingApprovalForm {
   status: 'approved' | 'rejected'
-  opinion: string
+  opinion?: string
 }
 
 /**
@@ -217,7 +144,7 @@ export interface MeetingApprovalForm {
  */
 export interface CheckInForm {
   bookingId: string
-  actualStartTime: string
+  actualStartTime?: string
 }
 
 /**
@@ -226,7 +153,7 @@ export interface CheckInForm {
 export interface RatingForm {
   bookingId: string
   rating: number
-  feedback: string
+  feedback?: string
 }
 
 /**
@@ -236,11 +163,12 @@ export interface RoomForm {
   name: string
   location: string
   capacity: number
-  floor: number
-  area: number
-  equipments: string[] // equipment IDs
+  floor?: number
+  area?: number
+  equipment?: string[]
   description?: string
-  hourlyRate?: number
+  images?: string
+  status?: RoomStatus
 }
 
 // ==================== 查询参数类型 ====================
@@ -252,8 +180,8 @@ export interface BookingQueryParams {
   page?: number
   size?: number
   roomId?: string
-  status?: BookingStatus
-  organizerId?: string
+  status?: string
+  bookerId?: string
   departmentId?: string
   startDate?: string
   endDate?: string
@@ -268,8 +196,7 @@ export interface RoomQueryParams {
   size?: number
   capacity?: number
   floor?: number
-  equipmentTypes?: EquipmentType[]
-  status?: RoomStatus
+  status?: string
 }
 
 /**
@@ -277,9 +204,9 @@ export interface RoomQueryParams {
  */
 export interface AvailabilityQueryParams {
   roomId: string
-  date: string // YYYY-MM-DD
-  startTime?: string // HH:mm
-  endTime?: string // HH:mm
+  date: string
+  startTime?: string
+  endTime?: string
 }
 
 /**
@@ -300,10 +227,9 @@ export interface ConflictCheckParams {
 export interface RoomUsageStats {
   roomId: string
   roomName: string
-  totalBookings: number
+  bookingCount: number
   totalHours: number
-  utilizationRate: number // 使用率
-  avgAttendees: number
+  utilizationRate?: number
 }
 
 /**
@@ -312,29 +238,32 @@ export interface RoomUsageStats {
 export interface DepartmentUsageStats {
   departmentId: string
   departmentName: string
-  totalBookings: number
+  bookingCount: number
   totalHours: number
-  cancellationRate: number
 }
 
 /**
  * 时间段统计
  */
 export interface TimeSlotStats {
-  hour: number // 0-23
-  bookingCount: number
-  utilizationRate: number
+  timeSlot?: string
+  morningCount?: number
+  afternoonCount?: number
+  eveningCount?: number
+  hour?: number
+  bookingCount?: number
+  utilizationRate?: number
 }
 
 /**
  * 月度统计
  */
 export interface MonthlyStats {
-  month: string // YYYY-MM
-  totalBookings: number
+  year: number
+  month: number
+  bookingCount: number
   totalHours: number
-  uniqueUsers: number
-  avgDuration: number
+  growthRate?: number
 }
 
 // ==================== 日历类型 ====================
@@ -345,10 +274,15 @@ export interface MonthlyStats {
 export interface CalendarEvent {
   id: string
   title: string
-  start: string // ISO datetime
-  end: string // ISO datetime
+  start: string
+  end: string
+  resourceId?: string
+  status?: BookingStatus
+  organizer?: string
+  department?: string
+  level?: MeetingLevel
+  attendeeCount?: number
   allDay?: boolean
-  resourceId?: string // roomId
   backgroundColor?: string
   borderColor?: string
   extendedProps?: {
@@ -373,20 +307,14 @@ export interface CalendarResource {
 // ==================== 通知类型 ====================
 
 /**
- * 通知类型
- */
-export type NotificationType = 'reminder' | 'cancelled' | 'approved' | 'rejected' | 'updated'
-
-/**
  * 会议通知
  */
 export interface MeetingNotification {
   id: string
-  type: NotificationType
-  bookingId: string
+  type: string
   title: string
-  message: string
-  recipientId: string
+  content?: string
+  bookingId?: string
   isRead: boolean
   createdAt: string
 }
@@ -399,12 +327,4 @@ export interface MeetingNotification {
 export interface PageResponse<T> {
   total: number
   list: T[]
-}
-
-/**
- * 分页参数
- */
-export interface PageParams {
-  page: number
-  pageSize: number
 }
