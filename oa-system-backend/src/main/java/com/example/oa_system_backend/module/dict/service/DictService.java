@@ -113,4 +113,14 @@ public interface DictService {
      * 清除字典缓存
      */
     void clearDictCache(String dictTypeCode);
+
+    /**
+     * 导出字典数据
+     */
+    void exportDicts(jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException;
+
+    /**
+     * 导入字典数据
+     */
+    java.util.Map<String, Object> importDicts(java.util.List<com.example.oa_system_backend.module.dict.vo.DictImportVO> importData);
 }

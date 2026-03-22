@@ -7,6 +7,8 @@ import com.example.oa_system_backend.module.asset.dto.response.AssetStatisticsRe
 import com.example.oa_system_backend.module.asset.entity.Asset;
 import com.example.oa_system_backend.module.asset.vo.AssetBorrowRecordVO;
 import com.example.oa_system_backend.module.asset.vo.AssetVO;
+import com.example.oa_system_backend.module.asset.vo.BorrowTrendVO;
+import com.example.oa_system_backend.module.asset.vo.DepreciationTrendVO;
 
 /**
  * 资产服务接口
@@ -72,4 +74,18 @@ public interface AssetService {
      * 生成资产ID
      */
     String generateAssetId();
+
+    /**
+     * 获取资产折旧趋势统计
+     */
+    java.util.List<DepreciationTrendVO> getDepreciationTrend(
+            java.time.LocalDate startDate,
+            java.time.LocalDate endDate);
+
+    /**
+     * 获取资产借用趋势统计
+     */
+    java.util.List<BorrowTrendVO> getBorrowTrend(
+            java.time.LocalDate startDate,
+            java.time.LocalDate endDate);
 }

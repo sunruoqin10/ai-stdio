@@ -500,6 +500,169 @@ public class DictServiceImpl implements DictService {
         log.info("清除字典缓存: dictTypeCode={}", dictTypeCode);
     }
 
+    @Override
+    public void exportDicts(jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        log.info("导出字典数据");
+
+        List<DictType> dictTypes = dictTypeMapper.selectAll();
+        List<DictExportVO> exportList = new java.util.ArrayList<>();
+
+        for (DictType dictType : dictTypes) {
+            List<DictItem> items = dictItemMapper.selectByDictTypeId(dictType.getId());
+
+            if (items.isEmpty()) {
+                DictExportVO vo = new DictExportVO();
+                vo.setDictTypeCode(dictType.getCode());
+                vo.setDictTypeName(dictType.getName());
+                vo.setDictTypeDescription(dictType.getDescription());
+                vo.setCategory(dictType.getCategory());
+                vo.setLabel("");
+                vo.setValue("");
+                vo.setColorType("");
+                vo.setColor("");
+                vo.setIcon("");
+                vo.setSortOrder(0);
+                vo.setStatus(dictType.getStatus());
+                vo.setRemark(dictType.getRemark());
+                exportList.add(vo);
+            } else {
+                for (DictItem item : items) {
+                    DictExportVO vo = new DictExportVO();
+                    vo.setDictTypeCode(dictType.getCode());
+                    vo.setDictTypeName(dictType.getName());
+                    vo.setDictTypeDescription(dictType.getDescription());
+                    vo.setCategory(dictType.getCategory());
+                    vo.setLabel(item.getLabel());
+                    vo.setValue(item.getValue());
+                    vo.setColorType(item.getColorType());
+                    vo.setColor(item.getColor());
+                    vo.setIcon(item.getIcon());
+                    vo.setSortOrder(item.getSortOrder());
+                    vo.setStatus(item.getStatus());
+                    vo.setRemark(item.getRemark());
+                    exportList.add(vo);
+                }
+            }
+        }
+
+        List<String> headers = List.of(
+                "字典类型编码", "字典类型名称", "字典类型描述", "字典类别",
+                "字典项标签", "字典项值", "颜色类型", "自定义颜色", "图标",
+                "排序序号", "状态", "备注"
+        );
+
+        List<String> fieldNames = List.of(
+                "dictTypeCode", "dictTypeName", "dictTypeDescription", "category",
+                "label", "value", "colorType", "color", "icon",
+                "sortOrder", "status", "remark"
+        );
+
+        String fileName = "字典数据_" + java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+
+        com.example.oa_system_backend.common.utils.ExcelUtils.exportExcel(
+                response, exportList, headers, fieldNames, fileName
+        );
+    }
+
+    @Override
+    public java.util.Map<String, Object> importDicts(List<DictImportVO> importData) {
+        log.info("导入字典数据, 共 {} 条", importData.size());
+
+        int successCount = 0;
+        int failCount = 0;
+        int skipCount = 0;
+        List<String> errors = new java.util.ArrayList<>();
+
+        for (int i = 0; i < importData.size(); i++) {
+            DictImportVO item = importData.get(i);
+            int rowNum = i + 2;
+
+            try {
+                if (item.getDictTypeCode() == null || item.getDictTypeCode().trim().isEmpty()) {
+                    errors.add("第 " + rowNum + " 行: 字典类型编码不能为空");
+                    failCount++;
+                    continue;
+                }
+
+                if (item.getLabel() == null || item.getLabel().trim().isEmpty()) {
+                    errors.add("第 " + rowNum + " 行: 字典项标签不能为空");
+                    failCount++;
+                    continue;
+                }
+
+                if (item.getValue() == null || item.getValue().trim().isEmpty()) {
+                    errors.add("第 " + rowNum + " 行: 字典项值不能为空");
+                    failCount++;
+                    continue;
+                }
+
+                DictType dictType = dictTypeMapper.selectByCode(item.getDictTypeCode().trim());
+                if (dictType == null) {
+                    dictType = new DictType();
+                    dictType.setCode(item.getDictTypeCode().trim());
+                    dictType.setName(item.getDictTypeName() != null ? item.getDictTypeName().trim() : item.getDictTypeCode().trim());
+                    dictType.setDescription(item.getDictTypeDescription());
+                    dictType.setCategory(item.getCategory() != null ? item.getCategory().trim() : "business");
+                    dictType.setStatus(item.getStatus() != null ? item.getStatus().trim() : "enabled");
+                    dictType.setSortOrder(0);
+                    dictType.setItemCount(0);
+                    dictType.setCreatedAt(LocalDateTime.now());
+                    dictType.setUpdatedAt(LocalDateTime.now());
+                    dictTypeMapper.insert(dictType);
+                    log.info("创建新字典类型: code={}", dictType.getCode());
+                }
+
+                List<DictItem> existingItems = dictItemMapper.selectByDictTypeId(dictType.getId());
+                boolean itemExists = existingItems.stream()
+                        .anyMatch(existing -> existing.getValue().equals(item.getValue().trim()));
+
+                if (itemExists) {
+                    errors.add("第 " + rowNum + " 行: 字典项值已存在, 将跳过: " + item.getValue());
+                    skipCount++;
+                    continue;
+                }
+
+                DictItem dictItem = new DictItem();
+                dictItem.setDictTypeId(dictType.getId());
+                dictItem.setDictTypeCode(dictType.getCode());
+                dictItem.setTypeCode(dictType.getCode());
+                dictItem.setLabel(item.getLabel().trim());
+                dictItem.setValue(item.getValue().trim());
+                dictItem.setColorType(item.getColorType());
+                dictItem.setColor(item.getColor());
+                dictItem.setIcon(item.getIcon());
+                dictItem.setSortOrder(item.getSortOrder() != null ? item.getSortOrder() : 0);
+                dictItem.setStatus(item.getStatus() != null ? item.getStatus().trim() : "enabled");
+                dictItem.setRemark(item.getRemark());
+                dictItem.setCreatedAt(LocalDateTime.now());
+                dictItem.setUpdatedAt(LocalDateTime.now());
+
+                dictItemMapper.insert(dictItem);
+                updateDictTypeItemCount(dictType.getId());
+                clearDictCache(dictType.getCode());
+
+                successCount++;
+
+            } catch (Exception e) {
+                log.error("导入第 " + rowNum + " 行数据失败", e);
+                errors.add("第 " + rowNum + " 行: " + e.getMessage());
+                failCount++;
+            }
+        }
+
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("successCount", successCount);
+        result.put("failCount", failCount);
+        result.put("skipCount", skipCount);
+        result.put("errors", errors);
+        result.put("totalCount", importData.size());
+
+        log.info("字典数据导入完成: 成功={}, 失败={}, 跳过={}", successCount, failCount, skipCount);
+
+        return result;
+    }
+
     // ========== 私有方法 ==========
 
     /**

@@ -7,11 +7,15 @@ import com.example.oa_system_backend.module.dict.entity.DictItem;
 import com.example.oa_system_backend.module.dict.entity.DictType;
 import com.example.oa_system_backend.module.dict.service.DictService;
 import com.example.oa_system_backend.module.dict.vo.*;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 数据字典控制器
@@ -223,5 +227,28 @@ public class DictController {
     public ApiResponse<Void> clearDictCache(@PathVariable String code) {
         dictService.clearDictCache(code);
         return ApiResponse.success("清除缓存成功", null);
+    }
+
+    /**
+     * 导出字典数据
+     * GET /api/dict/export
+     */
+    @GetMapping("/export")
+    public void exportDicts(HttpServletResponse response) throws IOException {
+        dictService.exportDicts(response);
+    }
+
+    /**
+     * 导入字典数据
+     * POST /api/dict/import
+     */
+    @PostMapping("/import")
+    public ApiResponse<Map<String, Object>> importDicts(
+            @RequestParam("file") MultipartFile file) throws IOException {
+        List<DictImportVO> importData = com.example.oa_system_backend.common.utils.ExcelUtils.importExcel(
+                file.getInputStream(), DictImportVO.class
+        );
+        Map<String, Object> result = dictService.importDicts(importData);
+        return ApiResponse.success("导入完成", result);
     }
 }

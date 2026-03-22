@@ -9,9 +9,14 @@ import com.example.oa_system_backend.module.asset.entity.Asset;
 import com.example.oa_system_backend.module.asset.service.AssetService;
 import com.example.oa_system_backend.module.asset.vo.AssetBorrowRecordVO;
 import com.example.oa_system_backend.module.asset.vo.AssetVO;
+import com.example.oa_system_backend.module.asset.vo.DepreciationTrendVO;
+import com.example.oa_system_backend.module.asset.vo.BorrowTrendVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.util.List;
 
 /**
  * 资产管理控制器
@@ -119,6 +124,34 @@ public class AssetController {
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         IPage<AssetBorrowRecordVO> result = assetService.getBorrowHistory(id, pageNum, pageSize);
+        return ApiResponse.success(result);
+    }
+
+    /**
+     * 获取资产折旧趋势统计
+     * GET /api/assets/depreciation-trend
+     */
+    @GetMapping("/depreciation-trend")
+    public ApiResponse<List<DepreciationTrendVO>> getDepreciationTrend(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        LocalDate start = startDate != null ? LocalDate.parse(startDate) : null;
+        LocalDate end = endDate != null ? LocalDate.parse(endDate) : null;
+        List<DepreciationTrendVO> result = assetService.getDepreciationTrend(start, end);
+        return ApiResponse.success(result);
+    }
+
+    /**
+     * 获取资产借用趋势统计
+     * GET /api/assets/borrow-trend
+     */
+    @GetMapping("/borrow-trend")
+    public ApiResponse<List<BorrowTrendVO>> getBorrowTrend(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        LocalDate start = startDate != null ? LocalDate.parse(startDate) : null;
+        LocalDate end = endDate != null ? LocalDate.parse(endDate) : null;
+        List<BorrowTrendVO> result = assetService.getBorrowTrend(start, end);
         return ApiResponse.success(result);
     }
 }

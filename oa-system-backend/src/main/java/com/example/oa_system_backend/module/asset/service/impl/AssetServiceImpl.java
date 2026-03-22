@@ -17,6 +17,8 @@ import com.example.oa_system_backend.module.asset.service.AssetService;
 import com.example.oa_system_backend.module.asset.util.AssetDepreciationUtil;
 import com.example.oa_system_backend.module.asset.vo.AssetBorrowRecordVO;
 import com.example.oa_system_backend.module.asset.vo.AssetVO;
+import com.example.oa_system_backend.module.asset.vo.DepreciationTrendVO;
+import com.example.oa_system_backend.module.asset.vo.BorrowTrendVO;
 import com.example.oa_system_backend.module.employee.entity.Employee;
 import com.example.oa_system_backend.module.employee.mapper.EmployeeMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -33,7 +35,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -618,5 +622,104 @@ public class AssetServiceImpl implements AssetService {
         }
 
         return response;
+    }
+
+    @Override
+    public List<DepreciationTrendVO> getDepreciationTrend(LocalDate startDate, LocalDate endDate) {
+        log.info("获取资产折旧趋势, startDate={}, endDate={}", startDate, endDate);
+
+        LambdaQueryWrapper<Asset> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByAsc(Asset::getPurchaseDate);
+
+        if (startDate != null) {
+            wrapper.ge(Asset::getPurchaseDate, startDate);
+        }
+        if (endDate != null) {
+            wrapper.le(Asset::getPurchaseDate, endDate);
+        }
+
+        List<Asset> assets = assetMapper.selectList(wrapper);
+
+        List<DepreciationTrendVO> trendList = new ArrayList<>();
+
+        for (Asset asset : assets) {
+            DepreciationTrendVO vo = new DepreciationTrendVO();
+
+            LocalDate purchaseDate = asset.getPurchaseDate();
+            String month = purchaseDate.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
+
+            vo.setMonth(month);
+            vo.setYear(String.valueOf(purchaseDate.getYear()));
+
+            vo.setOriginalValue(asset.getPurchasePrice());
+            vo.setCurrentValue(asset.getCurrentValue() != null ? asset.getCurrentValue() : BigDecimal.ZERO);
+
+            BigDecimal depreciationAmount = asset.getPurchasePrice()
+                    .subtract(vo.getCurrentValue());
+            vo.setDepreciationAmount(depreciationAmount);
+
+            if (asset.getPurchasePrice().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal rate = depreciationAmount.divide(asset.getPurchasePrice(), 4, RoundingMode.HALF_UP)
+                        .multiply(new BigDecimal("100"));
+                vo.setDepreciationRate(rate);
+            } else {
+                vo.setDepreciationRate(BigDecimal.ZERO);
+            }
+
+            trendList.add(vo);
+        }
+
+        return trendList;
+    }
+
+    @Override
+    public List<BorrowTrendVO> getBorrowTrend(LocalDate startDate, LocalDate endDate) {
+        log.info("获取资产借用趋势, startDate={}, endDate={}", startDate, endDate);
+
+        LambdaQueryWrapper<AssetBorrowRecord> wrapper = new LambdaQueryWrapper<>();
+
+        if (startDate != null) {
+            wrapper.ge(AssetBorrowRecord::getBorrowDate, startDate);
+        }
+        if (endDate != null) {
+            wrapper.le(AssetBorrowRecord::getBorrowDate, endDate);
+        }
+
+        wrapper.orderByAsc(AssetBorrowRecord::getBorrowDate);
+
+        List<AssetBorrowRecord> records = assetBorrowRecordMapper.selectList(wrapper);
+
+        java.util.Map<String, BorrowTrendVO> monthMap = new java.util.LinkedHashMap<>();
+
+        for (AssetBorrowRecord record : records) {
+            LocalDate borrowDate = record.getBorrowDate();
+            String month = borrowDate.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
+
+            BorrowTrendVO vo = monthMap.computeIfAbsent(month, k -> {
+                BorrowTrendVO newVo = new BorrowTrendVO();
+                newVo.setMonth(month);
+                newVo.setYear(String.valueOf(borrowDate.getYear()));
+                newVo.setBorrowCount(0);
+                newVo.setReturnCount(0);
+                newVo.setActiveCount(0);
+                newVo.setOverdueCount(0);
+                return newVo;
+            });
+
+            String status = record.getStatus();
+            if ("active".equals(status)) {
+                vo.setBorrowCount(vo.getBorrowCount() + 1);
+                vo.setActiveCount(vo.getActiveCount() + 1);
+            } else if ("returned".equals(status)) {
+                vo.setBorrowCount(vo.getBorrowCount() + 1);
+                vo.setReturnCount(vo.getReturnCount() + 1);
+            } else if ("overdue".equals(status)) {
+                vo.setBorrowCount(vo.getBorrowCount() + 1);
+                vo.setActiveCount(vo.getActiveCount() + 1);
+                vo.setOverdueCount(vo.getOverdueCount() + 1);
+            }
+        }
+
+        return new ArrayList<>(monthMap.values());
     }
 }

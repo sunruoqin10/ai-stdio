@@ -9,6 +9,8 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import java.util.List;
+
 /**
  * 字典类型Mapper接口
  */
@@ -73,4 +75,10 @@ public interface DictTypeMapper extends BaseMapper<DictType> {
             ") " +
             "WHERE id = #{dictTypeId}")
     void updateItemCount(@Param("dictTypeId") Long dictTypeId);
+
+    /**
+     * 查询所有字典类型
+     */
+    @Select("SELECT * FROM sys_dict_type WHERE is_deleted = 0 ORDER BY sort_order, id")
+    List<DictType> selectAll();
 }
