@@ -211,8 +211,33 @@ public class MeetingRoomServiceImpl extends ServiceImpl<MeetingRoomMapper, Meeti
         vo.setEquipment(parseJsonArray(room.getFacilities()));
         vo.setDescription(room.getDescription());
         vo.setImages(room.getImages());
-        vo.setStatus(room.getStatus());
-        vo.setStatusName(MeetingRoomStatus.fromCode(room.getStatus()).getName());
+
+        // 检查当前时间是否有正在进行的会议
+        LocalDateTime now = LocalDateTime.now();
+        List<MeetingBooking> currentBookings = meetingBookingMapper.selectByRoomAndDateRange(
+            room.getId(),
+            now,
+            now
+        );
+
+        boolean isOccupied = currentBookings.stream()
+            .filter(b -> !BookingStatus.CANCELLED.getCode().equals(b.getStatus())
+                     && !BookingStatus.REJECTED.getCode().equals(b.getStatus()))
+            .anyMatch(b -> {
+                LocalDateTime start = b.getStartTime();
+                LocalDateTime end = b.getEndTime();
+                return now.isAfter(start) && now.isBefore(end);
+            });
+
+        // 如果有正在进行的会议，显示为"使用中"
+        if (isOccupied) {
+            vo.setStatus(MeetingRoomStatus.OCCUPIED.getCode());
+            vo.setStatusName(MeetingRoomStatus.OCCUPIED.getName());
+        } else {
+            vo.setStatus(room.getStatus());
+            vo.setStatusName(MeetingRoomStatus.fromCode(room.getStatus()).getName());
+        }
+
         vo.setCreatedAt(room.getCreatedAt());
         vo.setUpdatedAt(room.getUpdatedAt());
 

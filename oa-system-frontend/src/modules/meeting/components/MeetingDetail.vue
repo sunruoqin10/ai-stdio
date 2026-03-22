@@ -51,11 +51,7 @@
         </el-descriptions-item>
 
         <el-descriptions-item label="组织者">
-          {{ booking.organizerName }}
-        </el-descriptions-item>
-
-        <el-descriptions-item label="联系电话">
-          {{ booking.organizerPhone }}
+          {{ booking.bookerName }}
         </el-descriptions-item>
 
         <el-descriptions-item label="部门">
@@ -75,14 +71,11 @@
         <el-tag
           v-for="attendee in booking.attendees"
           :key="attendee.userId"
-          :type="attendee.required ? '' : 'info'"
+          :type="attendee.required === false ? 'info' : ''"
           style="margin-right: 8px; margin-bottom: 8px"
         >
-          {{ attendee.userName }}
-          {{ attendee.required ? '(必须)' : '(可选)' }}
-          <span v-if="attendee.status === 'accepted'" style="color: #67c23a">✓</span>
-          <span v-else-if="attendee.status === 'declined'" style="color: #f56c6c">✗</span>
-          <span v-else style="color: #909399">?</span>
+          {{ attendee.userName || attendee.userId }}
+          <template v-if="attendee.required === false">(可选)</template>
         </el-tag>
       </div>
       <div v-else class="attendees-list" style="color: #909399">

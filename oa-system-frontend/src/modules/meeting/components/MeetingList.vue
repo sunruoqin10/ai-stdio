@@ -101,7 +101,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="organizerName" label="组织者" width="100" />
+        <el-table-column prop="bookerName" label="组织者" width="100" />
 
         <el-table-column label="参会人数" width="80" align="center">
           <template #default="{ row }">

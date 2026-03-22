@@ -74,8 +74,11 @@ export function getBookingStatusName(status: BookingStatus): string {
   const statusMap: Record<BookingStatus, string> = {
     pending: '待审批',
     approved: '已通过',
-    rejected: '已驳回',
-    cancelled: '已取消'
+    rejected: '已拒绝',
+    cancelled: '已取消',
+    checked_in: '已签到',
+    checked_out: '已签退',
+    completed: '已完成'
   }
   return statusMap[status] || status
 }
@@ -88,7 +91,10 @@ export function getBookingStatusType(status: BookingStatus): string {
     pending: 'warning',
     approved: 'success',
     rejected: 'danger',
-    cancelled: 'info'
+    cancelled: 'info',
+    checked_in: 'primary',
+    checked_out: 'info',
+    completed: 'success'
   }
   return typeMap[status] || 'info'
 }
@@ -100,7 +106,8 @@ export function getRoomStatusName(status: RoomStatus): string {
   const statusMap: Record<RoomStatus, string> = {
     available: '空闲',
     occupied: '使用中',
-    maintenance: '维护中'
+    unavailable: '不可用',
+    disabled: '已禁用'
   }
   return statusMap[status] || status
 }
@@ -112,7 +119,8 @@ export function getRoomStatusType(status: RoomStatus): string {
   const typeMap: Record<RoomStatus, string> = {
     available: 'success',
     occupied: 'danger',
-    maintenance: 'info'
+    unavailable: 'warning',
+    disabled: 'info'
   }
   return typeMap[status] || 'info'
 }

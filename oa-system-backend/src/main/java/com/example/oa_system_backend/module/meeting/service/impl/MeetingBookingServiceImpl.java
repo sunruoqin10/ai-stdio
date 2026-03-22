@@ -439,11 +439,33 @@ public class MeetingBookingServiceImpl extends ServiceImpl<MeetingBookingMapper,
         try {
             List<String> userIds = objectMapper.readValue(json, new TypeReference<List<String>>() {});
             List<AttendeeVO> attendees = new ArrayList<>();
-            for (String userId : userIds) {
-                AttendeeVO attendee = new AttendeeVO();
-                attendee.setUserId(userId);
-                attendees.add(attendee);
+
+            if (!userIds.isEmpty()) {
+                List<Employee> employees = employeeMapper.selectBatchIds(userIds);
+
+                for (String userId : userIds) {
+                    AttendeeVO attendee = new AttendeeVO();
+                    attendee.setUserId(userId);
+
+                    employees.stream()
+                            .filter(emp -> emp.getId().equals(userId))
+                            .findFirst()
+                            .ifPresent(emp -> {
+                                attendee.setUserName(emp.getName());
+                                String departmentName = null;
+                                if (emp.getDepartmentId() != null) {
+                                    Department dept = departmentMapper.selectById(emp.getDepartmentId());
+                                    if (dept != null) {
+                                        departmentName = dept.getName();
+                                    }
+                                }
+                                attendee.setDepartmentName(departmentName);
+                            });
+
+                    attendees.add(attendee);
+                }
             }
+
             return attendees;
         } catch (JsonProcessingException e) {
             log.error("解析参会人JSON失败: {}", json, e);

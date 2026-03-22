@@ -7,6 +7,16 @@
 // ==================== 基础类型 ====================
 
 /**
+ * 员工选项（用于下拉选择）
+ */
+export interface EmployeeOption {
+  id: string
+  name: string
+  departmentName?: string
+  position?: string
+}
+
+/**
  * 预定状态
  */
 export type BookingStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'checked_in' | 'checked_out' | 'completed'
@@ -14,7 +24,7 @@ export type BookingStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 
 /**
  * 会议室状态
  */
-export type RoomStatus = 'available' | 'unavailable' | 'disabled'
+export type RoomStatus = 'available' | 'occupied' | 'unavailable' | 'disabled'
 
 /**
  * 重复类型

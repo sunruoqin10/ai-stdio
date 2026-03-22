@@ -1,7 +1,8 @@
 package com.example.oa_system_backend.module.meeting.enums;
 
 public enum MeetingRoomStatus {
-    AVAILABLE("available", "可用"),
+    AVAILABLE("available", "空闲"),
+    OCCUPIED("occupied", "使用中"),
     UNAVAILABLE("unavailable", "不可用"),
     DISABLED("disabled", "已禁用");
 

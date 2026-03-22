@@ -66,7 +66,6 @@
           value-format="HH:mm"
           placeholder="选择开始时间"
           :disabled-hours="disabledHours"
-          :disabled-minutes="disabledMinutes"
           style="width: 100%"
         />
       </el-form-item>
@@ -78,7 +77,6 @@
           value-format="HH:mm"
           placeholder="选择结束时间"
           :disabled-hours="disabledHours"
-          :disabled-minutes="disabledMinutes"
           style="width: 100%"
         />
       </el-form-item>
@@ -102,14 +100,6 @@
           </div>
         </template>
       </el-alert>
-
-      <el-form-item label="联系电话" prop="organizerPhone">
-        <el-input
-          v-model="form.organizerPhone"
-          placeholder="请输入联系电话"
-          maxlength="11"
-        />
-      </el-form-item>
 
       <!-- 会议详情 -->
       <el-divider content-position="left">会议详情</el-divider>
@@ -146,12 +136,13 @@
           multiple
           filterable
           placeholder="请选择参会人员"
+          :loading="loadingUsers"
           style="width: 100%"
         >
           <el-option
-            v-for="user in mockUsers"
+            v-for="user in employeeOptions"
             :key="user.id"
-            :label="user.name"
+            :label="`${user.name}${user.departmentName ? ` (${user.departmentName})` : ''}`"
             :value="user.id"
           />
         </el-select>
@@ -237,6 +228,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useMeetingStore } from '../store'
+import * as meetingApi from '../api'
 import {
   getRoomStatusName,
   getRoomStatusType,
@@ -244,7 +236,7 @@ import {
   formatDateTime,
   formatTime
 } from '../utils'
-import type { BookingForm, MeetingRoom, MeetingBooking } from '../types'
+import type { BookingForm, MeetingRoom, MeetingBooking, EmployeeOption } from '../types'
 
 // Props
 interface Props {
@@ -289,7 +281,6 @@ const form = reactive<BookingForm>({
   date: '',
   startTime: '',
   endTime: '',
-  organizerPhone: '',
   agenda: '',
   level: 'normal',
   isPrivate: false,
@@ -328,14 +319,24 @@ const roomEquipments = computed(() => {
 const hasConflict = ref(false)
 const conflicts = ref<MeetingBooking[]>([])
 
-// 模拟用户数据(TODO: 从用户服务获取)
-const mockUsers = ref([
-  { id: 'U001', name: '张三' },
-  { id: 'U002', name: '李四' },
-  { id: 'U003', name: '王五' },
-  { id: 'U004', name: '赵六' },
-  { id: 'U005', name: '孙七' }
-])
+// 员工选项
+const employeeOptions = ref<EmployeeOption[]>([])
+const loadingUsers = ref(false)
+
+// 加载员工列表
+async function loadEmployees() {
+  if (employeeOptions.value.length > 0) return
+
+  loadingUsers.value = true
+  try {
+    employeeOptions.value = await meetingApi.getEmployeeList()
+  } catch (error) {
+    console.error('加载员工列表失败:', error)
+    ElMessage.error('加载员工列表失败')
+  } finally {
+    loadingUsers.value = false
+  }
+}
 
 // 表单验证规则
 const rules: FormRules = {
@@ -373,10 +374,6 @@ const rules: FormRules = {
       },
       trigger: 'change'
     }
-  ],
-  organizerPhone: [
-    { required: true, message: '请输入联系电话', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
   ],
   participantIds: [
     { required: true, message: '请选择参会人员', trigger: 'change' },
@@ -491,7 +488,6 @@ function resetForm() {
     date: '',
     startTime: '',
     endTime: '',
-    organizerPhone: '',
     agenda: '',
     level: 'normal',
     isPrivate: false,
@@ -562,6 +558,10 @@ async function handleSubmit() {
 
 // 监听对话框打开
 watch(() => props.modelValue, (val) => {
+  if (val) {
+    loadEmployees()
+  }
+
   if (val && props.bookingData) {
     // 编辑模式:回填数据
     const booking = props.bookingData
@@ -573,7 +573,6 @@ watch(() => props.modelValue, (val) => {
     form.date = startDate.toISOString().split('T')[0]
     form.startTime = startDate.toTimeString().slice(0, 5)
     form.endTime = endDate.toTimeString().slice(0, 5)
-    form.organizerPhone = booking.organizerPhone
     form.agenda = booking.agenda || ''
     form.level = booking.level
     form.isPrivate = booking.isPrivate

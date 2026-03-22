@@ -1,6 +1,6 @@
 /**
  * 会议室预定模块 - API接口层
- * 
+ *
  * 已切换到真实后端API
  */
 
@@ -23,8 +23,29 @@ import type {
   TimeSlotStats,
   MonthlyStats,
   CalendarEvent,
-  MeetingNotification
+  MeetingNotification,
+  EmployeeOption
 } from '../types'
+
+// ==================== 员工管理 API ====================
+
+/**
+ * 获取员工列表（用于选择参会人员）
+ */
+export async function getEmployeeList(params?: any): Promise<EmployeeOption[]> {
+  const response = await http.get('/employees', {
+    params: {
+      ...params,
+      pageSize: 1000 // 获取所有员工
+    }
+  })
+  return response.data.records.map((emp: any) => ({
+    id: emp.id,
+    name: emp.name,
+    departmentName: emp.departmentName,
+    position: emp.position
+  }))
+}
 
 // ==================== 会议室管理 API ====================
 
