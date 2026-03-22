@@ -275,6 +275,45 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
+    public void changePassword(ChangePasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new BusinessException("两次密码输入不一致");
+        }
+
+        if (request.getNewPassword().equals(request.getOldPassword())) {
+            throw new BusinessException("新密码不能与旧密码相同");
+        }
+
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new BusinessException("用户未登录");
+        }
+
+        AuthUser user = authUserMapper.selectById(currentUserId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+
+        if (!PasswordUtils.matches(request.getOldPassword(), user.getPassword())) {
+            throw new BusinessException("旧密码错误");
+        }
+
+        if (!PasswordUtils.isValidPassword(request.getNewPassword())) {
+            throw new BusinessException("密码强度不足，必须包含大小写字母和数字，且长度不少于8位");
+        }
+
+        user.setPassword(PasswordUtils.encode(request.getNewPassword()));
+        user.setPasswordChangedAt(LocalDateTime.now());
+        user.setLoginAttempts(0);
+        user.setStatus("active");
+        user.setLockedUntil(null);
+        authUserMapper.updateById(user);
+
+        log.info("Password changed successfully for user: {}", user.getUsername());
+    }
+
+    @Override
     public Page<UserSessionVO> getActiveSessions(int page, int size) {
         // TODO: Get current user from security context
         // For now, return empty page

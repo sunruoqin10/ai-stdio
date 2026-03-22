@@ -61,6 +61,12 @@ public class AuthController {
         return ApiResponse.success("密码重置成功", null);
     }
 
+    @PostMapping("/change-password")
+    public ApiResponse<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(request);
+        return ApiResponse.success("密码修改成功", null);
+    }
+
     @GetMapping("/sessions")
     public ApiResponse<Page<UserSessionVO>> getActiveSessions(
             @RequestParam(defaultValue = "1") int page,
